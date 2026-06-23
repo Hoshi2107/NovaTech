@@ -1,0 +1,82 @@
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Báo cáo thống kê kinh doanh";
+    ViewData["BreadcrumbActive"] = "Báo cáo";
+}
+
+<div class="row g-4">
+    <!-- Channel stats breakdown -->
+    <div class="col-md-6">
+        <div class="card card-glass p-4 h-100">
+            <h5 class="fw-bold mb-4 text-cyan"><i class="fa-solid fa-chart-pie me-2"></i>Doanh thu theo Kênh bán hàng</h5>
+            
+            <div class="table-responsive mb-4">
+                <table class="table table-dark table-borderless text-sm mb-0">
+                    <tr><td class="text-muted"><i class="fa-solid fa-store text-warning me-2"></i>Cửa hàng trực tiếp:</td><td class="fw-bold text-end">@ViewBag.RevenueCuaHang.ToString("N0") đ</td></tr>
+                    <tr><td class="text-muted"><i class="fa-solid fa-globe text-primary me-2"></i>Website Online:</td><td class="fw-bold text-end">@ViewBag.RevenueWebsite.ToString("N0") đ</td></tr>
+                    <tr><td class="text-muted"><i class="fa-brands fa-tiktok text-light me-2"></i>TikTok Shop:</td><td class="fw-bold text-end">@ViewBag.RevenueTikTok.ToString("N0") đ</td></tr>
+                </table>
+            </div>
+
+            <canvas id="channelChart" style="max-height: 200px;"></canvas>
+        </div>
+    </div>
+
+    <!-- Monthly breakdown details -->
+    <div class="col-md-6">
+        <div class="card card-glass p-4 h-100">
+            <h5 class="fw-bold mb-4 text-cyan"><i class="fa-solid fa-chart-column me-2"></i>Phân tích Doanh thu Tháng</h5>
+            <canvas id="monthlyChart" style="max-height: 280px;"></canvas>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Pie Chart
+        const pieCtx = document.getElementById('channelChart').getContext('2d');
+        const channelChart = new Chart(pieCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Cửa hàng', 'Website', 'TikTok Shop'],
+                datasets: [{
+                    data: [@ViewBag.RevenueCuaHang, @ViewBag.RevenueWebsite, @ViewBag.RevenueTikTok],
+                    backgroundColor: ['#f97316', '#3b82f6', '#ec4899'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { labels: { color: '#94a3b8' } }
+                }
+            }
+        });
+
+        // Bar Chart
+        const barCtx = document.getElementById('monthlyChart').getContext('2d');
+        const monthlyChart = new Chart(barCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6'],
+                datasets: [{
+                    label: 'Doanh thu (triệu đ)',
+                    data: [120, 150, 180, 220, 210, 260],
+                    backgroundColor: '#00f2fe',
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { labels: { color: '#94a3b8' } }
+                },
+                scales: {
+                    x: { ticks: { color: '#94a3b8' } },
+                    y: { ticks: { color: '#94a3b8' } }
+                }
+            }
+        });
+    </script>
+}

@@ -1,0 +1,68 @@
+@model List<DATN64.Models.MockDataService.Supplier>
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Nhà cung cấp";
+    ViewData["BreadcrumbActive"] = "Nhà cung cấp";
+}
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card card-glass p-4">
+            <h5 class="fw-bold mb-4 text-cyan">Thêm nhà cung cấp</h5>
+            <form method="post" action="@Url.Action("CreateSupplier", "Product")">
+                <div class="mb-3">
+                    <label class="form-label text-xs">Tên đối tác</label>
+                    <input type="text" name="Name" class="form-control bg-dark border-secondary border-opacity-50 text-white" required placeholder="Nhà cung cấp LG">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-xs">Mã định danh</label>
+                    <input type="text" name="Code" class="form-control bg-dark border-secondary border-opacity-50 text-white" required placeholder="SUP-LG">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-xs">Hotline liên hệ</label>
+                    <input type="text" name="Phone" class="form-control bg-dark border-secondary border-opacity-50 text-white" required placeholder="091...">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-xs">Địa chỉ Email</label>
+                    <input type="email" name="Email" class="form-control bg-dark border-secondary border-opacity-50 text-white" required placeholder="partner@lg.com">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label text-xs">Văn phòng / Địa chỉ</label>
+                    <input type="text" name="Address" class="form-control bg-dark border-secondary border-opacity-50 text-white" placeholder="TP.HCM">
+                </div>
+                <button type="submit" class="btn btn-info rounded-pill px-4 w-100 fw-bold">Thêm nhà cung cấp</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card card-glass p-4">
+            <h5 class="fw-bold mb-4 text-cyan">Danh sách nhà cung cấp</h5>
+            <div class="table-responsive">
+                <table class="table table-dark table-hover mb-0 text-xs">
+                    <thead>
+                        <tr>
+                            <th>Mã số</th>
+                            <th>Tên đối tác</th>
+                            <th>Số điện thoại</th>
+                            <th>Email</th>
+                            <th>Địa chỉ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in Model)
+                        {
+                            <tr>
+                                <td><code>@s.Code</code></td>
+                                <td class="fw-bold text-white">@s.Name</td>
+                                <td>@s.Phone</td>
+                                <td>@s.Email</td>
+                                <td>@s.Address</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,49 @@
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Cấu hình hệ thống";
+    ViewData["BreadcrumbActive"] = "Cài đặt";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card card-glass p-4">
+            <h5 class="fw-bold mb-4 text-cyan"><i class="fa-solid fa-gears me-2"></i>Cài đặt cửa hàng & Cấu hình</h5>
+            
+            <form method="post" action="@Url.Action("Save", "Setting")">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-sm">Tên cửa hàng công nghệ</label>
+                        <input type="text" name="shopName" class="form-control bg-dark border-secondary border-opacity-50 text-white" value="@ViewBag.ShopName" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-sm">Đường dây nóng (Hotline)</label>
+                        <input type="text" name="shopHotline" class="form-control bg-dark border-secondary border-opacity-50 text-white" value="@ViewBag.ShopHotline" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-sm">Email liên hệ cửa hàng</label>
+                        <input type="email" name="shopEmail" class="form-control bg-dark border-secondary border-opacity-50 text-white" value="@ViewBag.ShopEmail" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-sm">Hệ thống giờ mở cửa</label>
+                        <input type="text" name="systemConfig" class="form-control bg-dark border-secondary border-opacity-50 text-white" value="@ViewBag.SystemConfig">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label text-sm">Địa chỉ trụ sở</label>
+                        <input type="text" name="shopAddress" class="form-control bg-dark border-secondary border-opacity-50 text-white" value="@ViewBag.ShopAddress" required>
+                    </div>
+                </div>
+
+                <hr class="border-secondary my-4">
+
+                @if (AuthHelper.HasPermission(Context, "Edit_Setting"))
+                {
+                    <button type="submit" class="btn btn-info rounded-pill px-5 py-2.5 fw-bold">Lưu cấu hình lại</button>
+                }
+                else
+                {
+                    <button class="btn btn-secondary rounded-pill px-5 py-2.5 disabled" type="button">Không có quyền sửa cài đặt</button>
+                }
+            </form>
+        </div>
+    </div>
+</div>

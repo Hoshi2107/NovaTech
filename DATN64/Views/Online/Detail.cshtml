@@ -1,0 +1,98 @@
+@model DATN64.Models.MockDataService.Product
+@{
+    Layout = "~/Views/Shared/_OnlineLayout.cshtml";
+    ViewData["Title"] = Model.Name;
+    bool isDiscounted = Model.DiscountExpiry.HasValue && Model.DiscountExpiry.Value > DateTime.Now;
+}
+<div class="container my-5 animate-fade-in bg-white p-5 rounded-4 border border-light shadow-sm">
+    <div class="row g-5">
+        <div class="col-md-6">
+            <img src="@Model.Image" class="img-fluid rounded-4 shadow-sm border" alt="@Model.Name" style="width: 100%; max-height: 450px; object-fit: cover;">
+        </div>
+        <div class="col-md-6">
+            <span class="badge bg-light text-primary border border-info border-opacity-25 rounded-pill px-3 py-1.5 mb-3 text-xs">@Model.Category</span>
+            
+            @if (Model.IsBestSeller)
+            {
+                <span class="badge bg-warning text-dark rounded-pill px-3 py-1.5 mb-3 text-xs ms-1"><i class="fa-solid fa-crown me-1"></i>Bán chạy nhất</span>
+            }
+
+            <h1 class="fw-bold mb-2 text-dark">@Model.Name</h1>
+            <p class="text-xs text-muted mb-1">Mã sản phẩm SKU: <strong class="text-secondary">@Model.SKU</strong></p>
+            <p class="text-xs text-muted mb-3">Hãng sản xuất: <strong class="text-secondary">@Model.Brand</strong></p>
+            
+            @if (isDiscounted)
+            {
+                <div class="discount-countdown text-danger fw-bold mb-3 text-xs" data-expiry="@Model.DiscountExpiry?.ToString("o")">
+                    <i class="fa-regular fa-clock me-1"></i>Flash Sale kết thúc sau: <span class="countdown-text">--:--:--</span>
+                </div>
+                
+                <h3 class="text-danger fw-bold my-4">
+                    @Model.Price.ToString("N0") đ
+                    <span class="text-sm text-muted text-decoration-line-through fw-normal ms-2">@Model.OriginalPrice.ToString("N0") đ</span>
+                    <span class="badge bg-danger text-white text-xxs ms-2 align-middle">Giảm @Model.DiscountRate%</span>
+                </h3>
+            }
+            else
+            {
+                <h3 class="text-primary fw-bold my-4">@Model.Price.ToString("N0") đ</h3>
+            }
+            
+            <hr class="border-secondary border-opacity-10 my-4">
+            <h5 class="fw-bold text-dark mb-2">Thông số kỹ thuật</h5>
+            <p class="text-xs text-secondary" style="white-space: pre-line; line-height: 1.6;">@Model.Specifications</p>
+
+            <button class="btn btn-primary rounded-pill px-5 py-3 text-white fw-bold mt-4 shadow-sm" onclick="addToCart(@Model.Id)">
+                <i class="fa-solid fa-cart-plus me-2"></i>Thêm Vào Giỏ Hàng
+            </button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function addToCart(productId) {
+            fetch('@Url.Action("AddToCart", "Online")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'id=' + productId + '&qty=1'
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const badge = document.querySelector('.navbar .badge');
+                    if (badge) {
+                        badge.innerText = data.cartCount;
+                    }
+                    alert('Đã thêm sản phẩm vào giỏ hàng!');
+                }
+            });
+        }
+
+        // Countdown Timer Logic
+        function updateCountdowns() {
+            document.querySelectorAll('.discount-countdown').forEach(el => {
+                const expiryStr = el.getAttribute('data-expiry');
+                if (!expiryStr) return;
+                const expiry = new Date(expiryStr);
+                const now = new Date();
+                const diff = expiry - now;
+                if (diff <= 0) {
+                    el.innerHTML = "<span class='badge bg-secondary text-xxs'>Hết Flash Sale</span>";
+                    return;
+                }
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                
+                let text = "";
+                if (days > 0) text += days + "d ";
+                text += String(hours).padStart(2, '0') + "h " + String(minutes).padStart(2, '0') + "m " + String(seconds).padStart(2, '0') + "s";
+                el.querySelector('.countdown-text').innerText = text;
+            });
+        }
+        setInterval(updateCountdowns, 1000);
+        updateCountdowns();
+    </script>
+}

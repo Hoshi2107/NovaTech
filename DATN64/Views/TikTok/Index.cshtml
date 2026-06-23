@@ -1,0 +1,90 @@
+@model DATN64.Models.MockDataService.TikTokShopConfig
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Kết nối TikTok Shop";
+    ViewData["BreadcrumbActive"] = "TikTok Shop";
+    var logs = ViewBag.SyncLogs as List<DATN64.Models.MockDataService.TikTokSyncLog> ?? new();
+}
+
+<div class="row g-4">
+    <!-- Config and Sync Action panel -->
+    <div class="col-md-5">
+        <div class="card card-glass p-4 mb-4">
+            <h5 class="fw-bold mb-4 text-cyan"><i class="fa-brands fa-tiktok me-2"></i>Cấu hình kết nối TikTok</h5>
+            
+            <div class="p-3 rounded-3 bg-light border border-light mb-4 text-dark">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="fs-1 text-dark"><i class="fa-brands fa-tiktok"></i></div>
+                    <div>
+                        <h6 class="fw-bold m-0">@Model.ShopName</h6>
+                        <span class="text-xs text-muted">Mã Shop: @Model.ShopId</span>
+                    </div>
+                </div>
+                <hr class="border-light my-2">
+                <div class="text-xs">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Trạng thái:</span>
+                        <span class="text-success fw-bold">Đã liên kết</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Đồng bộ gần nhất:</span>
+                        <span>@Model.LastSyncTime.ToString("HH:mm - dd/MM/yyyy")</span>
+                    </div>
+                </div>
+            </div>
+
+            <h6 class="fw-bold text-xs text-muted-custom uppercase mb-3">TÁC VỤ ĐỒNG BỘ DỮ LIỆU</h6>
+            <form method="post" action="@Url.Action("TriggerSync", "TikTok")" class="d-grid gap-2">
+                <button type="submit" name="syncType" value="Sản phẩm" class="btn btn-outline-info rounded-pill py-2.5 text-xs">
+                    <i class="fa-solid fa-arrows-rotate me-2 animate-spin"></i>Đồng bộ danh mục Sản phẩm
+                </button>
+                <button type="submit" name="syncType" value="Đơn hàng" class="btn btn-outline-warning text-dark rounded-pill py-2.5 text-xs">
+                    <i class="fa-solid fa-cart-flatbed-suitcase me-2"></i>Đồng bộ Đơn hàng mới
+                </button>
+                <button type="submit" name="syncType" value="Tồn kho" class="btn btn-outline-success rounded-pill py-2.5 text-xs">
+                    <i class="fa-solid fa-warehouse-full me-2"></i>Cập nhật số lượng Kho
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sync Log panel -->
+    <div class="col-md-7">
+        <div class="card card-glass p-4">
+            <h5 class="fw-bold mb-4 text-cyan"><i class="fa-solid fa-book me-2"></i>Nhật ký đồng bộ hệ thống</h5>
+            
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                <table class="table table-dark table-hover mb-0 text-xs align-middle">
+                    <thead>
+                        <tr>
+                            <th>Phân loại</th>
+                            <th>Thông tin mô tả</th>
+                            <th>Kết quả</th>
+                            <th>Thời gian</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var l in logs)
+                        {
+                            <tr>
+                                <td><span class="badge bg-secondary">@l.Type</span></td>
+                                <td>@l.Message</td>
+                                <td>
+                                    @if (l.Status == "Thành công")
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success border-opacity-25 rounded-pill px-2">@l.Status</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 rounded-pill px-2">@l.Status</span>
+                                    }
+                                </td>
+                                <td>@l.Timestamp.ToString("HH:mm:ss dd/MM")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

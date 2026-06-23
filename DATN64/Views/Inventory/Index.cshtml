@@ -1,0 +1,82 @@
+@model List<DATN64.Models.MockDataService.Product>
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Quản lý kho bãi";
+    ViewData["BreadcrumbActive"] = "Tồn kho";
+    var transactions = ViewBag.Transactions as List<DATN64.Models.MockDataService.InventoryTransaction> ?? new();
+}
+
+<div class="row g-4 mb-4">
+    <!-- Tồn kho tổng hợp -->
+    <div class="col-md-7">
+        <div class="card card-glass p-4 h-100">
+            <h5 class="fw-bold mb-4 text-cyan"><i class="fa-solid fa-boxes-stacked me-2"></i>Bảng Tồn Kho Sản Phẩm</h5>
+            <div class="table-responsive">
+                <table class="table table-dark table-hover mb-0 text-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th>Mã SKU</th>
+                            <th>Tên sản phẩm</th>
+                            <th>Giá Trị</th>
+                            <th>Số Lượng Tồn</th>
+                            <th>Trạng thái kho</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in Model)
+                        {
+                            <tr>
+                                <td><code>@p.SKU</code></td>
+                                <td class="fw-bold">@p.Name</td>
+                                <td>@p.Price.ToString("N0") đ</td>
+                                <td class="fw-bold">@p.Stock chiếc</td>
+                                <td>
+                                    @if (p.Stock == 0)
+                                    {
+                                        <span class="badge bg-danger">Hết hàng</span>
+                                    }
+                                    else if (p.Stock <= 3)
+                                    {
+                                        <span class="badge bg-warning text-dark">Sắp hết hàng</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success">An toàn</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nhập xuất nhanh -->
+    <div class="col-md-5">
+        <div class="card card-glass p-4 mb-4">
+            <h5 class="fw-bold mb-3 text-cyan">Tác vụ kho nhanh</h5>
+            <div class="d-grid gap-2">
+                <a href="@Url.Action("Import", "Inventory")" class="btn btn-outline-success rounded-pill py-2.5 text-xs"><i class="fa-solid fa-circle-down me-2"></i>Tạo Phiếu Nhập Kho</a>
+                <a href="@Url.Action("Export", "Inventory")" class="btn btn-outline-danger rounded-pill py-2.5 text-xs"><i class="fa-solid fa-circle-up me-2"></i>Tạo Phiếu Xuất Kho</a>
+            </div>
+        </div>
+
+        <div class="card card-glass p-4">
+            <h5 class="fw-bold mb-3 text-cyan"><i class="fa-solid fa-clock-rotate-left me-2"></i>Lịch sử nhập xuất</h5>
+            <div class="overflow-y-auto" style="max-height: 250px;">
+                @foreach (var tx in transactions)
+                {
+                    <div class="p-2 mb-2 rounded bg-dark bg-opacity-40 border border-secondary border-opacity-10 text-xs">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="badge @(tx.Type == "Nhập kho" ? "bg-success" : "bg-danger")">@tx.Type (@tx.Code)</span>
+                            <span class="text-muted">@tx.Date.ToString("HH:mm - dd/MM")</span>
+                        </div>
+                        <p class="mb-0.5 text-white">@tx.ProductName (SKU: @tx.ProductSKU)</p>
+                        <p class="mb-0 text-muted-custom">Số lượng: <strong>@tx.QuantityChange</strong> | Người thực hiện: @tx.Creator</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

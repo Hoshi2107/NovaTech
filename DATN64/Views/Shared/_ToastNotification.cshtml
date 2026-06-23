@@ -1,0 +1,58 @@
+<!-- Global Toast Container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1080;">
+    <div id="globalToast" class="toast align-items-center bg-white border border-light shadow" role="alert" aria-live="assertive" aria-atomic="true" style="border-radius: 12px; border-left: 4px solid #0284c7 !important;">
+        <div class="d-flex">
+            <div class="toast-body d-flex align-items-center gap-2 py-3 px-3">
+                <span id="toastIcon" class="fs-5"><i class="fa-solid fa-circle-info text-info"></i></span>
+                <span id="toastMessage" class="text-sm fw-medium text-dark">Thông báo từ hệ thống.</span>
+            </div>
+            <button type="button" class="btn-close me-3 m-auto text-dark" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Toast Helper
+    function showToast(message, type = 'success') {
+        const toastEl = document.getElementById('globalToast');
+        const toastMsg = document.getElementById('toastMessage');
+        const toastIcon = document.getElementById('toastIcon');
+        
+        if (!toastEl || !toastMsg || !toastIcon) return;
+        
+        toastMsg.innerText = message;
+        
+        // Default styling
+        toastEl.style.backgroundColor = '#ffffff';
+        toastEl.style.color = '#0f172a';
+        
+        if (type === 'success') {
+            toastEl.style.borderLeft = '4px solid #10b981';
+            toastIcon.innerHTML = '<i class="fa-solid fa-circle-check" style="color: #10b981"></i>';
+        } else if (type === 'danger' || type === 'error') {
+            toastEl.style.borderLeft = '4px solid #ef4444';
+            toastIcon.innerHTML = '<i class="fa-solid fa-circle-xmark" style="color: #ef4444"></i>';
+        } else if (type === 'warning') {
+            toastEl.style.borderLeft = '4px solid #f59e0b';
+            toastIcon.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color: #f59e0b"></i>';
+        } else {
+            toastEl.style.borderLeft = '4px solid #3b82f6';
+            toastIcon.innerHTML = '<i class="fa-solid fa-circle-info" style="color: #3b82f6"></i>';
+        }
+
+        const toast = new bootstrap.Toast(toastEl);
+        toast.show();
+    }
+
+    // Show sample toast if TempData has messages
+    @if (TempData["ToastMessage"] != null)
+    {
+        var msg = TempData["ToastMessage"]?.ToString() ?? "";
+        var tType = TempData["ToastType"]?.ToString() ?? "success";
+        <text>
+            document.addEventListener("DOMContentLoaded", function() {
+                showToast(decodeURIComponent("@Uri.EscapeDataString(msg)"), "@tType");
+            });
+        </text>
+    }
+</script>

@@ -1,0 +1,37 @@
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Nhập kho sản phẩm";
+    ViewData["BreadcrumbActive"] = "Nhập kho";
+    var products = ViewBag.Products as List<DATN64.Models.MockDataService.Product> ?? new();
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card card-glass p-4">
+            <h5 class="fw-bold mb-4 text-success"><i class="fa-solid fa-circle-down me-2"></i>Tạo phiếu nhập kho</h5>
+            <form method="post" action="@Url.Action("SubmitImport", "Inventory")">
+                <div class="mb-3">
+                    <label class="form-label text-sm">Chọn sản phẩm</label>
+                    <select name="productId" class="form-select bg-dark border-secondary border-opacity-50 text-white" required>
+                        @foreach (var p in products)
+                        {
+                            <option value="@p.Id">@p.Name (SKU: @p.SKU) - Tồn hiện tại: @p.Stock</option>
+                        }
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-sm">Số lượng nhập</label>
+                    <input type="number" name="quantity" class="form-control bg-dark border-secondary border-opacity-50 text-white" required min="1" value="10">
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label text-sm">Ghi chú nhập</label>
+                    <input type="text" name="note" class="form-control bg-dark border-secondary border-opacity-50 text-white" placeholder="Nhập từ NCC, sửa chữa, v.v.">
+                </div>
+
+                <button type="submit" class="btn btn-success rounded-pill px-4 w-100 fw-bold">Xác nhận nhập kho</button>
+            </form>
+        </div>
+    </div>
+</div>

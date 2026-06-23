@@ -1,0 +1,387 @@
+@model List<DATN64.Models.MockDataService.Product>
+@{
+    Layout = "~/Views/Shared/_OnlineLayout.cshtml";
+    ViewData["Title"] = "Tất cả sản phẩm";
+    var currentCat = Context.Request.Query["category"].ToString();
+    var brands = Model.Select(p => p.Brand).Distinct().ToList();
+}
+
+<div class="container my-5 animate-fade-in">
+    <div class="row g-4">
+        <!-- Sidebar Bộ lọc bên trái (Bố cục Duchuymobile / Meta.vn) -->
+        <div class="col-lg-3">
+            <div class="card shadow-sm p-4 border border-light bg-white rounded-4 sticky-lg-top" style="top: 90px; z-index: 10;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="fw-bold m-0 text-dark"><i class="fa-solid fa-filter text-primary me-2"></i>Bộ lọc tìm kiếm</h5>
+                    <button type="button" class="btn btn-sm btn-link text-decoration-none text-xs p-0" onclick="resetAllFilters()">Xóa bộ lọc</button>
+                </div>
+                
+                <!-- 1. Search Box (Live search as you type) -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-secondary text-xs text-uppercase mb-2">Tìm kiếm nhanh</label>
+                    <div class="position-relative">
+                        <input type="text" id="liveSearchInput" class="form-control text-sm ps-3 pe-5" placeholder="Nhập tên sản phẩm..." oninput="filterProducts()">
+                        <i class="fa-solid fa-magnifying-glass position-absolute top-50 translate-middle-y end-0 me-3 text-muted"></i>
+                    </div>
+                </div>
+
+                <!-- 2. Nhóm danh mục (Click to filter, active highlight) -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-secondary text-xs text-uppercase mb-2">Thiết bị điện tử</label>
+                    <div class="d-flex flex-column gap-1.5" id="categoryFilterContainer">
+                        <button type="button" class="btn btn-sm text-start py-1.5 px-2.5 rounded border-0 fw-medium text-xs w-100 cat-btn @(string.IsNullOrEmpty(currentCat) ? "btn-primary text-white" : "btn-light text-dark bg-transparent hover-bg-light")" onclick="filterCategory('', this)">
+                            Tất cả thiết bị
+                        </button>
+                        <button type="button" class="btn btn-sm text-start py-1.5 px-2.5 rounded border-0 fw-medium text-xs w-100 cat-btn @(currentCat == "Điện thoại" ? "btn-primary text-white" : "btn-light text-dark bg-transparent hover-bg-light")" onclick="filterCategory('Điện thoại', this)">
+                            Điện thoại
+                        </button>
+                        <button type="button" class="btn btn-sm text-start py-1.5 px-2.5 rounded border-0 fw-medium text-xs w-100 cat-btn @(currentCat == "Laptop" ? "btn-primary text-white" : "btn-light text-dark bg-transparent hover-bg-light")" onclick="filterCategory('Laptop', this)">
+                            Laptop
+                        </button>
+                        <button type="button" class="btn btn-sm text-start py-1.5 px-2.5 rounded border-0 fw-medium text-xs w-100 cat-btn @(currentCat == "Máy tính bảng" ? "btn-primary text-white" : "btn-light text-dark bg-transparent hover-bg-light")" onclick="filterCategory('Máy tính bảng', this)">
+                            Máy tính bảng
+                        </button>
+                        <button type="button" class="btn btn-sm text-start py-1.5 px-2.5 rounded border-0 fw-medium text-xs w-100 cat-btn @(currentCat == "Tai nghe" ? "btn-primary text-white" : "btn-light text-dark bg-transparent hover-bg-light")" onclick="filterCategory('Tai nghe', this)">
+                            Tai nghe
+                        </button>
+                        <button type="button" class="btn btn-sm text-start py-1.5 px-2.5 rounded border-0 fw-medium text-xs w-100 cat-btn @(currentCat == "Phụ kiện" ? "btn-primary text-white" : "btn-light text-dark bg-transparent hover-bg-light")" onclick="filterCategory('Phụ kiện', this)">
+                            Phụ kiện
+                        </button>
+                        <button type="button" class="btn btn-sm text-start py-1.5 px-2.5 rounded border-0 fw-medium text-xs w-100 cat-btn @(currentCat == "Loa" ? "btn-primary text-white" : "btn-light text-dark bg-transparent hover-bg-light")" onclick="filterCategory('Loa', this)">
+                            Loa & Âm thanh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 3. Nhóm thương hiệu (Meta.vn style: search brand + checkbox list) -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-secondary text-xs text-uppercase mb-2">Thương hiệu</label>
+                    <input type="text" id="brandSearchInput" class="form-control text-xs mb-2 py-1 px-2.5" placeholder="Tìm nhanh hãng..." oninput="filterBrandCheckboxes()">
+                    
+                    <div class="brand-checkbox-list" id="brandChecklist">
+                        @foreach (var b in brands)
+                        {
+                            <div class="form-check mb-1.5 brand-item-row" data-brand-name="@b.ToLower()">
+                                <input class="form-check-input brand-filter-checkbox" type="checkbox" value="@b" id="brand-@b" onchange="filterProducts()">
+                                <label class="form-check-label text-xs cursor-pointer" for="brand-@b">@b</label>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- 4. Khoảng giá (Meta.vn style checkboxes) -->
+                <div class="mb-2">
+                    <label class="form-label fw-bold text-secondary text-xs text-uppercase mb-2">Mức giá</label>
+                    <div class="d-flex flex-column gap-1.5">
+                        <div class="form-check">
+                            <input class="form-check-input price-filter-checkbox" type="checkbox" value="under-5" id="price-1" onchange="filterProducts()">
+                            <label class="form-check-label text-xs cursor-pointer" for="price-1">Dưới 5 triệu</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input price-filter-checkbox" type="checkbox" value="5-15" id="price-2" onchange="filterProducts()">
+                            <label class="form-check-label text-xs cursor-pointer" for="price-2">5 triệu - 15 triệu</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input price-filter-checkbox" type="checkbox" value="15-30" id="price-3" onchange="filterProducts()">
+                            <label class="form-check-label text-xs cursor-pointer" for="price-3">15 triệu - 30 triệu</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input price-filter-checkbox" type="checkbox" value="over-30" id="price-4" onchange="filterProducts()">
+                            <label class="form-check-label text-xs cursor-pointer" for="price-4">Trên 30 triệu</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lưới sản phẩm bên phải -->
+        <div class="col-lg-9">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+                <div>
+                    <h4 class="fw-bold text-dark m-0" id="currentCatTitle">
+                        @(string.IsNullOrEmpty(currentCat) ? "Tất cả sản phẩm NovaTech" : "Thiết bị: " + currentCat)
+                    </h4>
+                    <span class="text-xs text-muted">Tìm thấy <strong id="filterCount">@Model.Count</strong> sản phẩm</span>
+                </div>
+
+                <!-- Sorting Select -->
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-xs text-muted whitespace-nowrap">Sắp xếp:</span>
+                    <select id="sortSelect" class="form-select text-xs py-1.5 px-3 rounded-pill bg-white border" style="width: 160px;" onchange="filterProducts()">
+                        <option value="default">Mới nhất</option>
+                        <option value="price-asc">Giá tăng dần</option>
+                        <option value="price-desc">Giá giảm dần</option>
+                        <option value="name-asc">Tên A-Z</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Empty state -->
+            <div class="text-center py-5 bg-white rounded-4 shadow-sm border border-light d-none" id="emptyState">
+                <div class="fs-1 text-muted mb-3"><i class="fa-regular fa-folder-open"></i></div>
+                <h5 class="text-secondary fw-semibold">Không tìm thấy sản phẩm nào</h5>
+                <p class="text-xs text-muted-custom">Vui lòng điều chỉnh hoặc xóa bộ lọc hiện tại.</p>
+            </div>
+
+            <!-- Product Grid -->
+            <div class="row row-cols-1 row-cols-md-3 g-4" id="productGrid">
+                @foreach (var p in Model)
+                {
+                    bool isDiscounted = p.DiscountExpiry.HasValue && p.DiscountExpiry.Value > DateTime.Now;
+                    
+                    <div class="col product-card-col" 
+                         data-id="@p.Id"
+                         data-name="@p.Name.ToLower()" 
+                         data-brand="@p.Brand" 
+                         data-category="@p.Category" 
+                         data-price="@p.Price"
+                         data-bestseller="@p.IsBestSeller.ToString().ToLower()">
+                        
+                        <div class="card card-product h-100 p-3 shadow-sm border border-light">
+                            <!-- Badges -->
+                            @if (p.IsBestSeller)
+                            {
+                                <span class="badge bg-warning text-dark badge-top-left text-xxs px-2 py-1 shadow-sm"><i class="fa-solid fa-crown me-1"></i>Bán chạy nhất</span>
+                            }
+                            @if (isDiscounted)
+                            {
+                                <span class="badge bg-danger badge-top-right text-xxs px-2 py-1 shadow-sm">Giảm @p.DiscountRate%</span>
+                            }
+
+                            <img src="@p.Image" class="card-img-top rounded-3 mb-3" alt="@p.Name" style="height: 180px; object-fit: cover;">
+                            
+                            <div class="card-body p-0 d-flex flex-column justify-content-between">
+                                <div>
+                                    <span class="badge bg-light text-primary border border-info border-opacity-25 mb-2 text-xxs">@p.Category</span>
+                                    <h5 class="card-title fw-bold text-dark fs-6 mb-1">@p.Name</h5>
+                                    <p class="text-xxs text-muted mb-2">Thương hiệu: @p.Brand</p>
+                                    
+                                    <!-- Countdown Timer if Discounted -->
+                                    @if (isDiscounted)
+                                    {
+                                        <div class="discount-countdown text-danger fw-bold mb-2 text-xxs" data-expiry="@p.DiscountExpiry?.ToString("o")">
+                                            <i class="fa-regular fa-clock me-1"></i>Còn: <span class="countdown-text">--:--:--</span>
+                                        </div>
+                                    }
+
+                                    <div class="mb-3">
+                                        @if (isDiscounted)
+                                        {
+                                            <span class="card-text text-danger fw-bold fs-5">@p.Price.ToString("N0") đ</span>
+                                            <span class="text-xxs text-muted text-decoration-line-through ms-1">@p.OriginalPrice.ToString("N0") đ</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="card-text text-primary fw-bold fs-5">@p.Price.ToString("N0") đ</span>
+                                        }
+                                    </div>
+                                </div>
+                                
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-outline-primary rounded-pill text-xs py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#detail-@p.Id" aria-expanded="false" aria-controls="detail-@p.Id">
+                                        Xem Chi Tiết
+                                    </button>
+                                    <button class="btn btn-primary rounded-pill text-xs py-2 fw-semibold text-white shadow-sm" type="button" onclick="addToCart(@p.Id)">
+                                        <i class="fa-solid fa-cart-plus me-1"></i>Thêm Vào Giỏ
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Expandable Inline Product Details Collapse -->
+                            <div class="collapse product-details-collapse mt-3" id="detail-@p.Id">
+                                <hr class="my-2 border-secondary border-opacity-10">
+                                <div class="p-3 bg-light rounded-3 text-xs text-dark border">
+                                    <div class="mb-1.5"><strong>Mã SKU:</strong> <code>@p.SKU</code></div>
+                                    <div class="mb-1.5"><strong>Hãng sản xuất:</strong> @p.Brand</div>
+                                    <div class="mb-2"><strong>Thông số kỹ thuật:</strong></div>
+                                    <div class="bg-white p-2 rounded text-xxs text-secondary border border-opacity-25" style="white-space: pre-line; max-height: 120px; overflow-y: auto; line-height: 1.5;">
+                                        @p.Specifications
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        var selectedCategory = '@currentCat';
+
+        function filterCategory(cat, btn) {
+            selectedCategory = cat;
+            
+            // Highlight active button
+            document.querySelectorAll('.cat-btn').forEach(b => {
+                b.className = "btn btn-sm text-start py-1.5 px-2.5 rounded border-0 fw-medium text-xs w-100 cat-btn btn-light text-dark bg-transparent hover-bg-light";
+            });
+            btn.className = "btn btn-sm text-start py-1.5 px-2.5 rounded border-0 fw-medium text-xs w-100 cat-btn btn-primary text-white";
+
+            // Update title
+            document.getElementById('currentCatTitle').innerText = cat === '' ? "Tất cả sản phẩm NovaTech" : "Thiết bị: " + cat;
+
+            filterProducts();
+        }
+
+        function filterBrandCheckboxes() {
+            const query = document.getElementById('brandSearchInput').value.toLowerCase().trim();
+            document.querySelectorAll('.brand-item-row').forEach(row => {
+                const brand = row.getAttribute('data-brand-name');
+                if (brand.includes(query)) {
+                    row.classList.remove('d-none');
+                } else {
+                    row.classList.add('d-none');
+                }
+            });
+        }
+
+        function filterProducts() {
+            const searchQuery = document.getElementById('liveSearchInput').value.toLowerCase().trim();
+            
+            // Get checked brands
+            const checkedBrands = [];
+            document.querySelectorAll('.brand-filter-checkbox:checked').forEach(cb => {
+                checkedBrands.push(cb.value);
+            });
+
+            // Get checked prices
+            const checkedPrices = [];
+            document.querySelectorAll('.price-filter-checkbox:checked').forEach(cb => {
+                checkedPrices.push(cb.value);
+            });
+
+            // Loop cards
+            let visibleCount = 0;
+            const cards = Array.from(document.querySelectorAll('.product-card-col'));
+
+            cards.forEach(card => {
+                const name = card.getAttribute('data-name');
+                const brand = card.getAttribute('data-brand');
+                const category = card.getAttribute('data-category');
+                const price = parseFloat(card.getAttribute('data-price'));
+
+                // 1. Category check
+                let matchCat = (selectedCategory === '' || category === selectedCategory);
+
+                // 2. Search check
+                let matchSearch = (searchQuery === '' || name.includes(searchQuery));
+
+                // 3. Brand check
+                let matchBrand = (checkedBrands.length === 0 || checkedBrands.includes(brand));
+
+                // 4. Price check
+                let matchPrice = true;
+                if (checkedPrices.length > 0) {
+                    matchPrice = false;
+                    for (let p of checkedPrices) {
+                        if (p === 'under-5' && price < 5000000) matchPrice = true;
+                        else if (p === '5-15' && price >= 5000000 && price <= 15000000) matchPrice = true;
+                        else if (p === '15-30' && price >= 15000000 && price <= 30000000) matchPrice = true;
+                        else if (p === 'over-30' && price > 30000000) matchPrice = true;
+                    }
+                }
+
+                if (matchCat && matchSearch && matchBrand && matchPrice) {
+                    card.style.display = 'block';
+                    card.style.opacity = '0';
+                    setTimeout(() => { card.style.opacity = '1'; card.style.transition = 'opacity 0.2s ease-in-out'; }, 50);
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            // 5. Sorting
+            const sortVal = document.getElementById('sortSelect').value;
+            const grid = document.getElementById('productGrid');
+            
+            if (sortVal !== 'default') {
+                cards.sort((a, b) => {
+                    const priceA = parseFloat(a.getAttribute('data-price'));
+                    const priceB = parseFloat(b.getAttribute('data-price'));
+                    const nameA = a.getAttribute('data-name');
+                    const nameB = b.getAttribute('data-name');
+
+                    if (sortVal === 'price-asc') return priceA - priceB;
+                    if (sortVal === 'price-desc') return priceB - priceA;
+                    if (sortVal === 'name-asc') return nameA.localeCompare(nameB);
+                    return 0;
+                }).forEach(c => grid.appendChild(c));
+            }
+
+            // Update count & empty state
+            document.getElementById('filterCount').innerText = visibleCount;
+            if (visibleCount === 0) {
+                document.getElementById('emptyState').classList.remove('d-none');
+            } else {
+                document.getElementById('emptyState').classList.add('d-none');
+            }
+        }
+
+        function resetAllFilters() {
+            document.getElementById('liveSearchInput').value = '';
+            document.getElementById('brandSearchInput').value = '';
+            document.querySelectorAll('.brand-filter-checkbox').forEach(cb => cb.checked = false);
+            document.querySelectorAll('.price-filter-checkbox').forEach(cb => cb.checked = false);
+            document.getElementById('sortSelect').value = 'default';
+            filterBrandCheckboxes();
+            filterCategory('', document.querySelector('.cat-btn'));
+        }
+
+        // AJAX Add to Cart
+        function addToCart(productId) {
+            fetch('@Url.Action("AddToCart", "Online")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'id=' + productId + '&qty=1'
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // Update header badge dynamically without reload
+                    const badge = document.querySelector('.navbar .badge');
+                    if (badge) {
+                        badge.innerText = data.cartCount;
+                    }
+                    
+                    // Show a toast notification
+                    showToast('Đã thêm sản phẩm vào giỏ hàng!', 'success');
+                }
+            });
+        }
+
+        function showToast(message, type = 'success') {
+            // Check if there is a custom toast show logic or use bootstrap toast
+            alert(message);
+        }
+
+        // Countdown Timer Logic
+        function updateCountdowns() {
+            document.querySelectorAll('.discount-countdown').forEach(el => {
+                const expiryStr = el.getAttribute('data-expiry');
+                if (!expiryStr) return;
+                const expiry = new Date(expiryStr);
+                const now = new Date();
+                const diff = expiry - now;
+                if (diff <= 0) {
+                    el.innerHTML = "<span class='badge bg-secondary text-xxs'>Hết Flash Sale</span>";
+                    return;
+                }
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                
+                let text = "";
+                if (days > 0) text += days + "d ";
+                text += String(hours).padStart(2, '0') + "h " + String(minutes).padStart(2, '0') + "m " + String(seconds).padStart(2, '0') + "s";
+                el.querySelector('.countdown-text').innerText = text;
+            });
+        }
+        setInterval(updateCountdowns, 1000);
+        updateCountdowns();
+    </script>
+}

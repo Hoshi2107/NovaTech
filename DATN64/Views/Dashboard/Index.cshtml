@@ -1,0 +1,197 @@
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Dashboard Tổng Quan";
+    ViewData["BreadcrumbActive"] = "Tổng quan";
+}
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card card-glass p-3 text-white">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-xs text-muted-custom text-uppercase">Doanh Thu Hoàn Thành</span>
+                <span class="badge bg-success bg-opacity-25 text-success rounded-pill px-2.5 py-1 text-xs"><i class="fa-solid fa-arrow-trend-up"></i> +12%</span>
+            </div>
+            <h3 class="fw-bold mb-1 text-cyan">@ViewBag.TotalRevenue.ToString("N0") đ</h3>
+            <span class="text-xxs text-muted">Hôm nay: 18,500,000 đ</span>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-glass p-3 text-white">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-xs text-muted-custom text-uppercase">Tổng số đơn hàng</span>
+                <span class="badge bg-info bg-opacity-25 text-info rounded-pill px-2.5 py-1 text-xs">Ổn định</span>
+            </div>
+            <h3 class="fw-bold mb-1">@ViewBag.TotalOrders đơn</h3>
+            <span class="text-xxs text-muted">Đơn chờ xử lý: @ViewBag.PendingOrders đơn</span>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-glass p-3 text-white">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-xs text-muted-custom text-uppercase">Sản phẩm quản lý</span>
+                <span class="badge bg-warning bg-opacity-25 text-warning rounded-pill px-2.5 py-1 text-xs">Cần kiểm kho</span>
+            </div>
+            <h3 class="fw-bold mb-1">@ViewBag.TotalProducts dòng</h3>
+            <span class="text-xxs text-muted">Sắp hết hàng: @(((List<DATN64.Models.MockDataService.Product>)ViewBag.LowStockProducts).Count) sản phẩm</span>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-glass p-3 text-white">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-xs text-muted-custom text-uppercase">Khách hàng thành viên</span>
+                <span class="badge bg-primary bg-opacity-25 text-primary rounded-pill px-2.5 py-1 text-xs"><i class="fa-solid fa-user-plus"></i> +3 mới</span>
+            </div>
+            <h3 class="fw-bold mb-1 text-neon">@ViewBag.TotalCustomers TV</h3>
+            <span class="text-xxs text-muted">Lượt mua trung bình: 1.5 lần</span>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Section -->
+<div class="row g-4 mb-4">
+    <div class="col-md-8">
+        <div class="card card-glass p-4 h-100">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-chart-area text-cyan me-2"></i>Biểu đồ Doanh Thu & Đơn Hàng (7 ngày qua)</h5>
+            <canvas id="revenueChart" style="max-height: 280px;"></canvas>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card card-glass p-4 h-100">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-triangle-exclamation text-warning me-2"></i>Cảnh báo Kho & Hệ thống</h5>
+            
+            <div class="d-flex flex-column gap-2.5">
+                @foreach (var p in (List<DATN64.Models.MockDataService.Product>)ViewBag.LowStockProducts)
+                {
+                    <div class="p-2.5 rounded-3 bg-danger bg-opacity-10 border border-danger border-opacity-25 d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-xs fw-bold text-danger d-block">Sắp hết hàng</span>
+                            <span class="text-xs text-light">@p.Name</span>
+                        </div>
+                        <span class="badge bg-danger">Còn @p.Stock chiếc</span>
+                    </div>
+                }
+                
+                @foreach (var n in (List<DATN64.Models.MockDataService.SystemNotification>)ViewBag.RecentNotifications)
+                {
+                    <div class="p-2.5 rounded-3 bg-secondary bg-opacity-10 border border-secondary border-opacity-25">
+                        <div class="d-flex justify-content-between text-xs mb-1">
+                            <strong class="text-info">@n.Title</strong>
+                            <span class="text-xxs text-muted">@n.Timestamp.ToString("HH:mm")</span>
+                        </div>
+                        <p class="text-xs text-muted-custom mb-0">@n.Message</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top lists tables -->
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card card-glass p-4">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-crown text-warning me-2"></i>Sản phẩm bán chạy nhất</h5>
+            <div class="table-responsive">
+                <table class="table table-dark table-hover mb-0 text-xs">
+                    <thead>
+                        <tr>
+                            <th>Hình</th>
+                            <th>Tên Sản Phẩm</th>
+                            <th>SKU</th>
+                            <th>Giá Bán</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in (List<DATN64.Models.MockDataService.Product>)ViewBag.TopProducts)
+                        {
+                            <tr>
+                                <td><img src="@p.Image" class="rounded-3" style="width: 32px; height: 32px; object-fit: cover;"></td>
+                                <td class="fw-bold">@p.Name</td>
+                                <td>@p.SKU</td>
+                                <td class="text-info fw-bold">@p.Price.ToString("N0") đ</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card card-glass p-4">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-users text-info me-2"></i>Khách hàng mua nhiều</h5>
+            <div class="table-responsive">
+                <table class="table table-dark table-hover mb-0 text-xs">
+                    <thead>
+                        <tr>
+                            <th>Tên Khách Hàng</th>
+                            <th>SĐT</th>
+                            <th>Tích Điểm</th>
+                            <th>Hạng Thành Viên</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var c in MockDataService.Instance.Customers)
+                        {
+                            <tr>
+                                <td class="fw-bold">@c.Name</td>
+                                <td>@c.Phone</td>
+                                <td>@c.Points điểm</td>
+                                <td><span class="badge bg-gradient-cyan text-dark rounded-pill">@c.MembershipRank</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const ctx = document.getElementById('revenueChart').getContext('2d');
+        const revenueChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'],
+                datasets: [{
+                    label: 'Doanh thu (triệu đ)',
+                    data: [12, 19, 15, 25, 22, 30, 45],
+                    borderColor: '#00f2fe',
+                    backgroundColor: 'rgba(0, 242, 254, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }, {
+                    label: 'Đơn hàng (chiếc)',
+                    data: [5, 12, 8, 15, 10, 18, 24],
+                    borderColor: '#4facfe',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#94a3b8'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#94a3b8' }
+                    }
+                }
+            }
+        });
+    </script>
+}

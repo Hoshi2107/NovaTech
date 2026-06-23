@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "dgSpecHash": "xFy2cR+aEO8=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Admin\\Downloads\\DATN64\\DATN64\\DATN64.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Admin\\.nuget\\packages\\microsoft.aspnetcore.session\\2.3.11\\microsoft.aspnetcore.session.2.3.11.nupkg.sha512"
+  ],
+  "logs": [
+    {
+      "code": "NU1510",
+      "level": "Warning",
+      "message": "PackageReference Microsoft.AspNetCore.Session will not be pruned. Consider removing this package from your dependencies, as it is likely unnecessary.",
+      "projectPath": "C:\\Users\\Admin\\Downloads\\DATN64\\DATN64\\DATN64.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\Users\\Admin\\Downloads\\DATN64\\DATN64\\DATN64.csproj",
+      "libraryId": "Microsoft.AspNetCore.Session",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    }
+  ]
+}
