@@ -1,19 +1,385 @@
-@model List<DATN64.Models.SanPham>
-@{ Layout = "~/Views/Shared/_Layout.cshtml"; ViewData["Title"] = "Qu?n l� s?n ph?m"; }
-<div class="container my-5">
-    <h2>Qu?n l� s?n ph?m</h2>
-    <table class="table">
-        <thead><tr><th>M� SP</th><th>T�n SP</th><th>Gi� B�n</th><th>T?n Kho</th><th>Tr?ng Th�i</th></tr></thead>
-        <tbody>
-            @foreach(var item in Model) {
-                <tr>
-                    <td>@item.MaSanPham</td>
-                    <td>@item.TenSanPham</td>
-                    <td>@item.GiaBan.ToString("N0") d</td>
-                    <td>@item.SoLuongTon</td>
-                    <td>@item.TrangThai</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Quản lý sản phẩm";
+}
+
+<div id="app" class="container-fluid animate-fade-in" v-cloak>
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-6">
+            <h2 class="fw-bold text-gradient mb-0"><i class="fa-solid fa-box-open me-2"></i>Quản lý sản phẩm</h2>
+        </div>
+        <div class="col-md-6 text-md-end mt-3 mt-md-0">
+            <button class="btn btn-primary rounded-pill px-4 shadow-sm" @@click="openModal('create')">
+                <i class="fa-solid fa-plus me-2"></i>Thêm sản phẩm
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 bg-glass">
+        <div class="card-body p-4">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label text-muted-custom text-xs fw-bold text-uppercase">Tìm kiếm</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent border-end-0"><i class="fa-solid fa-search text-muted"></i></span>
+                        <input type="text" class="form-control border-start-0 ps-0" v-model="filters.search" placeholder="Tên hoặc mã SP..." @@keyup.enter="fetchProducts">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label text-muted-custom text-xs fw-bold text-uppercase">Danh mục</label>
+                    <select class="form-select" v-model="filters.category" @@change="fetchProducts">
+                        <option value="">Tất cả</option>
+                        <option v-for="c in options.categories" :value="c.maDanhMuc">${c.tenDanhMuc}</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label text-muted-custom text-xs fw-bold text-uppercase">Thương hiệu</label>
+                    <select class="form-select" v-model="filters.brand" @@change="fetchProducts">
+                        <option value="">Tất cả</option>
+                        <option v-for="b in options.brands" :value="b.maThuongHieu">${b.tenThuongHieu}</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label text-muted-custom text-xs fw-bold text-uppercase">Trạng thái</label>
+                    <select class="form-select" v-model="filters.status" @@change="fetchProducts">
+                        <option value="">Tất cả</option>
+                        <option value="Đang bán">Đang bán</option>
+                        <option value="Ngừng kinh doanh">Ngừng kinh doanh</option>
+                        <option value="Hết hàng">Hết hàng</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-outline-primary w-100 rounded-3" @@click="fetchProducts">
+                        <i class="fa-solid fa-filter me-2"></i>Lọc Dữ Liệu
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-glass">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="px-4 py-3 text-muted-custom text-xs fw-bold text-uppercase">Mã SP</th>
+                        <th class="px-4 py-3 text-muted-custom text-xs fw-bold text-uppercase">Sản Phẩm</th>
+                        <th class="px-4 py-3 text-muted-custom text-xs fw-bold text-uppercase">Giá Bán</th>
+                        <th class="px-4 py-3 text-muted-custom text-xs fw-bold text-uppercase">Tồn Kho</th>
+                        <th class="px-4 py-3 text-muted-custom text-xs fw-bold text-uppercase">Trạng Thái</th>
+                        <th class="px-4 py-3 text-muted-custom text-xs fw-bold text-uppercase text-end">Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-if="loading">
+                        <td colspan="6" class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr v-else-if="products.length === 0">
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="fa-solid fa-box-open fs-1 mb-3 text-opacity-50"></i>
+                            <p class="mb-0">Không tìm thấy sản phẩm nào!</p>
+                        </td>
+                    </tr>
+                    <tr v-else v-for="item in products" :key="item.maSanPham" class="group-hover">
+                        <td class="px-4 fw-medium text-secondary">#${item.maSanPham}</td>
+                        <td class="px-4">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <img :src="item.hinhAnh || 'https://via.placeholder.com/40'" class="rounded-3 shadow-sm object-fit-cover" width="48" height="48" alt="Ảnh SP">
+                                </div>
+                                <div class="ms-3">
+                                    <h6 class="mb-0 fw-bold">${item.tenSanPham}</h6>
+                                    <small class="text-muted">${item.danhMucTen} &bull; ${item.thuongHieuTen}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 fw-bold text-success">${formatCurrency(item.giaBan)}</td>
+                        <td class="px-4">
+                            <span class="badge" :class="item.soLuongTon > 10 ? 'bg-info-subtle text-info' : 'bg-warning-subtle text-warning'">
+                                ${item.soLuongTon} cái
+                            </span>
+                        </td>
+                        <td class="px-4">
+                            <span class="badge rounded-pill" :class="{
+                                'bg-success': item.trangThai === 'Đang bán',
+                                'bg-danger': item.trangThai === 'Ngừng kinh doanh',
+                                'bg-secondary': item.trangThai === 'Hết hàng'
+                            }">${item.trangThai || 'Không rõ'}</span>
+                        </td>
+                        <td class="px-4 text-end">
+                            <div class="d-flex justify-content-end gap-2">
+                                <button class="btn btn-sm btn-light text-primary rounded-circle shadow-sm" @@click="openModal('edit', item)" title="Sửa">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button class="btn btn-sm btn-light text-danger rounded-circle shadow-sm" @@click="disableProduct(item.maSanPham)" title="Vô hiệu hóa" v-if="item.trangThai !== 'Ngừng kinh doanh'">
+                                    <i class="fa-solid fa-ban"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal Form -->
+    <div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow-lg">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold">${modalMode === 'create' ? 'Thêm Sản Phẩm Mới' : 'Cập Nhật Sản Phẩm'}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form @@submit.prevent="saveProduct">
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <label class="form-label fw-medium">Tên sản phẩm <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" v-model="currentProduct.tenSanPham" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-medium">Danh mục</label>
+                                <select class="form-select" v-model="currentProduct.maDanhMuc" required>
+                                    <option v-for="c in options.categories" :value="c.maDanhMuc">${c.tenDanhMuc}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-medium">Thương hiệu</label>
+                                <select class="form-select" v-model="currentProduct.maThuongHieu" required>
+                                    <option v-for="b in options.brands" :value="b.maThuongHieu">${b.tenThuongHieu}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-medium">Nhà cung cấp</label>
+                                <select class="form-select" v-model="currentProduct.maNCC" required>
+                                    <option v-for="s in options.suppliers" :value="s.maNCC">${s.tenNhaCungCap}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-medium">Giá nhập</label>
+                                <input type="number" class="form-control" v-model.number="currentProduct.giaNhap" required min="0">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-medium">Giá bán</label>
+                                <input type="number" class="form-control" v-model.number="currentProduct.giaBan" required min="0">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-medium">Số lượng tồn</label>
+                                <input type="number" class="form-control" v-model.number="currentProduct.soLuongTon" required min="0">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Trạng thái</label>
+                                <select class="form-select" v-model="currentProduct.trangThai">
+                                    <option value="Đang bán">Đang bán</option>
+                                    <option value="Ngừng kinh doanh">Ngừng kinh doanh</option>
+                                    <option value="Hết hàng">Hết hàng</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Tải Hình Ảnh (Lưu Server)</label>
+                                <input type="file" class="form-control" @@change="handleFileUpload" accept="image/*">
+                                <div class="mt-2 text-center" v-if="currentProduct.hinhAnh">
+                                    <img :src="currentProduct.hinhAnh" class="img-thumbnail shadow-sm object-fit-cover" width="120" height="120" />
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label fw-medium">Mô tả</label>
+                                <textarea class="form-control" v-model="currentProduct.moTa" rows="3"></textarea>
+                            </div>
+                        </div>
+                        <div class="text-end mt-4">
+                            <button type="button" class="btn btn-light rounded-pill px-4 me-2" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm" :disabled="saving">
+                                <span v-if="saving" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                ${modalMode === 'create' ? 'Tạo mới' : 'Lưu thay đổi'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        [v-cloak] { display: none; }
+        .text-gradient {
+            background: linear-gradient(45deg, #4e73df, #224abe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .bg-glass {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+        }
+        .group-hover:hover {
+            background-color: rgba(78, 115, 223, 0.05) !important;
+            transition: all 0.2s ease-in-out;
+        }
+    </style>
+
+    <script>
+        var app = new Vue({
+            el: '#app',
+            delimiters: ['${', '}'],
+            data: {
+                products: [],
+                loading: false,
+                saving: false,
+                filters: {
+                    search: '',
+                    category: '',
+                    brand: '',
+                    status: ''
+                },
+                options: {
+                    categories: [],
+                    brands: [],
+                    suppliers: []
+                },
+                modalMode: 'create', // 'create' or 'edit'
+                currentProduct: {},
+                modalInstance: null
+            },
+            mounted() {
+                const modalEl = document.getElementById('productModal');
+                document.body.appendChild(modalEl); // Fix stacking context dark screen
+                this.modalInstance = new bootstrap.Modal(modalEl);
+                this.fetchOptions();
+                this.fetchProducts();
+            },
+            methods: {
+                formatCurrency(val) {
+                    if (!val && val !== 0) return '0 ₫';
+                    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
+                },
+                async fetchOptions() {
+                    try {
+                        const res = await axios.get('/api/product/options');
+                        this.options = res.data;
+                    } catch (err) {
+                        console.error('Lỗi khi tải options:', err);
+                    }
+                },
+                async fetchProducts() {
+                    this.loading = true;
+                    try {
+                        const params = {};
+                        if (this.filters.search) params.search = this.filters.search;
+                        if (this.filters.category) params.category = this.filters.category;
+                        if (this.filters.brand) params.brand = this.filters.brand;
+                        if (this.filters.status) params.status = this.filters.status;
+
+                        const res = await axios.get('/api/product', { params });
+                        this.products = res.data;
+                    } catch (err) {
+                        console.error('Lỗi khi tải sản phẩm:', err);
+                        Swal.fire('Lỗi', 'Không thể tải danh sách sản phẩm!', 'error');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                async handleFileUpload(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    const formData = new FormData();
+                    formData.append('file', file);
+
+                    try {
+                        const res = await axios.post('/api/product/upload-image', formData, {
+                            headers: { 'Content-Type': 'multipart/form-data' }
+                        });
+                        this.currentProduct.hinhAnh = res.data.url;
+                        // Trigger Vue reactivity for currentProduct
+                        this.currentProduct = { ...this.currentProduct };
+                    } catch (err) {
+                        Swal.fire('Lỗi', 'Không thể tải ảnh lên!', 'error');
+                    }
+                },
+                openModal(mode, product = null) {
+                    this.modalMode = mode;
+                    if (mode === 'create') {
+                        this.currentProduct = {
+                            tenSanPham: '',
+                            maDanhMuc: this.options.categories.length > 0 ? this.options.categories[0].maDanhMuc : null,
+                            maThuongHieu: this.options.brands.length > 0 ? this.options.brands[0].maThuongHieu : null,
+                            maNCC: this.options.suppliers.length > 0 ? this.options.suppliers[0].maNCC : null,
+                            giaNhap: 0,
+                            giaBan: 0,
+                            soLuongTon: 0,
+                            trangThai: 'Đang bán',
+                            hinhAnh: '',
+                            moTa: ''
+                        };
+                    } else {
+                        // clone object
+                        this.currentProduct = { ...product };
+                    }
+                    this.modalInstance.show();
+                },
+                async saveProduct() {
+                    this.saving = true;
+                    try {
+                        if (this.modalMode === 'create') {
+                            await axios.post('/api/product', this.currentProduct);
+                        } else {
+                            await axios.put(`/api/product/${this.currentProduct.maSanPham}`, this.currentProduct);
+                        }
+
+                        this.modalInstance.hide();
+                        setTimeout(() => {
+                            if (this.modalMode === 'create') {
+                                Swal.fire('Thành công', 'Đã thêm sản phẩm mới!', 'success');
+                            } else {
+                                Swal.fire('Thành công', 'Đã cập nhật sản phẩm!', 'success');
+                            }
+                            this.fetchProducts();
+                        }, 300);
+                    } catch (err) {
+                        console.error('Lỗi khi lưu:', err);
+                        this.modalInstance.hide();
+                        setTimeout(() => {
+                            Swal.fire('Lỗi', 'Có lỗi xảy ra khi lưu sản phẩm.', 'error');
+                        }, 300);
+                    } finally {
+                        this.saving = false;
+                    }
+                },
+                async disableProduct(id) {
+                    const result = await Swal.fire({
+                        title: 'Bạn có chắc chắn?',
+                        text: "Sản phẩm sẽ bị chuyển sang trạng thái Ngừng kinh doanh!",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Vâng, vô hiệu hóa!',
+                        cancelButtonText: 'Hủy'
+                    });
+
+                    if (result.isConfirmed) {
+                        try {
+                            await axios.delete(`/api/product/${id}`);
+                            Swal.fire('Đã vô hiệu hóa!', 'Sản phẩm đã ngừng kinh doanh.', 'success');
+                            this.fetchProducts();
+                        } catch (err) {
+                            Swal.fire('Lỗi', 'Không thể vô hiệu hóa sản phẩm.', 'error');
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+}

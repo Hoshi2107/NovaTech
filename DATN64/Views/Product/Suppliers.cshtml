@@ -1,13 +1,235 @@
-@model List<DATN64.Models.NhaCungCap>
-@{ Layout = "~/Views/Shared/_Layout.cshtml"; ViewData["Title"] = "Qu?n l� NCC"; }
-<div class="container my-5">
-    <h2>Qu?n l� Nh� Cung C?p</h2>
-    <table class="table">
-        <thead><tr><th>M� NCC</th><th>T�n NCC</th><th>S? �i?n Tho?i</th></tr></thead>
-        <tbody>
-            @foreach(var item in Model) {
-                <tr><td>@item.MaNCC</td><td>@item.TenNCC</td><td>@item.SoDienThoai</td></tr>
-            }
-        </tbody>
-    </table>
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Quản lý nhà cung cấp";
+}
+
+<div id="app" class="container-fluid animate-fade-in" v-cloak>
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-6">
+            <h2 class="fw-bold text-gradient mb-0"><i class="fa-solid fa-truck-fast me-2"></i>Quản lý nhà cung cấp</h2>
+        </div>
+        <div class="col-md-6 text-md-end mt-3 mt-md-0">
+            <button class="btn btn-primary rounded-pill px-4 shadow-sm" @@click="openModal('create')">
+                <i class="fa-solid fa-plus me-2"></i>Thêm nhà cung cấp
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 bg-glass">
+        <div class="card-body p-4">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent border-end-0"><i class="fa-solid fa-search text-muted"></i></span>
+                        <input type="text" class="form-control border-start-0 ps-0" v-model="filters.search" placeholder="Tên NCC hoặc SĐT..." @@keyup.enter="fetchData">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent border-end-0"><i class="fa-solid fa-location-dot text-muted"></i></span>
+                        <input type="text" class="form-control border-start-0 ps-0" v-model="filters.address" placeholder="Lọc theo địa chỉ..." @@keyup.enter="fetchData">
+                    </div>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-outline-primary w-100 rounded-3" @@click="fetchData">
+                        <i class="fa-solid fa-filter me-2"></i>Tìm kiếm
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-glass">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="px-4 py-3 text-muted-custom text-xs fw-bold text-uppercase">Mã NCC</th>
+                        <th class="px-4 py-3 text-muted-custom text-xs fw-bold text-uppercase">Tên Nhà Cung Cấp</th>
+                        <th class="px-4 py-3 text-muted-custom text-xs fw-bold text-uppercase">SĐT</th>
+                        <th class="px-4 py-3 text-muted-custom text-xs fw-bold text-uppercase">Email</th>
+                        <th class="px-4 py-3 text-muted-custom text-xs fw-bold text-uppercase">Địa chỉ</th>
+                        <th class="px-4 py-3 text-muted-custom text-xs fw-bold text-uppercase text-end">Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-if="loading">
+                        <td colspan="6" class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status"></div>
+                        </td>
+                    </tr>
+                    <tr v-else-if="items.length === 0">
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="fa-solid fa-truck-fast fs-1 mb-3 text-opacity-50"></i>
+                            <p class="mb-0">Không tìm thấy dữ liệu!</p>
+                        </td>
+                    </tr>
+                    <tr v-else v-for="item in items" :key="item.maNCC" class="group-hover">
+                        <td class="px-4 fw-medium text-secondary">#${item.maNCC}</td>
+                        <td class="px-4 fw-bold">${item.tenNCC}</td>
+                        <td class="px-4">${item.soDienThoai || '--'}</td>
+                        <td class="px-4">${item.email || '--'}</td>
+                        <td class="px-4">${item.diaChi || '--'}</td>
+                        <td class="px-4 text-end">
+                            <div class="d-flex justify-content-end gap-2">
+                                <button class="btn btn-sm btn-light text-primary rounded-circle shadow-sm" @@click="openModal('edit', item)" title="Sửa">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button class="btn btn-sm btn-light text-danger rounded-circle shadow-sm" @@click="deleteItem(item.maNCC)" title="Xóa">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal Form -->
+    <div class="modal fade" id="dataModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow-lg">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold">${modalMode === 'create' ? 'Thêm Nhà Cung Cấp' : 'Cập Nhật Nhà Cung Cấp'}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form @@submit.prevent="saveItem">
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <label class="form-label fw-medium">Tên nhà cung cấp <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" v-model="currentItem.tenNCC" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Số điện thoại</label>
+                                <input type="text" class="form-control" v-model="currentItem.soDienThoai">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Email</label>
+                                <input type="email" class="form-control" v-model="currentItem.email">
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label fw-medium">Địa chỉ</label>
+                                <input type="text" class="form-control" v-model="currentItem.diaChi">
+                            </div>
+                        </div>
+                        <div class="text-end mt-4">
+                            <button type="button" class="btn btn-light rounded-pill px-4 me-2" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm" :disabled="saving">
+                                <span v-if="saving" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                ${modalMode === 'create' ? 'Tạo mới' : 'Lưu thay đổi'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        [v-cloak] { display: none; }
+        .text-gradient { background: linear-gradient(45deg, #4e73df, #224abe); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .bg-glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+        .group-hover:hover { background-color: rgba(78, 115, 223, 0.05) !important; transition: all 0.2s ease-in-out; }
+    </style>
+
+    <script>
+        var app = new Vue({
+            el: '#app',
+            delimiters: ['${', '}'],
+            data: {
+                items: [],
+                loading: false,
+                saving: false,
+                filters: {
+                    search: '',
+                    address: ''
+                },
+                modalMode: 'create',
+                currentItem: {},
+                modalInstance: null
+            },
+            mounted() {
+                const modalEl = document.getElementById('dataModal');
+                document.body.appendChild(modalEl);
+                this.modalInstance = new bootstrap.Modal(modalEl);
+                this.fetchData();
+            },
+            methods: {
+                async fetchData() {
+                    this.loading = true;
+                    try {
+                        const params = {};
+                        if (this.filters.search) params.search = this.filters.search;
+                        if (this.filters.address) params.address = this.filters.address;
+                        const res = await axios.get('/api/product/suppliers', { params });
+                        this.items = res.data;
+                    } catch (err) {
+                        Swal.fire('Lỗi', 'Không thể tải dữ liệu!', 'error');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                openModal(mode, item = null) {
+                    this.modalMode = mode;
+                    if (mode === 'create') {
+                        this.currentItem = { tenNCC: '', soDienThoai: '', email: '', diaChi: '' };
+                    } else {
+                        this.currentItem = { ...item };
+                    }
+                    this.modalInstance.show();
+                },
+                async saveItem() {
+                    this.saving = true;
+                    try {
+                        if (this.modalMode === 'create') {
+                            await axios.post('/api/product/suppliers', this.currentItem);
+                        } else {
+                            await axios.put(`/api/product/suppliers/${this.currentItem.maNCC}`, this.currentItem);
+                        }
+                        this.modalInstance.hide();
+                        setTimeout(() => {
+                            Swal.fire('Thành công', 'Lưu dữ liệu thành công!', 'success');
+                            this.fetchData();
+                        }, 300);
+                    } catch (err) {
+                        this.modalInstance.hide();
+                        setTimeout(() => { Swal.fire('Lỗi', 'Có lỗi xảy ra khi lưu!', 'error'); }, 300);
+                    } finally {
+                        this.saving = false;
+                    }
+                },
+                async deleteItem(id) {
+                    const result = await Swal.fire({
+                        title: 'Bạn có chắc chắn?',
+                        text: "Hành động xóa (vô hiệu hóa) không thể hoàn tác, có thể ảnh hưởng đến sản phẩm liên quan!",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Vâng, xóa luôn!',
+                        cancelButtonText: 'Hủy'
+                    });
+                    if (result.isConfirmed) {
+                        try {
+                            await axios.delete(`/api/product/suppliers/${id}`);
+                            Swal.fire('Đã xóa!', 'Nhà cung cấp đã bị vô hiệu hóa/xóa khỏi hệ thống.', 'success');
+                            this.fetchData();
+                        } catch (err) {
+                            Swal.fire('Lỗi', 'Không thể xóa nhà cung cấp này (có thể do đang có sản phẩm thuộc nhà cung cấp).', 'error');
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+}
