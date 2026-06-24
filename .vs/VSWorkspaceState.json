@@ -1,0 +1,15 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\DATN64",
+    "\\DATN64\\.github",
+    "\\DATN64\\bin",
+    "\\DATN64\\Controllers",
+    "\\DATN64\\Models",
+    "\\DATN64\\obj",
+    "\\DATN64\\Properties",
+    "\\DATN64\\Views"
+  ],
+  "SelectedNode": "\\DATN64\\Controllers\\AiController.cs",
+  "PreviewInSolutionExplorer": false
+}

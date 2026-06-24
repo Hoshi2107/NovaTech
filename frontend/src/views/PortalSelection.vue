@@ -1,0 +1,223 @@
+<template>
+  <div class="portal-body min-vh-100 w-100 d-flex align-items-center justify-content-center">
+    <div class="portal-container" v-if="user">
+      <div class="text-center mb-5">
+        <h1 class="fw-extrabold text-neon tracking-wide mb-2">
+          <i class="fa-solid fa-bolt-lightning animate-pulse"></i> NOVATECH HUB
+        </h1>
+        <p class="text-muted-custom">
+          Chào mừng <strong>{{ user.fullName }}</strong> ({{ user.roles.join(', ') }}). Vui lòng chọn ứng dụng cần mở.
+        </p>
+      </div>
+
+      <div class="row g-4 justify-content-center">
+        <!-- 1. Bán hàng Online -->
+        <div class="col-md-4">
+          <div class="portal-card">
+            <div>
+              <div class="icon-box bg-green-gradient">
+                <i class="fa-solid fa-store"></i>
+              </div>
+              <h4 class="portal-title">Website Bán Hàng</h4>
+              <p class="portal-desc">Cửa hàng công nghệ trực tuyến NovaTech. Xem danh mục sản phẩm công khai dành cho khách hàng.</p>
+            </div>
+            <router-link to="/store" class="btn btn-portal btn-success w-100 py-2.5">
+              Mở Cửa Hàng <i class="fa-solid fa-arrow-right ms-1"></i>
+            </router-link>
+          </div>
+        </div>
+
+        <!-- 2. Quầy bán hàng POS -->
+        <div class="col-md-4">
+          <div class="portal-card" :class="{ 'card-disabled': !canAccessPOS }">
+            <div>
+              <div class="icon-box bg-orange-gradient">
+                <i class="fa-solid fa-cash-register"></i>
+              </div>
+              <h4 class="portal-title">Bán Hàng POS</h4>
+              <p class="portal-desc">Giao diện bán hàng nhanh tại quầy dành cho Nhân viên Thu ngân / Bán hàng trực tiếp.</p>
+            </div>
+            <router-link to="/pos" class="btn btn-portal btn-warning w-100 py-2.5 text-white" :tabindex="canAccessPOS ? 0 : -1">
+              Mở POS Quầy <i class="fa-solid fa-arrow-right ms-1"></i>
+            </router-link>
+          </div>
+        </div>
+
+        <!-- 3. Bảng Quản trị ERP -->
+        <div class="col-md-4">
+          <div class="portal-card" :class="{ 'card-disabled': !canAccessERP }">
+            <div>
+              <div class="icon-box bg-cyan-gradient">
+                <i class="fa-solid fa-network-wired"></i>
+              </div>
+              <h4 class="portal-title">Quản Trị ERP</h4>
+              <p class="portal-desc">Bảng điều khiển ERP, quản lý kho bãi, nhân viên, phân quyền RBAC và đồng bộ TikTok Shop.</p>
+            </div>
+            <router-link to="/erp/dashboard" class="btn btn-portal btn-cyan w-100 py-2.5" :tabindex="canAccessERP ? 0 : -1">
+              Vào Quản Trị <i class="fa-solid fa-arrow-right ms-1"></i>
+            </router-link>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-center mt-5">
+        <button @click="logout" class="btn btn-outline-danger btn-sm rounded-pill px-4">
+          <i class="fa-solid fa-right-from-bracket me-2"></i>Đăng xuất hệ thống
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { authState, authService } from '../services/auth'
+
+export default {
+  name: 'PortalSelection',
+  setup() {
+    const router = useRouter()
+    const user = computed(() => authState.user)
+
+    const canAccessPOS = computed(() => {
+      if (!user.value) return false
+      const roles = user.value.roles
+      return roles.includes('Super Admin') || roles.includes('Quản lý cửa hàng') || roles.includes('Nhân viên bán hàng') || roles.includes('Nhân viên kho')
+    })
+
+    const canAccessERP = computed(() => {
+      if (!user.value) return false
+      const roles = user.value.roles
+      return roles.includes('Super Admin') || roles.includes('Quản lý cửa hàng') || roles.includes('Nhân viên bán hàng') || roles.includes('Nhân viên kho') || roles.includes('Kế toán') || roles.includes('Marketing')
+    })
+
+    const logout = async () => {
+      await authService.logout()
+      router.push('/login')
+    }
+
+    return {
+      user,
+      canAccessPOS,
+      canAccessERP,
+      logout
+    }
+  }
+}
+</script>
+
+<style scoped>
+.portal-body {
+  background: radial-gradient(circle at center, #f8fafc 0%, #e2e8f0 100%);
+}
+.portal-container {
+  max-width: 960px;
+  width: 100%;
+  padding: 2rem;
+}
+.portal-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 24px;
+  padding: 2rem;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: #0f172a;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+}
+.portal-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(135deg, rgba(2, 132, 199, 0.05) 0%, rgba(3, 105, 161, 0.05) 100%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 0;
+}
+.portal-card:hover:not(.card-disabled) {
+  transform: translateY(-8px);
+  border-color: rgba(2, 132, 199, 0.3);
+  box-shadow: 0 20px 40px rgba(2, 132, 199, 0.08);
+}
+.portal-card:hover::before {
+  opacity: 1;
+}
+.card-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+  filter: grayscale(100%);
+}
+.icon-box {
+  width: 80px;
+  height: 80px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  font-size: 2.2rem;
+  z-index: 1;
+  position: relative;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+.bg-cyan-gradient {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  color: #fff;
+}
+.bg-orange-gradient {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  color: #fff;
+}
+.bg-green-gradient {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #fff;
+}
+.portal-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  z-index: 1;
+  position: relative;
+  color: #0f172a;
+}
+.portal-desc {
+  font-size: 0.85rem;
+  color: #475569;
+  margin-bottom: 1.5rem;
+  z-index: 1;
+  position: relative;
+  line-height: 1.5;
+}
+.btn-portal {
+  z-index: 1;
+  position: relative;
+  border-radius: 30px;
+  font-weight: 600;
+  padding: 10px 24px;
+  transition: all 0.3s;
+}
+.btn-cyan {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  color: #fff;
+  border: none;
+}
+.btn-cyan:hover {
+  box-shadow: 0 8px 20px rgba(2, 132, 199, 0.3);
+  transform: scale(1.05);
+  color: #fff;
+}
+.text-neon {
+  background: linear-gradient(45deg, #0284c7, #0369a1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+</style>
