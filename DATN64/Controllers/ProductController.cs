@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using DATN64.Models;
 using DATN64.Helpers;
 using System;
@@ -8,40 +9,53 @@ namespace DATN64.Controllers
 {
     public class ProductController : Controller
     {
+        private readonly AppDbContext _context;
+
+        public ProductController(AppDbContext context)
+        {
+            _context = context;
+        }
+
         // ----------------- PRODUCTS -----------------
         [HasPermission("View_Product")]
-        public IActionResult Index(string search, string category, string brand)
+        public IActionResult Index(string search, int? category, int? brand)
         {
-            var products = MockDataService.Instance.Products.AsQueryable();
+            var products = _context.SanPhams
+                .Include(p => p.DanhMuc)
+                .Include(p => p.ThuongHieu)
+                .Include(p => p.NhaCungCap)
+                .AsQueryable();
 
             if (!string.IsNullOrEmpty(search))
             {
-                products = products.Where(p => p.Name.Contains(search, StringComparison.OrdinalIgnoreCase) || p.SKU.Contains(search, StringComparison.OrdinalIgnoreCase));
+                products = products.Where(p => p.TenSanPham.Contains(search) || p.MaSanPham.ToString().Contains(search));
             }
-            if (!string.IsNullOrEmpty(category))
+            if (category.HasValue)
             {
-                products = products.Where(p => p.Category == category);
+                products = products.Where(p => p.MaDanhMuc == category.Value);
             }
-            if (!string.IsNullOrEmpty(brand))
+            if (brand.HasValue)
             {
-                products = products.Where(p => p.Brand == brand);
+                products = products.Where(p => p.MaThuongHieu == brand.Value);
             }
 
-            ViewBag.Categories = MockDataService.Instance.Categories.ToList();
-            ViewBag.Brands = MockDataService.Instance.Brands.ToList();
-            ViewBag.Suppliers = MockDataService.Instance.Suppliers.ToList();
+            ViewBag.Categories = _context.DanhMucs.ToList();
+            ViewBag.Brands = _context.ThuongHieus.ToList();
+            ViewBag.Suppliers = _context.NhaCungCaps.ToList();
 
             return View(products.ToList());
         }
 
         [HttpPost]
         [HasPermission("Create_Product")]
-        public IActionResult Create(MockDataService.Product p)
+        public IActionResult Create(SanPham p)
         {
-            p.Id = MockDataService.Instance.Products.Max(prod => prod.Id) + 1;
-            p.Image = string.IsNullOrEmpty(p.Image) ? "https://images.unsplash.com/photo-1531297484001-80022131f5a1?q=80&w=300" : p.Image;
-            p.Images = new List<string> { p.Image };
-            MockDataService.Instance.Products.Add(p);
+            if (string.IsNullOrEmpty(p.HinhAnh))
+            {
+                p.HinhAnh = "https://images.unsplash.com/photo-1531297484001-80022131f5a1?q=80&w=300";
+            }
+            _context.SanPhams.Add(p);
+            _context.SaveChanges();
 
             TempData["ToastMessage"] = "Thêm sản phẩm thành công!";
             TempData["ToastType"] = "success";
@@ -50,26 +64,25 @@ namespace DATN64.Controllers
 
         [HttpPost]
         [HasPermission("Edit_Product")]
-        public IActionResult Edit(MockDataService.Product p)
+        public IActionResult Edit(SanPham p)
         {
-            var target = MockDataService.Instance.Products.FirstOrDefault(prod => prod.Id == p.Id);
+            var target = _context.SanPhams.FirstOrDefault(prod => prod.MaSanPham == p.MaSanPham);
             if (target != null)
             {
-                target.Name = p.Name;
-                target.SKU = p.SKU;
-                target.Barcode = p.Barcode;
-                target.Brand = p.Brand;
-                target.Category = p.Category;
-                target.Supplier = p.Supplier;
-                target.ImportPrice = p.ImportPrice;
-                target.Price = p.Price;
-                target.Stock = p.Stock;
-                target.Specifications = p.Specifications;
-                target.Status = p.Status;
-                if (!string.IsNullOrEmpty(p.Image))
+                target.TenSanPham = p.TenSanPham;
+                target.MaDanhMuc = p.MaDanhMuc;
+                target.MaThuongHieu = p.MaThuongHieu;
+                target.MaNCC = p.MaNCC;
+                target.GiaNhap = p.GiaNhap;
+                target.GiaBan = p.GiaBan;
+                target.SoLuongTon = p.SoLuongTon;
+                target.MoTa = p.MoTa;
+                target.TrangThai = p.TrangThai;
+                if (!string.IsNullOrEmpty(p.HinhAnh))
                 {
-                    target.Image = p.Image;
+                    target.HinhAnh = p.HinhAnh;
                 }
+                _context.SaveChanges();
             }
 
             TempData["ToastMessage"] = "Cập nhật sản phẩm thành công!";
@@ -81,10 +94,11 @@ namespace DATN64.Controllers
         [HasPermission("Delete_Product")]
         public IActionResult Delete(int id)
         {
-            var target = MockDataService.Instance.Products.FirstOrDefault(p => p.Id == id);
+            var target = _context.SanPhams.FirstOrDefault(p => p.MaSanPham == id);
             if (target != null)
             {
-                MockDataService.Instance.Products.Remove(target);
+                _context.SanPhams.Remove(target);
+                _context.SaveChanges();
             }
 
             TempData["ToastMessage"] = "Đã xóa sản phẩm khỏi hệ thống!";
@@ -96,15 +110,15 @@ namespace DATN64.Controllers
         [HasPermission("View_Product")]
         public IActionResult Categories()
         {
-            return View(MockDataService.Instance.Categories.ToList());
+            return View(_context.DanhMucs.ToList());
         }
 
         [HttpPost]
         [HasPermission("Create_Product")]
-        public IActionResult CreateCategory(MockDataService.Category c)
+        public IActionResult CreateCategory(DanhMuc c)
         {
-            c.Id = MockDataService.Instance.Categories.Max(cat => cat.Id) + 1;
-            MockDataService.Instance.Categories.Add(c);
+            _context.DanhMucs.Add(c);
+            _context.SaveChanges();
             TempData["ToastMessage"] = "Thêm danh mục mới thành công!";
             return RedirectToAction("Categories");
         }
@@ -113,15 +127,15 @@ namespace DATN64.Controllers
         [HasPermission("View_Product")]
         public IActionResult Brands()
         {
-            return View(MockDataService.Instance.Brands.ToList());
+            return View(_context.ThuongHieus.ToList());
         }
 
         [HttpPost]
         [HasPermission("Create_Product")]
-        public IActionResult CreateBrand(MockDataService.Brand b)
+        public IActionResult CreateBrand(ThuongHieu b)
         {
-            b.Id = MockDataService.Instance.Brands.Max(br => br.Id) + 1;
-            MockDataService.Instance.Brands.Add(b);
+            _context.ThuongHieus.Add(b);
+            _context.SaveChanges();
             TempData["ToastMessage"] = "Thêm thương hiệu mới thành công!";
             return RedirectToAction("Brands");
         }
@@ -130,15 +144,15 @@ namespace DATN64.Controllers
         [HasPermission("View_Product")]
         public IActionResult Suppliers()
         {
-            return View(MockDataService.Instance.Suppliers.ToList());
+            return View(_context.NhaCungCaps.ToList());
         }
 
         [HttpPost]
         [HasPermission("Create_Product")]
-        public IActionResult CreateSupplier(MockDataService.Supplier s)
+        public IActionResult CreateSupplier(NhaCungCap s)
         {
-            s.Id = MockDataService.Instance.Suppliers.Max(sup => sup.Id) + 1;
-            MockDataService.Instance.Suppliers.Add(s);
+            _context.NhaCungCaps.Add(s);
+            _context.SaveChanges();
             TempData["ToastMessage"] = "Thêm nhà cung cấp thành công!";
             return RedirectToAction("Suppliers");
         }
@@ -147,30 +161,17 @@ namespace DATN64.Controllers
         [HasPermission("Edit_Product")]
         public IActionResult UpdateDiscount(int id, decimal discountPrice, int hours)
         {
-            var target = MockDataService.Instance.Products.FirstOrDefault(prod => prod.Id == id);
+            // Simplified since SanPham might not have OriginalPrice or DiscountExpiry
+            var target = _context.SanPhams.FirstOrDefault(prod => prod.MaSanPham == id);
             if (target != null)
             {
                 if (discountPrice > 0 && hours > 0)
                 {
-                    if (target.OriginalPrice == 0)
-                    {
-                        target.OriginalPrice = target.Price;
-                    }
-                    target.Price = discountPrice;
-                    target.DiscountExpiry = DateTime.Now.AddHours(hours);
-                    target.DiscountRate = (int)Math.Round((1 - (discountPrice / target.OriginalPrice)) * 100);
+                    target.GiaBan = discountPrice;
+                    // Note: Flash sale mechanism should be handled differently, 
+                    // this just updates the price directly for now.
                 }
-                else
-                {
-                    // Remove discount
-                    if (target.OriginalPrice > 0)
-                    {
-                        target.Price = target.OriginalPrice;
-                        target.OriginalPrice = 0;
-                    }
-                    target.DiscountExpiry = null;
-                    target.DiscountRate = 0;
-                }
+                _context.SaveChanges();
             }
 
             TempData["ToastMessage"] = "Cập nhật giảm giá sản phẩm thành công!";

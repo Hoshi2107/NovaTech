@@ -8,10 +8,17 @@ namespace DATN64.Controllers
     [HasPermission("View_TikTok")]
     public class TikTokController : Controller
     {
+        private readonly AppDbContext _context;
+
+        public TikTokController(AppDbContext context)
+        {
+            _context = context;
+        }
+
         public IActionResult Index()
         {
-            var config = MockDataService.Instance.TikTokConfig;
-            ViewBag.SyncLogs = MockDataService.Instance.TikTokSyncLogs.OrderByDescending(l => l.Timestamp).ToList();
+            var config = _context.TikTokShopConfigs.FirstOrDefault() ?? new TikTokShopConfig();
+            ViewBag.SyncLogs = _context.TikTokSyncLogs.OrderByDescending(l => l.Timestamp).ToList();
             return View(config);
         }
 
@@ -19,18 +26,22 @@ namespace DATN64.Controllers
         [HasPermission("Sync_TikTok")]
         public IActionResult TriggerSync(string syncType)
         {
-            // Simulating Sync operation
-            var log = new MockDataService.TikTokSyncLog
+            var log = new TikTokSyncLog
             {
-                Id = MockDataService.Instance.TikTokSyncLogs.Max(l => l.Id) + 1,
                 Type = syncType,
                 Message = $"Đồng bộ thành công dữ liệu {syncType} với TikTok API cửa hàng.",
                 Status = "Thành công",
                 Timestamp = System.DateTime.Now
             };
 
-            MockDataService.Instance.TikTokSyncLogs.Add(log);
-            MockDataService.Instance.TikTokConfig.LastSyncTime = System.DateTime.Now;
+            var config = _context.TikTokShopConfigs.FirstOrDefault();
+            if (config != null)
+            {
+                config.LastSyncTime = System.DateTime.Now;
+            }
+
+            _context.TikTokSyncLogs.Add(log);
+            _context.SaveChanges();
 
             TempData["ToastMessage"] = $"Yêu cầu đồng bộ {syncType} hoàn tất!";
             TempData["ToastType"] = "success";

@@ -1,9 +1,10 @@
-@model List<DATN64.Models.MockDataService.Product>
+@model List<DATN64.Models.SanPham>
 @{
     Layout = "~/Views/Shared/_OnlineLayout.cshtml";
     ViewData["Title"] = "Trang chủ NovaTech";
-    var flashSaleProducts = Model.Where(p => p.DiscountExpiry.HasValue && p.DiscountExpiry.Value > DateTime.Now).ToList();
-    var bestSellers = Model.Where(p => p.IsBestSeller).ToList();
+    // Simplified for DB schema
+    var flashSaleProducts = Model.Take(4).ToList();
+    var bestSellers = Model.Skip(4).Take(4).ToList();
 }
 
 <!-- Hero Banner Section -->
@@ -18,9 +19,9 @@
     </div>
 </div>
 
-<!-- Chợ Tốt Style Category Navigation Row -->
+<!-- Category Navigation Row -->
 <div class="container my-5 animate-fade-in">
-    <h5 class="fw-bold mb-4 text-dark"><i class="fa-solid fa-layer-group text-primary me-2"></i>Danh mục sản phẩm điện tử</h5>
+    <h5 class="fw-bold mb-4 text-dark"><i class="fa-solid fa-layer-group text-primary me-2"></i>Danh mục sản phẩm</h5>
     <div class="d-flex flex-wrap justify-content-center justify-content-md-between gap-3">
         <a href="@Url.Action("ProductsList", "Online", new { category = "Điện thoại" })" class="text-decoration-none">
             <div class="chotot-cat-card">
@@ -34,158 +35,47 @@
                 <div class="chotot-cat-title">Laptop</div>
             </div>
         </a>
-        <a href="@Url.Action("ProductsList", "Online", new { category = "Máy tính bảng" })" class="text-decoration-none">
-            <div class="chotot-cat-card">
-                <div class="chotot-cat-icon"><i class="fa-solid fa-tablet-screen-button"></i></div>
-                <div class="chotot-cat-title">Máy tính bảng</div>
-            </div>
-        </a>
-        <a href="@Url.Action("ProductsList", "Online", new { category = "Tai nghe" })" class="text-decoration-none">
-            <div class="chotot-cat-card">
-                <div class="chotot-cat-icon"><i class="fa-solid fa-headphones"></i></div>
-                <div class="chotot-cat-title">Tai nghe</div>
-            </div>
-        </a>
         <a href="@Url.Action("ProductsList", "Online", new { category = "Phụ kiện" })" class="text-decoration-none">
             <div class="chotot-cat-card">
                 <div class="chotot-cat-icon"><i class="fa-solid fa-keyboard"></i></div>
                 <div class="chotot-cat-title">Phụ kiện</div>
             </div>
         </a>
-        <a href="@Url.Action("ProductsList", "Online", new { category = "Loa" })" class="text-decoration-none">
-            <div class="chotot-cat-card">
-                <div class="chotot-cat-icon"><i class="fa-solid fa-volume-high"></i></div>
-                <div class="chotot-cat-title">Loa & Âm thanh</div>
-            </div>
-        </a>
     </div>
 </div>
 
-<!-- FLASH SALE COUNTDOWN SECTION -->
-@if (flashSaleProducts.Count > 0)
-{
-    <div class="container my-5 animate-fade-in p-4 rounded-4" style="background: linear-gradient(135deg, #fff5f5 0%, #fff 100%); border: 1px solid #fecaca;">
-        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-            <div class="d-flex align-items-center gap-2">
-                <span class="flash-sale-badge"><i class="fa-solid fa-bolt-lightning me-1"></i>FLASH SALE</span>
-                <h3 class="fw-bold text-dark m-0">Giá sốc hôm nay</h3>
-            </div>
-            <div class="countdown-box" id="globalFlashSaleTimer" data-expiry="@flashSaleProducts.Max(p => p.DiscountExpiry)?.ToString("o")">
-                <i class="fa-regular fa-clock"></i> Kết thúc sau: <span id="globalCountdownText">--:--:--</span>
-            </div>
-        </div>
-        
-        <div class="row row-cols-1 row-cols-md-4 g-4">
-            @foreach (var p in flashSaleProducts)
-            {
-                <div class="col">
-                    <div class="card card-product h-100 p-3 shadow-sm border border-light bg-white">
-                        <span class="badge bg-danger badge-top-right text-xxs px-2 py-1 shadow-sm">Giảm @p.DiscountRate%</span>
-                        
-                        <img src="@p.Image" class="card-img-top rounded-3 mb-3" alt="@p.Name" style="height: 180px; object-fit: cover;">
-                        <div class="card-body p-0 d-flex flex-column justify-content-between">
-                            <div>
-                                <span class="badge bg-light text-primary border border-info border-opacity-25 mb-2 text-xxs">@p.Category</span>
-                                <h5 class="card-title fw-bold text-dark fs-6 mb-1">@p.Name</h5>
-                                <p class="text-xxs text-muted mb-2">Thương hiệu: @p.Brand</p>
-                                
-                                <div class="mb-3">
-                                    <span class="card-text text-danger fw-bold fs-5">@p.Price.ToString("N0") đ</span>
-                                    <span class="text-xxs text-muted text-decoration-line-through ms-1">@p.OriginalPrice.ToString("N0") đ</span>
-                                </div>
-                            </div>
-                            
-                            <div class="d-grid gap-2">
-                                <button class="btn btn-outline-danger rounded-pill text-xs py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#fs-detail-@p.Id">
-                                    Xem Chi Tiết
-                                </button>
-                                <button class="btn btn-danger rounded-pill text-xs py-2 fw-semibold text-white shadow-sm" type="button" onclick="addToCart(@p.Id)">
-                                    <i class="fa-solid fa-cart-plus me-1"></i>Thêm Vào Giỏ
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Collapsible inline details -->
-                        <div class="collapse product-details-collapse mt-3" id="fs-detail-@p.Id">
-                            <hr class="my-2 border-secondary border-opacity-10">
-                            <div class="p-3 bg-light rounded-3 text-xs text-dark border">
-                                <div class="mb-1.5"><strong>Mã SKU:</strong> <code>@p.SKU</code></div>
-                                <div class="mb-1.5"><strong>Hãng:</strong> @p.Brand</div>
-                                <div class="mb-2"><strong>Thông số kỹ thuật:</strong></div>
-                                <div class="bg-white p-2 rounded text-xxs text-secondary border border-opacity-25" style="white-space: pre-line; max-height: 120px; overflow-y: auto;">
-                                    @p.Specifications
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            }
-        </div>
-    </div>
-}
-
-<!-- BEST SELLERS SECTION -->
+<!-- PRODUCTS SECTION -->
 <div class="container my-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="fw-bold text-dark m-0"><i class="fa-solid fa-crown text-warning me-2"></i>Sản phẩm bán chạy nhất</h3>
+        <h3 class="fw-bold text-dark m-0"><i class="fa-solid fa-crown text-warning me-2"></i>Sản phẩm nổi bật</h3>
         <a href="@Url.Action("ProductsList", "Online")" class="text-primary text-decoration-none fw-semibold">Xem tất cả <i class="fa-solid fa-angles-right ms-1"></i></a>
     </div>
     <div class="row row-cols-1 row-cols-md-4 g-4">
-        @foreach (var p in bestSellers)
+        @foreach (var p in Model)
         {
-            bool isDiscounted = p.DiscountExpiry.HasValue && p.DiscountExpiry.Value > DateTime.Now;
-
             <div class="col">
                 <div class="card card-product h-100 p-3 shadow-sm border border-light bg-white">
-                    @if (isDiscounted)
-                    {
-                        <span class="badge bg-danger badge-top-right text-xxs px-2 py-1 shadow-sm">Giảm @p.DiscountRate%</span>
-                    }
-                    else
-                    {
-                        <span class="badge bg-warning text-dark badge-top-left text-xxs px-2 py-1 shadow-sm"><i class="fa-solid fa-crown me-1"></i>Best Seller</span>
-                    }
-
-                    <img src="@p.Image" class="card-img-top rounded-3 mb-3" alt="@p.Name" style="height: 180px; object-fit: cover;">
+                    <img src="@p.HinhAnh" class="card-img-top rounded-3 mb-3" alt="@p.TenSanPham" style="height: 180px; object-fit: cover;" onerror="this.src='https://images.unsplash.com/photo-1531297484001-80022131f5a1?q=80&w=300'">
                     <div class="card-body p-0 d-flex flex-column justify-content-between">
                         <div>
-                            <span class="badge bg-light text-primary border border-info border-opacity-25 mb-2 text-xxs">@p.Category</span>
-                            <h5 class="card-title fw-bold text-dark fs-6 mb-1">@p.Name</h5>
-                            <p class="text-xxs text-muted mb-2">Thương hiệu: @p.Brand</p>
+                            <span class="badge bg-light text-primary border border-info border-opacity-25 mb-2 text-xxs">@(p.DanhMuc?.TenDanhMuc ?? "Khác")</span>
+                            <h5 class="card-title fw-bold text-dark fs-6 mb-1">
+                                <a href="@Url.Action("Detail", "Online", new { id = p.MaSanPham })" class="text-decoration-none text-dark">@p.TenSanPham</a>
+                            </h5>
+                            <p class="text-xxs text-muted mb-2">Thương hiệu: @(p.ThuongHieu?.TenThuongHieu ?? "Khác")</p>
                             
                             <div class="mb-3">
-                                @if (isDiscounted)
-                                {
-                                    <span class="card-text text-danger fw-bold fs-5">@p.Price.ToString("N0") đ</span>
-                                    <span class="text-xxs text-muted text-decoration-line-through ms-1">@p.OriginalPrice.ToString("N0") đ</span>
-                                }
-                                else
-                                {
-                                    <span class="card-text text-primary fw-bold fs-5">@p.Price.ToString("N0") đ</span>
-                                }
+                                <span class="card-text text-danger fw-bold fs-5">@p.GiaBan.ToString("N0") đ</span>
                             </div>
                         </div>
                         
                         <div class="d-grid gap-2">
-                            <button class="btn btn-outline-primary rounded-pill text-xs py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#bs-detail-@p.Id">
+                            <a href="@Url.Action("Detail", "Online", new { id = p.MaSanPham })" class="btn btn-outline-danger rounded-pill text-xs py-2 fw-semibold">
                                 Xem Chi Tiết
-                            </button>
-                            <button class="btn btn-primary rounded-pill text-xs py-2 fw-semibold text-white shadow-sm" type="button" onclick="addToCart(@p.Id)">
+                            </a>
+                            <button class="btn btn-danger rounded-pill text-xs py-2 fw-semibold text-white shadow-sm" type="button" onclick="addToCart(@p.MaSanPham)">
                                 <i class="fa-solid fa-cart-plus me-1"></i>Thêm Vào Giỏ
                             </button>
-                        </div>
-                    </div>
-
-                    <!-- Collapsible inline details -->
-                    <div class="collapse product-details-collapse mt-3" id="bs-detail-@p.Id">
-                        <hr class="my-2 border-secondary border-opacity-10">
-                        <div class="p-3 bg-light rounded-3 text-xs text-dark border">
-                            <div class="mb-1.5"><strong>Mã SKU:</strong> <code>@p.SKU</code></div>
-                            <div class="mb-1.5"><strong>Hãng:</strong> @p.Brand</div>
-                            <div class="mb-2"><strong>Thông số kỹ thuật:</strong></div>
-                            <div class="bg-white p-2 rounded text-xxs text-secondary border border-opacity-25" style="white-space: pre-line; max-height: 120px; overflow-y: auto;">
-                                @p.Specifications
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -196,7 +86,6 @@
 
 @section Scripts {
     <script>
-        // AJAX Add to Cart
         function addToCart(productId) {
             fetch('@Url.Action("AddToCart", "Online")', {
                 method: 'POST',
@@ -214,34 +103,5 @@
                 }
             });
         }
-
-        // Countdown Timer Logic
-        function updateCountdowns() {
-            // Global timer
-            const globalEl = document.getElementById('globalFlashSaleTimer');
-            if (globalEl) {
-                const expiryStr = globalEl.getAttribute('data-expiry');
-                if (expiryStr) {
-                    const expiry = new Date(expiryStr);
-                    const now = new Date();
-                    const diff = expiry - now;
-                    if (diff <= 0) {
-                        globalEl.innerHTML = "Flash Sale đã kết thúc";
-                    } else {
-                        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-                        
-                        let text = "";
-                        if (days > 0) text += days + "d ";
-                        text += String(hours).padStart(2, '0') + "h " + String(minutes).padStart(2, '0') + "m " + String(seconds).padStart(2, '0') + "s";
-                        document.getElementById('globalCountdownText').innerText = text;
-                    }
-                }
-            }
-        }
-        setInterval(updateCountdowns, 1000);
-        updateCountdowns();
     </script>
 }

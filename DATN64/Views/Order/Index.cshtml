@@ -1,65 +1,20 @@
-@model List<DATN64.Models.MockDataService.Order>
-@{
-    Layout = "~/Views/Shared/_AdminLayout.cshtml";
-    ViewData["Title"] = "Quản lý đơn hàng";
-    ViewData["BreadcrumbActive"] = "Đơn hàng";
-}
-
-<div class="card card-glass p-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="fw-bold m-0"><i class="fa-solid fa-file-invoice-dollar text-cyan me-2"></i>Danh sách đơn hàng đa kênh</h4>
-    </div>
-
-    <div class="table-responsive">
-        <table class="table table-dark table-hover mb-0 text-sm align-middle">
-            <thead>
+@model List<DATN64.Models.DonHang>
+@{ Layout = "~/Views/Shared/_Layout.cshtml"; ViewData["Title"] = "Quản lý đơn hàng"; }
+<div class="container my-5">
+    <h2>Quản lý đơn hàng</h2>
+    <table class="table">
+        <thead><tr><th>Mã ĐH</th><th>Khách Hàng</th><th>Ngày Đặt</th><th>Tổng Tiền</th><th>Trạng Thái</th><th>Thao tác</th></tr></thead>
+        <tbody>
+            @foreach(var item in Model) {
                 <tr>
-                    <th>Mã Đơn</th>
-                    <th>Khách hàng</th>
-                    <th>Ngày đặt</th>
-                    <th>Kênh bán</th>
-                    <th>Tổng thanh toán</th>
-                    <th>Trạng thái</th>
-                    <th class="text-end">Hành động</th>
+                    <td>@item.MaDonHang</td>
+                    <td>@(item.KhachHang?.HoTen ?? "Khách vãng lai")</td>
+                    <td>@item.NgayDat?.ToString("dd/MM/yyyy")</td>
+                    <td>@item.TongTien?.ToString("N0") đ</td>
+                    <td>@item.TrangThai</td>
+                    <td><a href="@Url.Action("Detail", "Order", new { id = item.MaDonHang })" class="btn btn-sm btn-primary">Chi tiết</a></td>
                 </tr>
-            </thead>
-            <tbody>
-                @foreach (var o in Model)
-                {
-                    var statusBadge = "bg-secondary";
-                    if (o.Status == "Đơn mới") statusBadge = "bg-info text-dark";
-                    else if (o.Status == "Đã xác nhận") statusBadge = "bg-primary";
-                    else if (o.Status == "Đang đóng gói") statusBadge = "bg-warning text-dark";
-                    else if (o.Status == "Đang giao") statusBadge = "bg-info";
-                    else if (o.Status == "Hoàn thành") statusBadge = "bg-success";
-                    else if (o.Status == "Đã hủy") statusBadge = "bg-danger";
-
-                    var channelIcon = "fa-store text-warning";
-                    if (o.Channel == "Website") channelIcon = "fa-globe text-primary";
-                    else if (o.Channel == "TikTok Shop") channelIcon = "fa-brands fa-tiktok text-light";
-
-                    <tr>
-                        <td><code>@o.OrderCode</code></td>
-                        <td>
-                            <div class="fw-bold">@o.CustomerName</div>
-                            <span class="text-xs text-muted">@o.CustomerPhone</span>
-                        </td>
-                        <td>@o.OrderDate.ToString("HH:mm - dd/MM/yyyy")</td>
-                        <td>
-                            <i class="fa-solid @channelIcon me-1.5"></i>@o.Channel
-                        </td>
-                        <td class="text-info fw-bold">@o.Total.ToString("N0") đ</td>
-                        <td>
-                            <span class="badge @statusBadge px-2.5 py-1">@o.Status</span>
-                        </td>
-                        <td class="text-end">
-                            <a href="@Url.Action("Detail", "Order", new { id = o.Id })" class="btn btn-sm btn-outline-info rounded-pill px-3 text-xs">
-                                <i class="fa-solid fa-circle-info me-1"></i>Chi tiết
-                            </a>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
+            }
+        </tbody>
+    </table>
 </div>

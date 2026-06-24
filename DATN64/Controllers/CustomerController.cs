@@ -2,28 +2,34 @@ using Microsoft.AspNetCore.Mvc;
 using DATN64.Models;
 using DATN64.Helpers;
 using System.Linq;
+using System;
 
 namespace DATN64.Controllers
 {
     [HasPermission("View_Customer")]
     public class CustomerController : Controller
     {
+        private readonly AppDbContext _context;
+
+        public CustomerController(AppDbContext context)
+        {
+            _context = context;
+        }
+
         public IActionResult Index()
         {
-            var customers = MockDataService.Instance.Customers.ToList();
+            var customers = _context.KhachHangs.ToList();
             return View(customers);
         }
 
         [HttpPost]
         [HasPermission("Create_Customer")]
-        public IActionResult Create(MockDataService.Customer c)
+        public IActionResult Create(KhachHang c)
         {
-            c.Id = MockDataService.Instance.Customers.Max(cust => cust.Id) + 1;
-            c.CreatedDate = System.DateTime.Now;
-            c.Points = 10;
-            c.MembershipRank = "Đồng";
+            c.DiemTichLuy = 10;
             
-            MockDataService.Instance.Customers.Add(c);
+            _context.KhachHangs.Add(c);
+            _context.SaveChanges();
             TempData["ToastMessage"] = "Thêm khách hàng thành công!";
             return RedirectToAction("Index");
         }

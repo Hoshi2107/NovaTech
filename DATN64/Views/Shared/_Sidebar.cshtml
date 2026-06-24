@@ -5,7 +5,7 @@
     var session = HttpContextAccessor.HttpContext?.Session;
     var userRolesStr = session?.GetString("UserRoles") ?? "";
     var roles = userRolesStr.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
-    var hasDash = roles.Contains("Super Admin") || roles.Contains("Quản lý cửa hàng") || roles.Contains("Nhân viên bán hàng") || roles.Contains("Nhân viên kho") || roles.Contains("Kế toán") || roles.Contains("Marketing");
+    var hasDash = roles.Contains("Super Admin") || roles.Contains("Admin") || roles.Contains("Quản lý cửa hàng") || roles.Contains("Nhân viên bán hàng") || roles.Contains("Nhân viên kho") || roles.Contains("Kế toán") || roles.Contains("Marketing");
 }
 <aside class="sidebar position-fixed top-0 bottom-0 start-0 z-3 p-3">
     <div class="sidebar-brand d-flex align-items-center gap-2 mb-4 pb-3 border-bottom border-secondary border-opacity-25">

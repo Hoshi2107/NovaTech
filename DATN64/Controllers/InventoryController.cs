@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using DATN64.Models;
 using DATN64.Helpers;
 using System;
@@ -9,16 +10,23 @@ namespace DATN64.Controllers
     [HasPermission("View_Inventory")]
     public class InventoryController : Controller
     {
+        private readonly AppDbContext _context;
+
+        public InventoryController(AppDbContext context)
+        {
+            _context = context;
+        }
+
         public IActionResult Index()
         {
-            var products = MockDataService.Instance.Products.ToList();
-            ViewBag.Transactions = MockDataService.Instance.InventoryTransactions.OrderByDescending(t => t.Date).ToList();
+            var products = _context.SanPhams.ToList();
+            ViewBag.Transactions = _context.InventoryTransactions.OrderByDescending(t => t.Date).ToList();
             return View(products);
         }
 
         public IActionResult Import()
         {
-            ViewBag.Products = MockDataService.Instance.Products.ToList();
+            ViewBag.Products = _context.SanPhams.ToList();
             return View();
         }
 
@@ -26,25 +34,26 @@ namespace DATN64.Controllers
         [HasPermission("Import_Inventory")]
         public IActionResult SubmitImport(int productId, int quantity, string note)
         {
-            var prod = MockDataService.Instance.Products.FirstOrDefault(p => p.Id == productId);
+            var prod = _context.SanPhams.FirstOrDefault(p => p.MaSanPham == productId);
             if (prod != null && quantity > 0)
             {
-                prod.Stock += quantity;
+                prod.SoLuongTon += quantity;
                 
-                var tx = new MockDataService.InventoryTransaction
+                var tx = new InventoryTransaction
                 {
-                    Id = MockDataService.Instance.InventoryTransactions.Max(t => t.Id) + 1,
-                    Code = "GRN-" + (MockDataService.Instance.InventoryTransactions.Count + 1).ToString("D3"),
+                    Code = "GRN-" + (_context.InventoryTransactions.Count() + 1).ToString("D3"),
                     Type = "Nhập kho",
-                    ProductSKU = prod.SKU,
-                    ProductName = prod.Name,
+                    ProductSKU = prod.MaSanPham.ToString(),
+                    ProductName = prod.TenSanPham,
                     QuantityChange = quantity,
                     Creator = HttpContext.Session.GetString("UserName") ?? "Thủ kho",
                     Date = DateTime.Now,
                     Note = note ?? "Nhập bổ sung tồn kho"
                 };
 
-                MockDataService.Instance.InventoryTransactions.Add(tx);
+                _context.InventoryTransactions.Add(tx);
+                _context.SaveChanges();
+
                 TempData["ToastMessage"] = $"Nhập kho thành công {quantity} sản phẩm!";
                 TempData["ToastType"] = "success";
             }
@@ -53,7 +62,7 @@ namespace DATN64.Controllers
 
         public IActionResult Export()
         {
-            ViewBag.Products = MockDataService.Instance.Products.ToList();
+            ViewBag.Products = _context.SanPhams.ToList();
             return View();
         }
 
@@ -61,32 +70,33 @@ namespace DATN64.Controllers
         [HasPermission("Export_Inventory")]
         public IActionResult SubmitExport(int productId, int quantity, string note)
         {
-            var prod = MockDataService.Instance.Products.FirstOrDefault(p => p.Id == productId);
+            var prod = _context.SanPhams.FirstOrDefault(p => p.MaSanPham == productId);
             if (prod != null && quantity > 0)
             {
-                if (prod.Stock < quantity)
+                if (prod.SoLuongTon < quantity)
                 {
                     TempData["ToastMessage"] = "Số lượng xuất kho vượt quá tồn kho khả dụng!";
                     TempData["ToastType"] = "error";
                     return RedirectToAction("Index");
                 }
 
-                prod.Stock -= quantity;
+                prod.SoLuongTon -= quantity;
 
-                var tx = new MockDataService.InventoryTransaction
+                var tx = new InventoryTransaction
                 {
-                    Id = MockDataService.Instance.InventoryTransactions.Max(t => t.Id) + 1,
-                    Code = "GIN-" + (MockDataService.Instance.InventoryTransactions.Count + 1).ToString("D3"),
+                    Code = "GIN-" + (_context.InventoryTransactions.Count() + 1).ToString("D3"),
                     Type = "Xuất kho",
-                    ProductSKU = prod.SKU,
-                    ProductName = prod.Name,
+                    ProductSKU = prod.MaSanPham.ToString(),
+                    ProductName = prod.TenSanPham,
                     QuantityChange = -quantity,
                     Creator = HttpContext.Session.GetString("UserName") ?? "Thủ kho",
                     Date = DateTime.Now,
                     Note = note ?? "Xuất hủy hoặc chuyển hàng"
                 };
 
-                MockDataService.Instance.InventoryTransactions.Add(tx);
+                _context.InventoryTransactions.Add(tx);
+                _context.SaveChanges();
+
                 TempData["ToastMessage"] = $"Đã xuất kho {quantity} sản phẩm!";
                 TempData["ToastType"] = "success";
             }

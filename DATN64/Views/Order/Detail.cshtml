@@ -1,138 +1,16 @@
-@model DATN64.Models.MockDataService.Order
-@{
-    Layout = "~/Views/Shared/_AdminLayout.cshtml";
-    ViewData["Title"] = "Chi tiết đơn hàng: " + Model.OrderCode;
-    ViewData["BreadcrumbActive"] = "Chi tiết đơn hàng";
-
-    // Workflow status sequence
-    var steps = new List<string> { "Đơn mới", "Đã xác nhận", "Đang đóng gói", "Đang giao", "Hoàn thành" };
-}
-
-<div class="row g-4">
-    <!-- Workflow Progression bar -->
-    <div class="col-12">
-        <div class="card card-glass p-3 mb-2">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <span class="text-sm">Trình tự xử lý đơn hàng:</span>
-                <div class="d-flex gap-2">
-                    @foreach (var s in steps)
-                    {
-                        var btnClass = "btn-outline-secondary";
-                        if (Model.Status == s) btnClass = "btn-info text-dark fw-bold";
-                        <span class="btn btn-sm @btnClass disabled py-1 rounded-pill text-xs">@s</span>
-                        if (s != "Hoàn thành")
-                        {
-                            <span class="align-self-center text-muted text-xs"><i class="fa-solid fa-chevron-right"></i></span>
-                        }
-                    }
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Left Details Column -->
-    <div class="col-md-8">
-        <div class="card card-glass p-4 mb-4">
-            <h5 class="fw-bold mb-3 text-cyan">Danh sách sản phẩm mua</h5>
-            <div class="table-responsive">
-                <table class="table table-dark table-borderless text-sm align-middle">
-                    <thead>
-                        <tr class="border-bottom border-secondary border-opacity-25">
-                            <th>Sản phẩm</th>
-                            <th>Mã SKU</th>
-                            <th>Giá Bán</th>
-                            <th>Số Lượng</th>
-                            <th class="text-end">Tổng tiền</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in Model.Items)
-                        {
-                            <tr>
-                                <td>
-                                    <div class="d-flex align-items-center gap-3">
-                                        <img src="@item.Image" class="rounded-3" style="width: 40px; height: 40px; object-fit: cover;">
-                                        <span class="fw-bold">@item.ProductName</span>
-                                    </div>
-                                </td>
-                                <td><code>@item.SKU</code></td>
-                                <td>@item.Price.ToString("N0") đ</td>
-                                <td>x @item.Quantity</td>
-                                <td class="text-end text-info fw-bold">@item.Total.ToString("N0") đ</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-
-            <hr class="border-secondary my-4">
-            <div class="d-flex justify-content-end">
-                <div style="width: 300px;">
-                    <div class="d-flex justify-content-between mb-2 text-xs">
-                        <span class="text-muted-custom">Tạm tính:</span>
-                        <span>@Model.SubTotal.ToString("N0") đ</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2 text-xs">
-                        <span class="text-muted-custom">Chiết khấu / Giảm giá:</span>
-                        <span>- @Model.Discount.ToString("N0") đ</span>
-                    </div>
-                    <div class="d-flex justify-content-between text-sm fw-bold">
-                        <span>Tổng tiền thanh toán:</span>
-                        <span class="text-info">@Model.Total.ToString("N0") đ</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Right Operations Column -->
-    <div class="col-md-4">
-        <div class="card card-glass p-4 mb-4">
-            <h5 class="fw-bold mb-3 text-cyan">Thông tin giao nhận</h5>
-            <table class="table table-dark table-borderless text-xs mb-0">
-                <tr><td class="text-muted w-35">Người nhận:</td><td class="fw-bold">@Model.CustomerName</td></tr>
-                <tr><td class="text-muted">Điện thoại:</td><td>@Model.CustomerPhone</td></tr>
-                <tr><td class="text-muted">Địa chỉ nhận:</td><td>@Model.CustomerAddress</td></tr>
-                <tr><td class="text-muted">Kênh mua:</td><td>@Model.Channel</td></tr>
-                <tr><td class="text-muted">Thanh toán:</td><td>@Model.PaymentMethod</td></tr>
-                <tr><td class="text-muted">Ghi chú:</td><td>@Model.Note</td></tr>
-            </table>
-        </div>
-
-        @if (AuthHelper.HasPermission(Context, "Approve_Order"))
-        {
-            <div class="card card-glass p-4">
-                <h5 class="fw-bold mb-3 text-cyan">Cập nhật trạng thái đơn</h5>
-                <form method="post" action="@Url.Action("UpdateStatus", "Order")" class="d-grid gap-2">
-                    <input type="hidden" name="orderId" value="@Model.Id" />
-                    
-                    @if (Model.Status == "Đơn mới")
-                    {
-                        <button type="submit" name="status" value="Đã xác nhận" class="btn btn-primary rounded-pill py-2.5 text-xs">Xác nhận đơn hàng</button>
-                    }
-                    else if (Model.Status == "Đã xác nhận")
-                    {
-                        <button type="submit" name="status" value="Đang đóng gói" class="btn btn-warning text-dark fw-bold rounded-pill py-2.5 text-xs">Bắt đầu đóng gói</button>
-                    }
-                    else if (Model.Status == "Đang đóng gói")
-                    {
-                        <button type="submit" name="status" value="Đang giao" class="btn btn-info rounded-pill py-2.5 text-xs">Giao cho shipper</button>
-                    }
-                    else if (Model.Status == "Đang giao")
-                    {
-                        <button type="submit" name="status" value="Hoàn thành" class="btn btn-success rounded-pill py-2.5 text-xs">Xác nhận hoàn thành</button>
-                    }
-
-                    @if (Model.Status != "Hoàn thành" && Model.Status != "Đã hủy")
-                    {
-                        <button type="submit" name="status" value="Đã hủy" class="btn btn-outline-danger rounded-pill py-2 text-xs" onclick="return confirm('Bạn thực sự muốn hủy đơn này?');">Hủy đơn hàng</button>
-                    }
-                    else
-                    {
-                        <div class="alert alert-secondary text-center text-xs py-2 mb-0">Đơn hàng đã đóng khóa.</div>
-                    }
-                </form>
-            </div>
+@model DATN64.Models.DonHang
+@{ Layout = "~/Views/Shared/_Layout.cshtml"; ViewData["Title"] = "Chi tiết đơn hàng"; }
+<div class="container my-5">
+    <h2>Chi tiết đơn hàng #@Model.MaDonHang</h2>
+    <p>Khách hàng: @(Model.KhachHang?.HoTen ?? "Không rõ")</p>
+    <p>Trạng thái: @Model.TrangThai</p>
+    <p>Tổng tiền: @Model.TongTien?.ToString("N0") đ</p>
+    <h4>Danh sách sản phẩm</h4>
+    <ul>
+        @if(Model.ChiTietDonHangs != null) {
+            foreach(var c in Model.ChiTietDonHangs) {
+                <li>@(c.SanPham?.TenSanPham ?? "SP") - SL: @c.SoLuong - Đơn giá: @c.DonGia.ToString("N0") đ</li>
+            }
         }
-    </div>
+    </ul>
 </div>

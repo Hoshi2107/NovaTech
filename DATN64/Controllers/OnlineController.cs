@@ -5,11 +5,19 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 
 namespace DATN64.Controllers
 {
     public class OnlineController : Controller
     {
+        private readonly AppDbContext _context;
+
+        public OnlineController(AppDbContext context)
+        {
+            _context = context;
+        }
+
         public class CartItem
         {
             public int ProductId { get; set; }
@@ -24,19 +32,36 @@ namespace DATN64.Controllers
 
         public IActionResult Index()
         {
-            var products = MockDataService.Instance.Products.Where(p => p.Status == "Đang bán").ToList();
+            var products = _context.SanPhams
+                .Include(p => p.DanhMuc)
+                .Include(p => p.ThuongHieu)
+                .Where(p => p.TrangThai == "Đang bán")
+                .ToList();
             return View(products);
         }
 
-        public IActionResult ProductsList()
+        public IActionResult ProductsList(string category)
         {
-            var products = MockDataService.Instance.Products.Where(p => p.Status == "Đang bán").ToList();
-            return View(products);
+            var query = _context.SanPhams
+                .Include(p => p.DanhMuc)
+                .Include(p => p.ThuongHieu)
+                .Where(p => p.TrangThai == "Đang bán");
+
+            if (!string.IsNullOrEmpty(category))
+            {
+                query = query.Where(p => p.DanhMuc != null && p.DanhMuc.TenDanhMuc == category);
+            }
+
+            return View(query.ToList());
         }
 
         public IActionResult Detail(int id)
         {
-            var p = MockDataService.Instance.Products.FirstOrDefault(prod => prod.Id == id);
+            var p = _context.SanPhams
+                .Include(p => p.DanhMuc)
+                .Include(p => p.ThuongHieu)
+                .FirstOrDefault(prod => prod.MaSanPham == id);
+                
             if (p == null) return NotFound();
             return View(p);
         }
@@ -57,32 +82,30 @@ namespace DATN64.Controllers
         public IActionResult Cart()
         {
             var cart = GetCartFromSession();
-            ViewBag.Vouchers = MockDataService.Instance.Vouchers.Where(v => v.Status == "Đang diễn ra" && v.EndDate > DateTime.Now).ToList();
+            ViewBag.Vouchers = _context.Vouchers.Where(v => v.NgayKetThuc > DateTime.Now).ToList();
             return View(cart);
         }
 
         [HttpPost]
         public IActionResult AddToCart(int id, int qty = 1)
         {
-            var p = MockDataService.Instance.Products.FirstOrDefault(prod => prod.Id == id);
+            var p = _context.SanPhams.FirstOrDefault(prod => prod.MaSanPham == id);
             if (p == null) return NotFound();
 
             var cart = GetCartFromSession();
             var item = cart.FirstOrDefault(i => i.ProductId == id);
 
-            bool isDiscounted = p.DiscountExpiry.HasValue && p.DiscountExpiry.Value > DateTime.Now;
-
             if (item == null)
             {
                 cart.Add(new CartItem
                 {
-                    ProductId = p.Id,
-                    Name = p.Name,
-                    Image = p.Image,
-                    Price = p.Price,
-                    OriginalPrice = isDiscounted ? p.OriginalPrice : p.Price,
+                    ProductId = p.MaSanPham,
+                    Name = p.TenSanPham,
+                    Image = p.HinhAnh ?? "",
+                    Price = p.GiaBan,
+                    OriginalPrice = p.GiaBan,
                     Quantity = qty,
-                    IsDiscounted = isDiscounted
+                    IsDiscounted = false
                 });
             }
             else
@@ -91,7 +114,6 @@ namespace DATN64.Controllers
             }
 
             SaveCartToSession(cart);
-
             return Json(new { success = true, cartCount = cart.Sum(i => i.Quantity) });
         }
 
@@ -128,11 +150,10 @@ namespace DATN64.Controllers
         [HttpPost]
         public IActionResult ApplyVoucher(string code, decimal currentSubtotal)
         {
-            var voucher = MockDataService.Instance.Vouchers.FirstOrDefault(v => 
-                v.Code.Equals(code, StringComparison.OrdinalIgnoreCase) && 
-                v.Status == "Đang diễn ra" && 
-                v.EndDate > DateTime.Now && 
-                v.StartDate <= DateTime.Now);
+            var voucher = _context.Vouchers.FirstOrDefault(v => 
+                v.MaCode != null && v.MaCode.Equals(code, StringComparison.OrdinalIgnoreCase) && 
+                (v.NgayKetThuc == null || v.NgayKetThuc > DateTime.Now) && 
+                (v.NgayBatDau == null || v.NgayBatDau <= DateTime.Now));
 
             if (voucher == null)
             {
@@ -142,48 +163,15 @@ namespace DATN64.Controllers
             var cart = GetCartFromSession();
             decimal subtotal = cart.Sum(i => i.Total);
 
-            if (subtotal < voucher.MinOrderValue)
-            {
-                return Json(new { success = false, message = $"Đơn hàng tối thiểu phải đạt {voucher.MinOrderValue.ToString("N0")} đ để dùng mã này!" });
-            }
+            decimal eligibleSubtotal = subtotal;
 
-            // Rule: "mã giảm thì sẽ không áp dụng cho sản phẩm đang được giảm giá"
-            // Filter products in cart that are not discounted (regular priced)
-            decimal eligibleSubtotal = 0;
-            foreach (var item in cart)
-            {
-                var prod = MockDataService.Instance.Products.FirstOrDefault(p => p.Id == item.ProductId);
-                bool isCurrentlyDiscounted = prod != null && prod.DiscountExpiry.HasValue && prod.DiscountExpiry.Value > DateTime.Now;
-                
-                if (!isCurrentlyDiscounted)
-                {
-                    eligibleSubtotal += item.Total;
-                }
-            }
-
-            if (eligibleSubtotal == 0)
-            {
-                return Json(new { 
-                    success = true, 
-                    discount = 0, 
-                    message = "Mã hợp lệ, nhưng số tiền giảm là 0 đ vì tất cả sản phẩm trong giỏ hàng đều đang được giảm giá Flash Sale!" 
-                });
-            }
-
-            decimal discount = 0;
-            if (voucher.Type == "Giảm %")
-            {
-                discount = eligibleSubtotal * (voucher.Value / 100);
-            }
-            else if (voucher.Type == "Giảm tiền")
-            {
-                discount = Math.Min(voucher.Value, eligibleSubtotal);
-            }
+            decimal discount = voucher.GiaTri ?? 0;
+            discount = Math.Min(discount, eligibleSubtotal);
 
             return Json(new { 
                 success = true, 
                 discount = discount, 
-                message = $"Áp dụng mã thành công! Đã giảm giá trên các sản phẩm không khuyến mãi (Tổng tiền xét giảm: {eligibleSubtotal.ToString("N0")} đ)" 
+                message = $"Áp dụng mã thành công! Đã giảm {discount.ToString("N0")} đ" 
             });
         }
 
@@ -198,46 +186,82 @@ namespace DATN64.Controllers
                 return RedirectToAction("Cart");
             }
 
-            // Create Order
-            var order = new MockDataService.Order
+            var customer = _context.KhachHangs.FirstOrDefault(k => k.SoDienThoai == customerPhone);
+            if (customer == null)
             {
-                Id = MockDataService.Instance.Orders.Max(o => o.Id) + 1,
-                OrderCode = "ORD-WEB-" + new Random().Next(1000, 9999),
-                CustomerName = customerName,
-                CustomerPhone = customerPhone,
-                CustomerAddress = customerAddress,
-                OrderDate = DateTime.Now,
-                Status = "Đơn mới",
-                Channel = "Website",
-                PaymentMethod = paymentMethod,
-                Discount = discountVal,
-                Items = cart.Select(i => new MockDataService.OrderItem
+                customer = new KhachHang
                 {
-                    ProductId = i.ProductId,
-                    ProductName = i.Name,
-                    Image = i.Image,
-                    Quantity = i.Quantity,
-                    Price = i.Price
-                }).ToList()
+                    HoTen = customerName,
+                    SoDienThoai = customerPhone,
+                    DiaChi = customerAddress,
+                    DiemTichLuy = 0
+                };
+                _context.KhachHangs.Add(customer);
+                _context.SaveChanges();
+            }
+
+            decimal subtotal = cart.Sum(i => i.Total);
+            decimal total = Math.Max(0, subtotal - discountVal);
+
+            var order = new DonHang
+            {
+                MaKhachHang = customer.MaKhachHang,
+                NgayDat = DateTime.Now,
+                TongTien = total,
+                TrangThai = "Đơn mới",
+                PhuongThucThanhToan = paymentMethod,
+                GhiChu = $"Địa chỉ giao hàng: {customerAddress}. Voucher sử dụng: {voucherCode}. Giảm giá: {discountVal:N0}đ"
             };
 
-            MockDataService.Instance.Orders.Add(order);
+            _context.DonHangs.Add(order);
+            _context.SaveChanges();
 
-            // Add Notification
-            MockDataService.Instance.Notifications.Add(new MockDataService.SystemNotification
+            foreach (var item in cart)
             {
-                Id = MockDataService.Instance.Notifications.Max(n => n.Id) + 1,
+                var detail = new ChiTietDonHang
+                {
+                    MaDonHang = order.MaDonHang,
+                    MaSanPham = item.ProductId,
+                    SoLuong = item.Quantity,
+                    DonGia = item.Price
+                };
+                _context.ChiTietDonHangs.Add(detail);
+            }
+
+            if (!string.IsNullOrEmpty(voucherCode))
+            {
+                var voucher = _context.Vouchers.FirstOrDefault(v => v.MaCode == voucherCode);
+                if (voucher != null)
+                {
+                    var orderVoucher = new DonHang_Voucher
+                    {
+                        MaDonHang = order.MaDonHang,
+                        MaVoucher = voucher.MaVoucher
+                    };
+                    _context.DonHang_Vouchers.Add(orderVoucher);
+                    
+                    if (voucher.SoLuong.HasValue && voucher.SoLuong.Value > 0)
+                    {
+                        voucher.SoLuong--;
+                    }
+                }
+            }
+
+            var notification = new SystemNotification
+            {
                 Title = "Đơn hàng Website mới",
-                Message = $"Khách hàng {customerName} vừa đặt đơn hàng {order.OrderCode} giá trị {order.Total.ToString("N0")} đ.",
+                Message = $"Khách hàng {customerName} vừa đặt đơn hàng #{order.MaDonHang} trị giá {total.ToString("N0")} đ.",
                 Type = "Đơn mới",
                 Timestamp = DateTime.Now,
                 IsRead = false
-            });
+            };
+            _context.SystemNotifications.Add(notification);
 
-            // Clear Cart
+            _context.SaveChanges();
+
             HttpContext.Session.Remove("Cart");
 
-            TempData["ToastMessage"] = $"Đặt hàng thành công! Mã đơn hàng của bạn: {order.OrderCode}";
+            TempData["ToastMessage"] = $"Đặt hàng thành công! Mã đơn hàng của bạn: #{order.MaDonHang}";
             TempData["ToastType"] = "success";
 
             return RedirectToAction("Index");

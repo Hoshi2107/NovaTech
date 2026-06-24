@@ -2,7 +2,7 @@
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
     ViewData["Title"] = "Xuất kho sản phẩm";
     ViewData["BreadcrumbActive"] = "Xuất kho";
-    var products = ViewBag.Products as List<DATN64.Models.MockDataService.Product> ?? new();
+    var products = ViewBag.Products as List<DATN64.Models.SanPham> ?? new();
 }
 
 <div class="row justify-content-center">
@@ -15,7 +15,7 @@
                     <select name="productId" class="form-select bg-dark border-secondary border-opacity-50 text-white" required>
                         @foreach (var p in products)
                         {
-                            <option value="@p.Id">@p.Name (SKU: @p.SKU) - Tồn hiện tại: @p.Stock</option>
+                            <option value="@p.MaSanPham">@p.TenSanPham (Mã: @p.MaSanPham) - Tồn hiện tại: @p.SoLuongTon</option>
                         }
                     </select>
                 </div>
@@ -35,3 +35,5 @@
         </div>
     </div>
 </div>
+
+

@@ -136,20 +136,20 @@
 
     <script>
         function fillDemo(email) {
-            document.getElementsByName('email')[0].value = email;
-            document.getElementById('passwordInput').value = '123';
+            document.getElementsByName('email')[0].GiaTri = email;
+            document.getElementById('passwordInput').GiaTri = '123';
         }
 
         // Toggle password visibility
         document.getElementById('togglePasswordBtn').addEventListener('click', function() {
             const pwdInput = document.getElementById('passwordInput');
             const icon = this.querySelector('i');
-            if (pwdInput.type === 'password') {
-                pwdInput.type = 'text';
+            if (pwdInput.Loai === 'password') {
+                pwdInput.Loai = 'text';
                 icon.classList.remove('fa-eye');
                 icon.classList.add('fa-eye-slash');
             } else {
-                pwdInput.type = 'password';
+                pwdInput.Loai = 'password';
                 icon.classList.remove('fa-eye-slash');
                 icon.classList.add('fa-eye');
             }
@@ -157,3 +157,4 @@
     </script>
 </body>
 </html>
+

@@ -3,7 +3,7 @@
     Layout = "~/Views/Shared/_OnlineLayout.cshtml";
     ViewData["Title"] = "Giỏ hàng & Thanh toán";
     decimal subtotal = Model.Sum(i => i.Total);
-    var vouchers = ViewBag.Vouchers as List<DATN64.Models.MockDataService.Voucher> ?? new();
+    var vouchers = ViewBag.Vouchers as List<DATN64.Models.Voucher> ?? new();
 }
 
 <div class="container my-5 animate-fade-in">
@@ -126,8 +126,8 @@
                                 <div class="d-flex flex-wrap gap-2 mt-1.5">
                                     @foreach (var v in vouchers)
                                     {
-                                        <span class="badge bg-light text-primary border border-info border-opacity-25 cursor-pointer text-xxs py-1.5 px-2" onclick="useVoucherCode('@v.Code')" title="@v.Type: Giảm @v.Value.ToString("N0")@((v.Type == "Giảm %" ? "%" : "đ")) (Đơn từ @v.MinOrderValue.ToString("N0")đ)">
-                                            @v.Code
+                                        <span class="badge bg-light text-primary border border-info border-opacity-25 cursor-pointer text-xxs py-1.5 px-2" onclick="useVoucherCode('@v.MaCode')" title="Giảm @(v.GiaTri?.ToString("N0")) đ">
+                                            @v.MaCode
                                         </span>
                                     }
                                 </div>

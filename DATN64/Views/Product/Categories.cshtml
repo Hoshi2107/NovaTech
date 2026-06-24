@@ -1,54 +1,13 @@
-@model List<DATN64.Models.MockDataService.Category>
-@{
-    Layout = "~/Views/Shared/_AdminLayout.cshtml";
-    ViewData["Title"] = "Quản lý danh mục";
-    ViewData["BreadcrumbActive"] = "Danh mục";
-}
-
-<div class="row g-4">
-    <div class="col-md-4">
-        <div class="card card-glass p-4">
-            <h5 class="fw-bold mb-4 text-cyan">Tạo danh mục mới</h5>
-            <form method="post" action="@Url.Action("CreateCategory", "Product")">
-                <div class="mb-3">
-                    <label class="form-label text-xs">Tên danh mục</label>
-                    <input type="text" name="Name" class="form-control bg-dark border-secondary border-opacity-50 text-white" required placeholder="Ví dụ: Máy tính bảng">
-                </div>
-                <div class="mb-4">
-                    <label class="form-label text-xs">Mô tả ngắn</label>
-                    <textarea name="Description" rows="3" class="form-control bg-dark border-secondary border-opacity-50 text-white" placeholder="Mô tả thông tin chi tiết danh mục..."></textarea>
-                </div>
-                <button type="submit" class="btn btn-info rounded-pill px-4 w-100 fw-bold">Tạo danh mục</button>
-            </form>
-        </div>
-    </div>
-
-    <div class="col-md-8">
-        <div class="card card-glass p-4">
-            <h5 class="fw-bold mb-4 text-cyan">Danh sách danh mục</h5>
-            <div class="table-responsive">
-                <table class="table table-dark table-hover mb-0 text-sm">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Tên danh mục</th>
-                            <th>Mô tả</th>
-                            <th>Số sản phẩm</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var c in Model)
-                        {
-                            <tr>
-                                <td>@c.Id</td>
-                                <td class="fw-bold text-white">@c.Name</td>
-                                <td>@c.Description</td>
-                                <td><span class="badge bg-secondary">@c.ProductCount sản phẩm</span></td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+@model List<DATN64.Models.DanhMuc>
+@{ Layout = "~/Views/Shared/_Layout.cshtml"; ViewData["Title"] = "Qu?n l� danh m?c"; }
+<div class="container my-5">
+    <h2>Qu?n l� danh m?c</h2>
+    <table class="table">
+        <thead><tr><th>M� DM</th><th>T�n DM</th><th>M� T?</th></tr></thead>
+        <tbody>
+            @foreach(var item in Model) {
+                <tr><td>@item.MaDanhMuc</td><td>@item.TenDanhMuc</td><td>@item.MoTa</td></tr>
+            }
+        </tbody>
+    </table>
 </div>

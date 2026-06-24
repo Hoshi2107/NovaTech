@@ -39,8 +39,8 @@ namespace DATN64.Helpers
             var rolesString = session.GetString("UserRoles") ?? "";
             var roles = rolesString.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
 
-            // Super Admin bypass
-            if (roles.Contains("Super Admin"))
+            // Super Admin & Admin bypass
+            if (roles.Contains("Super Admin") || roles.Contains("Admin"))
             {
                 return;
             }
@@ -67,7 +67,7 @@ namespace DATN64.Helpers
             var rolesString = session.GetString("UserRoles") ?? "";
             var roles = rolesString.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
             
-            if (roles.Contains("Super Admin")) return true;
+            if (roles.Contains("Super Admin") || roles.Contains("Admin")) return true;
 
             var permissionsString = session.GetString("UserPermissions") ?? "";
             var permissions = permissionsString.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();

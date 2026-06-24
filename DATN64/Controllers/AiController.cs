@@ -6,9 +6,16 @@ namespace DATN64.Controllers
 {
     public class AiController : Controller
     {
+        private readonly AppDbContext _context;
+
+        public AiController(AppDbContext context)
+        {
+            _context = context;
+        }
+
         public IActionResult Index()
         {
-            var history = MockDataService.Instance.ChatHistory.ToList();
+            var history = _context.ChatMessages.ToList();
             return View(history);
         }
 
@@ -18,7 +25,7 @@ namespace DATN64.Controllers
             if (string.IsNullOrEmpty(question)) return RedirectToAction("Index");
 
             // Add user message
-            MockDataService.Instance.ChatHistory.Add(new MockDataService.ChatMessage
+            _context.ChatMessages.Add(new ChatMessage
             {
                 Sender = "User",
                 Message = question,
@@ -26,25 +33,24 @@ namespace DATN64.Controllers
             });
 
             // Simulate AI smart response
-            string reply = "Tôi đã tiếp nhận câu hỏi của bạn. Hệ thống ERP NovaTech đang hiển thị doanh thu tháng này là " + 
-                MockDataService.Instance.Orders.Where(o => o.Status == "Hoàn thành").Sum(o => o.Total).ToString("N0") + 
-                " đ và có " + MockDataService.Instance.Products.Count(p => p.Stock <= 3) + " sản phẩm sắp hết hàng cần bạn xử lý.";
+            string reply = "Tôi đã tiếp nhận câu hỏi của bạn. Hệ thống ERP NovaTech đang ghi nhận tổng doanh thu là " + 
+                _context.DonHangs.Where(o => o.TrangThai == "Hoàn thành").Sum(o => o.TongTien ?? 0).ToString("N0") + 
+                " đ và có " + _context.SanPhams.Count(p => p.SoLuongTon <= 3) + " sản phẩm sắp hết hàng.";
             
             if (question.Contains("kho", System.StringComparison.OrdinalIgnoreCase))
             {
-                reply = "Báo cáo kho hiện có: " + string.Join(", ", MockDataService.Instance.Products.Select(p => $"{p.Name} (Tồn: {p.Stock})"));
-            }
-            else if (question.Contains("khuyến mãi", System.StringComparison.OrdinalIgnoreCase))
-            {
-                reply = "Mã voucher hoạt động tốt nhất hiện nay là: NOVATECH10 (Giảm 10% đơn từ 500k).";
+                var sp = _context.SanPhams.Select(p => $"{p.TenSanPham} (Tồn: {p.SoLuongTon})").Take(5).ToList();
+                reply = "Báo cáo kho hiện có (Top 5): " + string.Join(", ", sp);
             }
 
-            MockDataService.Instance.ChatHistory.Add(new MockDataService.ChatMessage
+            _context.ChatMessages.Add(new ChatMessage
             {
                 Sender = "AI",
                 Message = reply,
                 Timestamp = System.DateTime.Now.AddSeconds(1)
             });
+
+            _context.SaveChanges();
 
             return RedirectToAction("Index");
         }

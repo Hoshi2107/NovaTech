@@ -1,11 +1,21 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using DATN64.Models;
 using System.Linq;
+using System.Collections.Generic;
+using System;
 
 namespace DATN64.Controllers
 {
     public class POSController : Controller
     {
+        private readonly AppDbContext _context;
+
+        public POSController(AppDbContext context)
+        {
+            _context = context;
+        }
+
         public IActionResult Index()
         {
             var userEmail = HttpContext.Session.GetString("UserEmail");
@@ -14,13 +24,13 @@ namespace DATN64.Controllers
             var rolesString = HttpContext.Session.GetString("UserRoles") ?? "";
             var roles = rolesString.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
 
-            if (!roles.Contains("Super Admin") && !roles.Contains("Quản lý cửa hàng") && !roles.Contains("Nhân viên bán hàng"))
+            if (!roles.Contains("Super Admin") && !roles.Contains("Admin") && !roles.Contains("Quản lý cửa hàng") && !roles.Contains("Nhân viên bán hàng"))
             {
                 return RedirectToAction("Selection", "Portal");
             }
 
-            var products = MockDataService.Instance.Products.Where(p => p.Status == "Đang bán").ToList();
-            var customers = MockDataService.Instance.Customers.ToList();
+            var products = _context.SanPhams.Where(p => p.TrangThai == "Đang bán").ToList();
+            var customers = _context.KhachHangs.ToList();
             
             ViewBag.Customers = customers;
             ViewBag.SellerName = HttpContext.Session.GetString("UserName") ?? "Nhân viên";
@@ -38,53 +48,68 @@ namespace DATN64.Controllers
                 return RedirectToAction("Index");
             }
 
-            var newOrder = new MockDataService.Order
+            // Find or create customer
+            var customer = _context.KhachHangs.FirstOrDefault(c => c.SoDienThoai == customerPhone);
+            if (customer == null && !string.IsNullOrEmpty(customerPhone))
             {
-                Id = MockDataService.Instance.Orders.Max(o => o.Id) + 1,
-                OrderCode = "ORD-POS" + (MockDataService.Instance.Orders.Count + 1).ToString("D3"),
-                CustomerName = string.IsNullOrEmpty(customerName) ? "Khách Hàng Vãng Lai" : customerName,
-                CustomerPhone = customerPhone ?? "",
-                CustomerAddress = "Bán tại quầy",
-                OrderDate = System.DateTime.Now,
-                Status = "Hoàn thành",
-                Channel = "Cửa hàng",
-                PaymentMethod = paymentMethod,
-                Items = new List<MockDataService.OrderItem>()
+                customer = new KhachHang 
+                { 
+                    HoTen = string.IsNullOrEmpty(customerName) ? "Khách Hàng Vãng Lai" : customerName,
+                    SoDienThoai = customerPhone,
+                    DiemTichLuy = 0
+                };
+                _context.KhachHangs.Add(customer);
+                _context.SaveChanges();
+            }
+
+            var newOrder = new DonHang
+            {
+                MaKhachHang = customer?.MaKhachHang,
+                NgayDat = DateTime.Now,
+                TrangThai = "Hoàn thành",
+                TongTien = 0, // Will calculate below
+                GhiChu = "Đơn mua tại quầy POS",
+                PhuongThucThanhToan = paymentMethod,
+                ChiTietDonHangs = new List<ChiTietDonHang>()
             };
+
+            decimal total = 0;
 
             for (int i = 0; i < productIds.Count; i++)
             {
-                var prod = MockDataService.Instance.Products.FirstOrDefault(p => p.Id == productIds[i]);
+                var prod = _context.SanPhams.FirstOrDefault(p => p.MaSanPham == productIds[i]);
                 if (prod != null)
                 {
                     int qty = quantities[i];
-                    prod.Stock -= qty; // Cập nhật kho
+                    prod.SoLuongTon -= qty; // Cập nhật kho
                     
-                    newOrder.Items.Add(new MockDataService.OrderItem
+                    var itemTotal = qty * prod.GiaBan;
+                    total += itemTotal;
+
+                    newOrder.ChiTietDonHangs.Add(new ChiTietDonHang
                     {
-                        ProductId = prod.Id,
-                        ProductName = prod.Name,
-                        SKU = prod.SKU,
-                        Image = prod.Image,
-                        Quantity = qty,
-                        Price = prod.Price
+                        MaSanPham = prod.MaSanPham,
+                        SoLuong = qty,
+                        DonGia = prod.GiaBan
                     });
                 }
             }
 
-            MockDataService.Instance.Orders.Add(newOrder);
+            newOrder.TongTien = total;
+            _context.DonHangs.Add(newOrder);
 
             // Gửi thông báo
-            MockDataService.Instance.Notifications.Add(new MockDataService.SystemNotification
+            _context.SystemNotifications.Add(new SystemNotification
             {
-                Id = MockDataService.Instance.Notifications.Max(n => n.Id) + 1,
                 Title = "Đơn POS mới",
-                Message = $"Đơn hàng {newOrder.OrderCode} trị giá {newOrder.Total:N0} đ vừa được thanh toán tại quầy.",
+                Message = $"Đơn hàng trị giá {newOrder.TongTien:N0} đ vừa được thanh toán tại quầy.",
                 Type = "Đơn mới",
-                Timestamp = System.DateTime.Now
+                Timestamp = DateTime.Now
             });
 
-            TempData["ToastMessage"] = $"Đã thanh toán đơn hàng {newOrder.OrderCode} thành công!";
+            _context.SaveChanges();
+
+            TempData["ToastMessage"] = $"Đã thanh toán đơn hàng thành công!";
             TempData["ToastType"] = "success";
 
             return RedirectToAction("Index");

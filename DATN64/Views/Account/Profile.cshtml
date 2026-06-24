@@ -7,10 +7,10 @@
     <div class="col-md-4">
         <div class="card card-glass text-center p-4 mb-4">
             <div class="avatar bg-gradient-cyan text-white d-flex align-items-center justify-content-center rounded-circle mx-auto mb-3 shadow fw-bold" style="width: 100px; height: 100px; font-size: 2.5rem;">
-                @ViewBag.FullName.Substring(0, 1).ToUpper()
+                @ViewBag.TenNhanVien.Substring(0, 1).ToUpper()
             </div>
-            <h4>@ViewBag.FullName</h4>
-            <span class="badge bg-info text-dark rounded-pill px-3 py-1.5 text-xs mb-3">@ViewBag.Roles</span>
+            <h4>@ViewBag.TenNhanVien</h4>
+            <span class="badge bg-info text-dark rounded-pill px-3 py-1.5 text-xs mb-3">@ViewBag.ChucVu</span>
             <p class="text-muted text-sm mb-0">Hệ thống NovaTech ERP</p>
         </div>
     </div>
@@ -20,7 +20,7 @@
             <div class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label text-muted text-sm">Họ và tên</label>
-                    <input type="text" class="form-control bg-dark border-secondary border-opacity-50 text-white" value="@ViewBag.FullName" readonly>
+                    <input type="text" class="form-control bg-dark border-secondary border-opacity-50 text-white" value="@ViewBag.TenNhanVien" readonly>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label text-muted text-sm">Email đăng nhập</label>
@@ -28,7 +28,7 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label text-muted text-sm">Số điện thoại</label>
-                    <input type="text" class="form-control bg-dark border-secondary border-opacity-50 text-white" value="@ViewBag.Phone" readonly>
+                    <input type="text" class="form-control bg-dark border-secondary border-opacity-50 text-white" value="@ViewBag.SoDienThoai" readonly>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label text-muted text-sm">Trạng thái làm việc</label>
@@ -38,3 +38,4 @@
         </div>
     </div>
 </div>
+

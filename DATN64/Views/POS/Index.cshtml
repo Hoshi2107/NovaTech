@@ -1,184 +1,39 @@
-@model List<DATN64.Models.MockDataService.Product>
-@{
-    Layout = "~/Views/Shared/_POSLayout.cshtml";
-    ViewData["Title"] = "Quầy bán hàng POS";
-    var customers = ViewBag.Customers as List<DATN64.Models.MockDataService.Customer> ?? new();
-}
-
-<div class="pos-container w-100 h-100">
-    <!-- Product selection Area -->
-    <div class="product-section d-flex flex-column h-100">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="fw-bold m-0"><i class="fa-solid fa-cash-register text-warning me-2"></i>NovaTech POS</h4>
-            <div class="d-flex align-items-center gap-3">
-                <span class="text-xs text-muted">Thu ngân: <strong>@ViewBag.SellerName</strong></span>
-                <a href="@Url.Action("Selection", "Portal")" class="btn btn-sm btn-outline-info rounded-pill px-3"><i class="fa-solid fa-arrow-left me-1"></i>Trở lại Cổng</a>
+@model List<DATN64.Models.SanPham>
+@{ Layout = "~/Views/Shared/_Layout.cshtml"; ViewData["Title"] = "B�n h�ng t?i qu?y (POS)"; }
+<div class="container my-5">
+    <h2>B�n h�ng t?i qu?y (POS)</h2>
+    <form asp-action="CreateOrderPOS" method="post">
+        <div class="row">
+            <div class="col-md-8">
+                <h4>Danh s�ch s?n ph?m</h4>
+                <table class="table">
+                    <thead><tr><th>M� SP</th><th>T�n SP</th><th>Gi� B�n</th><th>T?n</th><th>Ch?n mua</th></tr></thead>
+                    <tbody>
+                        @foreach(var item in Model) {
+                            <tr>
+                                <td>@item.MaSanPham</td>
+                                <td>@item.TenSanPham</td>
+                                <td>@item.GiaBan.ToString("N0") d</td>
+                                <td>@item.SoLuongTon</td>
+                                <td>
+                                    <input type="checkbox" name="productIds" value="@item.MaSanPham" />
+                                    <input type="number" name="quantities" value="1" min="1" max="@item.SoLuongTon" style="width:60px"/>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             </div>
-        </div>
-
-        <div class="row row-cols-3 g-3 overflow-y-auto flex-grow-1 pe-2" style="max-height: calc(100vh - 80px);">
-            @foreach (var p in Model)
-            {
-                <div class="col">
-                    <div class="card bg-dark border-secondary border-opacity-25 h-100 p-2 cursor-pointer product-card-pos" onclick="addToCart(@p.Id, '@p.Name', @p.Price, '@p.SKU', @p.Stock)">
-                        <img src="@p.Image" class="rounded-3 mb-2" alt="@p.Name" style="height: 110px; object-fit: cover;">
-                        <h6 class="text-xs text-white text-truncate mb-1 fw-bold">@p.Name</h6>
-                        <div class="d-flex justify-content-between align-items-center mt-auto">
-                            <span class="text-xs text-info fw-bold">@p.Price.ToString("N0") đ</span>
-                            <span class="badge bg-secondary text-xxs px-2 py-0.5">Tồn: @p.Stock</span>
-                        </div>
-                    </div>
-                </div>
-            }
-        </div>
-    </div>
-
-    <!-- Cart checkout Area -->
-    <div class="cart-section p-3">
-        <h5 class="fw-bold mb-3 border-bottom border-secondary border-opacity-25 pb-2 text-warning"><i class="fa-solid fa-basket-shopping me-2"></i>Giỏ hàng thanh toán</h5>
-        
-        <!-- Cart Items (JS dynamic) -->
-        <div class="flex-grow-1 overflow-y-auto pe-1" id="cartList" style="max-height: calc(100vh - 350px);">
-            <div class="text-center text-muted-custom py-5" id="emptyCartText">
-                <i class="fa-solid fa-cart-flatbed fs-2 mb-2"></i>
-                <p class="text-xs">Chưa có sản phẩm nào được chọn</p>
-            </div>
-        </div>
-
-        <!-- Checkout Form -->
-        <form method="post" action="@Url.Action("CreateOrderPOS", "POS")" class="border-top border-secondary border-opacity-25 pt-3">
-            <div id="hiddenFields"></div>
-            
-            <div class="mb-2">
-                <label class="form-label text-xs text-muted mb-1">Khách hàng</label>
-                <select name="customerName" id="posCust" class="form-select bg-dark border-secondary border-opacity-50 text-white text-xs" onchange="updatePhone()">
-                    <option value="">Khách Hàng Vãng Lai</option>
-                    @foreach (var c in customers)
-                    {
-                        <option value="@c.Name" data-phone="@c.Phone">@c.Name (@c.Phone)</option>
-                    }
+            <div class="col-md-4">
+                <h4>Th�ng tin kh�ch h�ng</h4>
+                <input type="text" name="customerPhone" class="form-control mb-2" placeholder="S�T Kh�ch h�ng" />
+                <input type="text" name="customerName" class="form-control mb-2" placeholder="T�n Kh�ch h�ng" />
+                <select name="paymentMethod" class="form-control mb-2">
+                    <option value="Ti?n m?t">Ti?n m?t</option>
+                    <option value="Chuy?n kho?n">Chuy?n kho?n</option>
                 </select>
+                <button type="submit" class="btn btn-success w-100">Thanh To�n</button>
             </div>
-            
-            <div class="mb-2">
-                <label class="form-label text-xs text-muted mb-1">Số điện thoại</label>
-                <input type="text" name="customerPhone" id="posPhone" class="form-control bg-dark border-secondary border-opacity-50 text-white text-xs" placeholder="090...">
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label text-xs text-muted mb-1">Thanh toán</label>
-                <select name="paymentMethod" class="form-select bg-dark border-secondary border-opacity-50 text-white text-xs">
-                    <option value="Tiền mặt">Tiền mặt</option>
-                    <option value="Chuyển khoản">Chuyển khoản / Quẹt thẻ</option>
-                </select>
-            </div>
-
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="text-sm fw-bold">Tổng thanh toán:</span>
-                <span class="fs-4 text-info fw-extrabold" id="totalAmountText">0 đ</span>
-            </div>
-
-            <button type="submit" class="btn btn-warning w-100 rounded-pill py-2.5 text-dark fw-bold text-sm">
-                <i class="fa-solid fa-circle-check me-2"></i>Xác nhận & In hóa đơn
-            </button>
-        </form>
-    </div>
+        </div>
+    </form>
 </div>
-
-@section Scripts {
-    <script>
-        let cart = [];
-
-        function updatePhone() {
-            const select = document.getElementById('posCust');
-            const phoneInput = document.getElementById('posPhone');
-            const selectedOpt = select.options[select.selectedIndex];
-            const phone = selectedOpt.getAttribute('data-phone') || '';
-            phoneInput.value = phone;
-        }
-
-        function addToCart(id, name, price, sku, maxStock) {
-            if (maxStock <= 0) {
-                alert('Sản phẩm đã hết hàng trong kho!');
-                return;
-            }
-            const existing = cart.find(i => i.id === id);
-            if (existing) {
-                if (existing.quantity >= maxStock) {
-                    alert('Số lượng chọn vượt quá tồn kho khả dụng!');
-                    return;
-                }
-                existing.quantity++;
-            } else {
-                cart.push({ id, name, price, sku, quantity: 1 });
-            }
-            renderCart();
-        }
-
-        function removeFromCart(id) {
-            cart = cart.filter(i => i.id !== id);
-            renderCart();
-        }
-
-        function updateQty(id, change) {
-            const item = cart.find(i => i.id === id);
-            if (item) {
-                item.quantity += change;
-                if (item.quantity <= 0) {
-                    removeFromCart(id);
-                }
-            }
-            renderCart();
-        }
-
-        function renderCart() {
-            const list = document.getElementById('cartList');
-            const emptyText = document.getElementById('emptyCartText');
-            const hiddenFields = document.getElementById('hiddenFields');
-            const totalText = document.getElementById('totalAmountText');
-            
-            list.innerHTML = '';
-            hiddenFields.innerHTML = '';
-            
-            if (cart.length === 0) {
-                emptyText.style.display = 'block';
-                list.appendChild(emptyText);
-                totalText.innerText = '0 đ';
-                return;
-            } else {
-                emptyText.style.display = 'none';
-            }
-
-            let total = 0;
-            cart.forEach(item => {
-                const sub = item.price * item.quantity;
-                total += sub;
-                
-                // Render item UI
-                const div = document.createElement('div');
-                div.className = 'd-flex justify-content-between align-items-center bg-dark p-2 rounded-3 mb-2 border border-secondary border-opacity-25';
-                div.innerHTML = `
-                    <div>
-                        <div class="text-xs fw-bold text-white text-truncate" style="max-width: 200px;">${item.name}</div>
-                        <div class="text-xxs text-muted">${item.sku} | ${item.price.toLocaleString()} đ</div>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="updateQty(${item.id}, -1)">-</button>
-                        <span class="text-xs fw-bold text-light">${item.quantity}</span>
-                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="updateQty(${item.id}, 1)">+</button>
-                        <button type="button" class="btn btn-xs text-danger py-0 px-2" onclick="removeFromCart(${item.id})"><i class="fa-solid fa-trash-can"></i></button>
-                    </div>
-                `;
-                list.appendChild(div);
-
-                // Add inputs for form submit
-                hiddenFields.innerHTML += `
-                    <input type="hidden" name="productIds" value="${item.id}" />
-                    <input type="hidden" name="quantities" value="${item.quantity}" />
-                `;
-            });
-
-            totalText.innerText = total.toLocaleString() + ' đ';
-        }
-    </script>
-}

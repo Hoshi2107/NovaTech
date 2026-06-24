@@ -2,16 +2,25 @@ using Microsoft.AspNetCore.Mvc;
 using DATN64.Models;
 using DATN64.Helpers;
 using System.Linq;
+using System.Collections.Generic;
+using System;
 
 namespace DATN64.Controllers
 {
     [HasPermission("View_Employee")]
     public class EmployeeController : Controller
     {
+        private readonly AppDbContext _context;
+
+        public EmployeeController(AppDbContext context)
+        {
+            _context = context;
+        }
+
         public IActionResult Index()
         {
-            var employees = MockDataService.Instance.Employees.ToList();
-            var roles = MockDataService.Instance.RolesList.ToList();
+            var employees = _context.NhanViens.ToList();
+            var roles = new List<string> { "Quản lý", "Nhân viên bán hàng", "Nhân viên kho", "Kế toán" };
             
             ViewBag.RolesList = roles;
             return View(employees);
@@ -19,14 +28,12 @@ namespace DATN64.Controllers
 
         [HttpPost]
         [HasPermission("Create_Employee")]
-        public IActionResult Create(MockDataService.Employee emp, List<string> selectedRoles)
+        public IActionResult Create(NhanVien emp, List<string> selectedRoles)
         {
-            emp.Id = MockDataService.Instance.Employees.Max(e => e.Id) + 1;
-            emp.JoinedDate = System.DateTime.Now;
-            emp.Password = "123";
-            emp.Roles = selectedRoles ?? new List<string> { "Nhân viên bán hàng" };
+            emp.VaiTro = selectedRoles != null && selectedRoles.Any() ? string.Join(", ", selectedRoles) : "Nhân viên bán hàng";
 
-            MockDataService.Instance.Employees.Add(emp);
+            _context.NhanViens.Add(emp);
+            _context.SaveChanges();
             TempData["ToastMessage"] = "Thêm nhân viên mới thành công!";
             return RedirectToAction("Index");
         }
@@ -35,11 +42,12 @@ namespace DATN64.Controllers
         [HasPermission("Assign_Role")]
         public IActionResult UpdateRoles(int employeeId, List<string> selectedRoles)
         {
-            var emp = MockDataService.Instance.Employees.FirstOrDefault(e => e.Id == employeeId);
+            var emp = _context.NhanViens.FirstOrDefault(e => e.MaNhanVien == employeeId);
             if (emp != null)
             {
-                emp.Roles = selectedRoles ?? new List<string>();
-                TempData["ToastMessage"] = "Cập nhật vai trò thành công!";
+                emp.VaiTro = selectedRoles != null && selectedRoles.Any() ? string.Join(", ", selectedRoles) : "Nhân viên bán hàng";
+                _context.SaveChanges();
+                TempData["ToastMessage"] = "Cập nhật chức vụ thành công!";
             }
             return RedirectToAction("Index");
         }
@@ -48,10 +56,11 @@ namespace DATN64.Controllers
         [HasPermission("Delete_Employee")]
         public IActionResult Delete(int id)
         {
-            var target = MockDataService.Instance.Employees.FirstOrDefault(e => e.Id == id);
+            var target = _context.NhanViens.FirstOrDefault(e => e.MaNhanVien == id);
             if (target != null)
             {
-                MockDataService.Instance.Employees.Remove(target);
+                _context.NhanViens.Remove(target);
+                _context.SaveChanges();
                 TempData["ToastMessage"] = "Đã xóa nhân viên khỏi hệ thống!";
             }
             return RedirectToAction("Index");
