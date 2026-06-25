@@ -148,13 +148,41 @@
       </div>
 
       <!-- Right Panel: Cart & Checkout Form -->
-      <div class="col-lg-4 d-flex flex-column h-100 p-4 pos-checkout-panel overflow-hidden" :class="{ 'd-none d-lg-flex': activeTab !== 'cart' }">
-        <h5 class="fw-bold mb-3 d-flex align-items-center gap-2 text-cyan flex-shrink-0">
-          <i class="fa-solid fa-basket-shopping text-cyan"></i> Giỏ hàng thanh toán
-        </h5>
+      <div class="col-lg-4 d-flex flex-column h-100 p-4 pos-checkout-panel overflow-y-auto" :class="{ 'd-none d-lg-flex': activeTab !== 'cart' }">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-shrink-0">
+          <h5 class="fw-bold m-0 d-flex align-items-center gap-2 text-cyan">
+            <i class="fa-solid fa-basket-shopping text-cyan"></i> Giỏ hàng thanh toán
+          </h5>
+          <button type="button" class="btn btn-xs btn-outline-warning rounded-pill px-2.5 py-1 text-xxs fw-bold d-flex align-items-center gap-1" @@click="holdCurrentCart" :disabled="cart.length === 0">
+            <i class="fa-solid fa-clock"></i> Lưu đơn tạm
+          </button>
+        </div>
+
+        <!-- Suspended/Held Carts List -->
+        <div class="held-carts-section mb-3 p-3 rounded-3" v-if="heldCarts.length > 0">
+          <h6 class="text-xs fw-bold text-cyan mb-2 d-flex align-items-center gap-1.5">
+            <i class="fa-solid fa-clock-rotate-left"></i> Đơn hàng đang tạm lưu (${ heldCarts.length })
+          </h6>
+          <div class="d-flex flex-column gap-2" style="max-height: 150px; overflow-y: auto;">
+            <div class="held-cart-item d-flex align-items-center justify-content-between p-2 rounded-2 text-xxs" v-for="hc in heldCarts" :key="hc.id" style="background: var(--input-bg); border: 1px solid var(--border-color);">
+              <div class="min-w-0 flex-grow-1">
+                <div class="fw-bold text-truncate text-slate-100" style="color: var(--text-primary) !important;">${ hc.customerName } (${ hc.time })</div>
+                <div class="text-secondary mt-0.5" style="color: var(--text-secondary) !important;">${ hc.cart.length } món | ${ formatMoney(hc.total) } đ</div>
+              </div>
+              <div class="d-flex gap-1.5 align-items-center">
+                <button type="button" class="btn btn-xs btn-info text-white px-2 py-0.5 rounded text-xxs fw-bold" @@click="restoreHeldCart(hc.id)">
+                  Khôi phục
+                </button>
+                <button type="button" class="btn btn-xs btn-outline-danger px-1.5 py-0.5 rounded" @@click="deleteHeldCart(hc.id)">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- Cart items list (Scrollable) -->
-        <div class="cart-items-wrapper flex-grow-1 overflow-y-auto mb-3 pe-1">
+        <div class="cart-items-wrapper mb-3 pe-1">
           <div class="d-flex flex-column align-items-center justify-content-center text-muted-custom py-5 h-100" v-if="cart.length === 0">
             <i class="fa-solid fa-cart-flatbed fs-2 mb-2 text-slate-500 animate-bounce"></i>
             <p class="text-xs text-slate-400">Chưa có sản phẩm nào được chọn</p>
@@ -247,6 +275,46 @@
                 <i class="fa-solid fa-credit-card fs-6 mb-1"></i>
                 <span class="text-xxs fw-bold d-block">Chuyển khoản</span>
               </div>
+            </div>
+          </div>
+
+          <!-- Cash Calculator Section -->
+          <div class="cash-calculator-section mb-3 p-3 rounded-3" v-if="paymentMethod === 'Tiền mặt'">
+            <div class="row g-2 mb-2">
+              <div class="col-6">
+                <label class="form-label text-xxs voucher-label fw-semibold mb-1">Tiền khách đưa</label>
+                <div class="input-group input-group-sm">
+                  <input type="number" v-model.number="cashReceived" class="form-control text-xs input-pos" placeholder="0">
+                  <span class="input-group-text bg-dark-custom text-xxs border-slate-800" style="color: var(--text-secondary) !important;">đ</span>
+                </div>
+              </div>
+              <div class="col-6">
+                <label class="form-label text-xxs voucher-label fw-semibold mb-1">Tiền thừa trả khách</label>
+                <div class="text-emerald text-sm fw-extrabold mt-1.5">
+                  ${ formatMoney(changeDue) } đ
+                </div>
+              </div>
+            </div>
+            <!-- Quick Cash Buttons -->
+            <div class="d-flex flex-wrap gap-1.5 quick-cash-buttons">
+              <button type="button" class="btn btn-xs btn-outline-slate rounded px-2 py-1 text-xxs fw-bold" @@click="cashReceived = totalAmount">Đủ tiền</button>
+              <button type="button" class="btn btn-xs btn-outline-slate rounded px-2 py-1 text-xxs fw-bold" v-if="totalAmount < 50000" @@click="cashReceived = 50000">50k</button>
+              <button type="button" class="btn btn-xs btn-outline-slate rounded px-2 py-1 text-xxs fw-bold" v-if="totalAmount < 100000" @@click="cashReceived = 100000">100k</button>
+              <button type="button" class="btn btn-xs btn-outline-slate rounded px-2 py-1 text-xxs fw-bold" v-if="totalAmount < 200000" @@click="cashReceived = 200000">200k</button>
+              <button type="button" class="btn btn-xs btn-outline-slate rounded px-2 py-1 text-xxs fw-bold" v-if="totalAmount < 500000" @@click="cashReceived = 500000">500k</button>
+              <button type="button" class="btn btn-xs btn-outline-slate rounded px-2 py-1 text-xxs fw-bold" v-if="totalAmount < 1000000" @@click="cashReceived = 1000000">1M</button>
+            </div>
+          </div>
+
+          <!-- Bank Transfer QR Section -->
+          <div class="qr-payment-section mb-3 p-3 rounded-3 text-center" v-if="paymentMethod === 'Chuyển khoản'">
+            <label class="form-label text-xxs voucher-label fw-semibold mb-2 d-block">Quét mã QR để chuyển khoản</label>
+            <div class="qr-container d-inline-block p-2 bg-white rounded-3 shadow-sm mb-2">
+              <img :src="qrCodeUrl" alt="VietQR Thanh toán" class="img-fluid" style="max-width: 160px; display: block; margin: 0 auto;">
+            </div>
+            <div class="text-xxs text-secondary mt-1">
+              <div>Ngân hàng: <strong class="text-cyan">${ bankConfig.bankId }</strong> | STK: <strong class="text-cyan">${ bankConfig.accountNo }</strong></div>
+              <div>Chủ tài khoản: <strong class="text-cyan">${ bankConfig.accountName }</strong></div>
             </div>
           </div>
 
@@ -344,6 +412,16 @@
               <div class="d-flex justify-content-between align-items-center text-sm border-top border-secondary border-dashed pt-2 mt-1">
                 <span class="fw-bold text-dark">TỔNG CỘNG:</span>
                 <span class="fs-5 fw-extrabold text-danger">${ formatMoney(lastOrder.totalAmount) } đ</span>
+              </div>
+              
+              <!-- Cash Calculator Receipt Info -->
+              <div class="d-flex justify-content-between text-xs border-top border-secondary border-dashed pt-2 mt-1" v-if="lastOrder.paymentMethod === 'Tiền mặt' && lastOrder.cashReceived > 0">
+                <span class="text-muted">Tiền khách đưa:</span>
+                <span class="text-dark fw-bold">${ formatMoney(lastOrder.cashReceived) } đ</span>
+              </div>
+              <div class="d-flex justify-content-between text-xs" v-if="lastOrder.paymentMethod === 'Tiền mặt' && lastOrder.cashReceived > 0">
+                <span class="text-muted">Tiền thừa trả khách:</span>
+                <span class="text-dark fw-bold text-success">${ formatMoney(lastOrder.changeDue) } đ</span>
               </div>
             </div>
             

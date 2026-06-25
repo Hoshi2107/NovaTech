@@ -38,11 +38,27 @@ var app = new Vue({
         sortBy: 'default',
         activeTab: 'products',
 
-        user: null
+        user: null,
+        cashReceived: 0,
+        heldCarts: [],
+        bankConfig: {
+            bankId: 'VietinBank',
+            accountNo: '108602210708',
+            accountName: 'CONG TY NOVATECH',
+            template: 'qr_only'
+        }
     },
     watch: {
         isDarkMode(newVal) {
             localStorage.setItem('pos-theme', newVal ? 'dark' : 'light');
+        },
+        paymentMethod(newVal) {
+            if (newVal !== 'Tiền mặt') {
+                this.cashReceived = 0;
+            }
+        },
+        cart() {
+            this.cashReceived = 0;
         }
     },
     computed: {
@@ -51,6 +67,19 @@ var app = new Vue({
         },
         totalAmount() {
             return Math.max(0, this.subtotalAmount - this.voucherDiscountValue);
+        },
+        changeDue() {
+            if (!this.cashReceived || this.cashReceived < this.totalAmount) {
+                return 0;
+            }
+            return this.cashReceived - this.totalAmount;
+        },
+        qrCodeUrl() {
+            if (this.totalAmount <= 0) return '';
+            const amount = this.totalAmount;
+            const description = encodeURIComponent('Thanh toan POS NovaTech');
+            const accName = encodeURIComponent(this.bankConfig.accountName);
+            return `https://img.vietqr.io/image/${this.bankConfig.bankId}-${this.bankConfig.accountNo}-${this.bankConfig.template}.png?amount=${amount}&addInfo=${description}&accountName=${accName}`;
         },
         categories() {
             const cats = this.products.map(p => p.category).filter(Boolean);
@@ -239,6 +268,13 @@ var app = new Vue({
                 return;
             }
 
+            // 2. Validation for Cash Payment under-payment
+            if (this.paymentMethod === 'Tiền mặt' && this.cashReceived > 0 && this.cashReceived < this.totalAmount) {
+                this.errorMsg = "Cảnh báo: Tiền khách đưa chưa đủ để thực hiện thanh toán!";
+                alert("Cảnh báo: Tiền khách đưa chưa đủ để thực hiện thanh toán!");
+                return;
+            }
+
             // 2. Confirmation before payment
             const confirmPayment = confirm("Cảnh báo: Bạn có chắc chắn muốn xác nhận thanh toán và in hóa đơn cho đơn hàng này?");
             if (!confirmPayment) {
@@ -286,6 +322,8 @@ var app = new Vue({
                     discount: this.voucherDiscountValue,
                     voucherCode: this.voucherAppliedCode,
                     totalAmount: this.totalAmount,
+                    cashReceived: this.paymentMethod === 'Tiền mặt' ? this.cashReceived : 0,
+                    changeDue: this.paymentMethod === 'Tiền mặt' ? this.changeDue : 0,
                     date: new Date().toLocaleString('vi-VN')
                 };
                 this.showReceiptModal = true;
@@ -296,6 +334,7 @@ var app = new Vue({
                 this.customerName = "Khách Hàng Vãng Lai";
                 this.customerPhone = "";
                 this.clearVoucher();
+                this.cashReceived = 0;
                 this.activeTab = 'products';
                 
                 // Reload catalog counts from server
@@ -315,6 +354,8 @@ var app = new Vue({
                     discount: this.voucherDiscountValue,
                     voucherCode: this.voucherAppliedCode,
                     totalAmount: this.totalAmount,
+                    cashReceived: this.paymentMethod === 'Tiền mặt' ? this.cashReceived : 0,
+                    changeDue: this.paymentMethod === 'Tiền mặt' ? this.changeDue : 0,
                     date: new Date().toLocaleString('vi-VN')
                 };
                 this.showReceiptModal = true;
@@ -325,6 +366,7 @@ var app = new Vue({
                 this.customerName = "Khách Hàng Vãng Lai";
                 this.customerPhone = "";
                 this.clearVoucher();
+                this.cashReceived = 0;
                 this.activeTab = 'products';
             } finally {
                 this.checkingOut = false;
@@ -363,9 +405,91 @@ var app = new Vue({
         formatMoney(val) {
             if (val === undefined || val === null) return 0;
             return Number(val).toLocaleString();
+        },
+        holdCurrentCart() {
+            if (this.cart.length === 0) {
+                alert("Giỏ hàng trống, không thể lưu tạm đơn!");
+                return;
+            }
+            const newHeldCart = {
+                id: Date.now(),
+                cart: [...this.cart.map(i => ({...i}))],
+                customerIndex: this.customerIndex,
+                customerName: this.customerName,
+                customerPhone: this.customerPhone,
+                voucherCode: this.voucherCode,
+                voucherDiscountValue: this.voucherDiscountValue,
+                voucherAppliedCode: this.voucherAppliedCode,
+                voucherSuccessMsg: this.voucherSuccessMsg,
+                voucherErrorMsg: this.voucherErrorMsg,
+                subtotal: this.subtotalAmount,
+                total: this.totalAmount,
+                time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+            };
+            this.heldCarts.push(newHeldCart);
+            
+            // Clear current cart and details
+            this.cart = [];
+            this.customerIndex = "-1";
+            this.customerName = "Khách Hàng Vãng Lai";
+            this.customerPhone = "";
+            this.clearVoucher();
+            this.cashReceived = 0;
+            
+            alert("Đã lưu tạm đơn hàng thành công!");
+        },
+        restoreHeldCart(id) {
+            if (this.cart.length > 0) {
+                const confirmRestore = confirm("Giỏ hàng hiện tại đang có sản phẩm. Bạn có chắc chắn muốn thay thế bằng đơn hàng tạm lưu này không?");
+                if (!confirmRestore) return;
+            }
+            const hc = this.heldCarts.find(c => c.id === id);
+            if (hc) {
+                this.cart = hc.cart;
+                this.customerIndex = hc.customerIndex;
+                this.customerName = hc.customerName;
+                this.customerPhone = hc.customerPhone;
+                this.voucherCode = hc.voucherCode;
+                this.voucherDiscountValue = hc.voucherDiscountValue;
+                this.voucherAppliedCode = hc.voucherAppliedCode;
+                this.voucherSuccessMsg = hc.voucherSuccessMsg;
+                this.voucherErrorMsg = hc.voucherErrorMsg;
+                this.cashReceived = 0;
+                
+                // Remove from held list
+                this.heldCarts = this.heldCarts.filter(c => c.id !== id);
+            }
+        },
+        deleteHeldCart(id) {
+            const confirmDelete = confirm("Bạn có chắc chắn muốn xóa đơn tạm lưu này không?");
+            if (confirmDelete) {
+                this.heldCarts = this.heldCarts.filter(c => c.id !== id);
+            }
+        },
+        handleGlobalShortcuts(e) {
+            if (e.key === 'F8') {
+                e.preventDefault();
+                const searchInput = document.querySelector('.search-box-pos input');
+                if (searchInput) searchInput.focus();
+            } else if (e.key === 'F9') {
+                e.preventDefault();
+                const voucherInput = document.querySelector('.voucher-section input');
+                if (voucherInput) voucherInput.focus();
+            } else if (e.key === 'F10') {
+                e.preventDefault();
+                this.handleCheckout();
+            } else if (e.key === 'Escape') {
+                if (this.showReceiptModal) {
+                    this.showReceiptModal = false;
+                }
+            }
         }
     },
+    beforeDestroy() {
+        window.removeEventListener('keydown', this.handleGlobalShortcuts);
+    },
     async mounted() {
+        window.addEventListener('keydown', this.handleGlobalShortcuts);
         // Load theme preference from LocalStorage
         const savedTheme = localStorage.getItem('pos-theme');
         if (savedTheme === 'light') {

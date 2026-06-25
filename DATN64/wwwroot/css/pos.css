@@ -323,7 +323,7 @@
 
 /* Cart list styling */
 .cart-items-wrapper {
-  max-height: calc(100% - 470px);
+  max-height: none;
 }
 
 .cart-item {
@@ -591,4 +591,38 @@
   .pos-checkout-panel {
     overflow-y: auto !important;
   }
+}
+
+/* Cash Calculator component styles */
+.cash-calculator-section {
+  background-color: var(--cart-item-bg);
+  border: 1px dashed var(--border-color);
+  transition: all 0.3s ease;
+}
+
+.quick-cash-buttons {
+  margin-top: 8px;
+}
+
+.quick-cash-buttons .btn {
+  padding: 4px 8px;
+  font-size: 0.7rem;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+/* Bank Transfer QR section styles */
+.qr-payment-section {
+  background-color: var(--cart-item-bg);
+  border: 1px dashed var(--border-color);
+  transition: all 0.3s ease;
+}
+
+.qr-container {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.qr-container:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 242, 254, 0.15);
 }
