@@ -1,0 +1,168 @@
+@model DATN64.Models.ViewModels.SaleReportViewModel
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Báo cáo bán hàng";
+}
+
+@section Styles {
+<style>
+    .filter-card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,.04); }
+    .kpi-sm { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:18px 20px; box-shadow:0 2px 8px rgba(0,0,0,.04); }
+    .kpi-sm .val { font-size:1.4rem; font-weight:700; color:#1e293b; }
+    .kpi-sm .lbl { font-size:0.72rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#64748b; }
+    .report-table th { background:#f8fafc; color:#475569; font-size:0.78rem; text-transform:uppercase; letter-spacing:.05em; font-weight:700; border-bottom:2px solid #e2e8f0; }
+    .report-table td { font-size:0.875rem; color:#1e293b; vertical-align:middle; border-bottom:1px solid #f1f5f9; }
+    .report-table tbody tr:hover td { background:#f8fafc; }
+    .badge-hoanThanh { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
+    .badge-donMoi    { background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; }
+    .badge-huy       { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
+    .badge-xacNhan   { background:#fff7ed; color:#ea580c; border:1px solid #fed7aa; }
+    .badge-other     { background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; }
+</style>
+}
+
+<!-- Header -->
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h3 class="fw-bold mb-1" style="color:#1e293b">
+                <i class="fa-solid fa-file-invoice-dollar text-primary me-2"></i>Báo cáo Bán hàng
+            </h3>
+            <p class="text-muted text-xs mb-0">Thống kê đơn hàng theo bộ lọc thời gian và trạng thái.</p>
+        </div>
+        <a asp-controller="Report" asp-action="Index" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+            <i class="fa-solid fa-arrow-left me-1"></i>Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Filter form -->
+<div class="filter-card mb-4">
+    <form method="get" asp-controller="Report" asp-action="SaleReport" class="row g-3 align-items-end">
+        <div class="col-12 col-sm-6 col-md-3">
+            <label class="form-label text-xs fw-bold text-muted">TỪ NGÀY</label>
+            <input type="date" name="tuNgay" class="form-control form-control-sm"
+                   value="@(Model.TuNgay.HasValue ? Model.TuNgay.Value.ToString("yyyy-MM-dd") : "")">
+        </div>
+        <div class="col-12 col-sm-6 col-md-3">
+            <label class="form-label text-xs fw-bold text-muted">ĐẾN NGÀY</label>
+            <input type="date" name="denNgay" class="form-control form-control-sm"
+                   value="@(Model.DenNgay.HasValue ? Model.DenNgay.Value.ToString("yyyy-MM-dd") : "")">
+        </div>
+        <div class="col-12 col-sm-6 col-md-3">
+            <label class="form-label text-xs fw-bold text-muted">TRẠNG THÁI</label>
+            @{
+                var selAll   = string.IsNullOrEmpty(Model.TrangThaiFilter) ? "selected" : null;
+                var selHoan  = Model.TrangThaiFilter == "Hoàn thành"  ? "selected" : null;
+                var selMoi   = Model.TrangThaiFilter == "Đơn mới"     ? "selected" : null;
+                var selXac   = Model.TrangThaiFilter == "Đã xác nhận" ? "selected" : null;
+                var selHuy   = Model.TrangThaiFilter == "Đã hủy"      ? "selected" : null;
+            }
+            <select name="trangThai" class="form-select form-select-sm">
+                <option value=""           selected="@selAll" >Tất cả</option>
+                <option value="Hoàn thành" selected="@selHoan">Hoàn thành</option>
+                <option value="Đơn mới"    selected="@selMoi" >Đơn mới</option>
+                <option value="Đã xác nhận" selected="@selXac">Đã xác nhận</option>
+                <option value="Đã hủy"     selected="@selHuy" >Đã hủy</option>
+            </select>
+        </div>
+        <div class="col-12 col-sm-6 col-md-3 d-flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3 flex-grow-1">
+                <i class="fa-solid fa-filter me-1"></i>Lọc
+            </button>
+            <a asp-controller="Report" asp-action="SaleReport" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                <i class="fa-solid fa-rotate-left"></i>
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- KPI row -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-sm-4">
+        <div class="kpi-sm">
+            <div class="lbl mb-1"><i class="fa-solid fa-coins me-1 text-success"></i>Tổng doanh thu</div>
+            <div class="val text-success">@Model.TongDoanhThu.ToString("N0")₫</div>
+            <small class="text-muted">Chỉ tính đơn Hoàn thành</small>
+        </div>
+    </div>
+    <div class="col-12 col-sm-4">
+        <div class="kpi-sm">
+            <div class="lbl mb-1"><i class="fa-solid fa-receipt me-1 text-primary"></i>Tổng đơn hàng</div>
+            <div class="val">@Model.TongDonHang.ToString("N0")</div>
+            <small class="text-muted">Tất cả trạng thái trong kỳ</small>
+        </div>
+    </div>
+    <div class="col-12 col-sm-4">
+        <div class="kpi-sm">
+            <div class="lbl mb-1"><i class="fa-solid fa-chart-bar me-1 text-warning"></i>Giá trị TB / đơn</div>
+            <div class="val">@Model.TrungBinhDonHang.ToString("N0")₫</div>
+            <small class="text-muted">Đơn hoàn thành</small>
+        </div>
+    </div>
+</div>
+
+<!-- Table + Export -->
+<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.04)">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <span class="fw-semibold text-sm" style="color:#475569">
+            Hiển thị <strong>@Model.Rows.Count</strong> đơn hàng
+        </span>
+        @if (AuthHelper.HasPermission(Context, "Export_Report"))
+        {
+            <form method="post" asp-controller="Report" asp-action="ExportExcel">
+                <input type="hidden" name="tuNgay"    value="@(Model.TuNgay?.ToString("yyyy-MM-dd"))">
+                <input type="hidden" name="denNgay"   value="@(Model.DenNgay?.ToString("yyyy-MM-dd"))">
+                <input type="hidden" name="trangThai" value="@Model.TrangThaiFilter">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-success btn-sm rounded-pill px-3">
+                    <i class="fa-solid fa-file-excel me-1"></i>Xuất Excel (tối đa 20.000 dòng)
+                </button>
+            </form>
+        }
+    </div>
+
+    <div class="table-responsive">
+        <table class="table report-table mb-0">
+            <thead>
+                <tr>
+                    <th>Mã ĐH</th>
+                    <th>Ngày đặt</th>
+                    <th>Khách hàng</th>
+                    <th class="text-end">Tổng tiền</th>
+                    <th>Trạng thái</th>
+                    <th>Thanh toán</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Rows.Any())
+                {
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="fa-solid fa-inbox fs-3 mb-2 d-block"></i>
+                            Không có dữ liệu trong khoảng thời gian này
+                        </td>
+                    </tr>
+                }
+                @foreach (var r in Model.Rows)
+                {
+                    var badgeClass = r.TrangThai switch {
+                        "Hoàn thành"  => "badge-hoanThanh",
+                        "Đơn mới"     => "badge-donMoi",
+                        "Đã xác nhận" => "badge-xacNhan",
+                        "Đã hủy"      => "badge-huy",
+                        _             => "badge-other"
+                    };
+                    <tr>
+                        <td class="fw-bold text-muted">#@r.MaDonHang</td>
+                        <td>@(r.NgayDat?.ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
+                        <td>@r.TenKhachHang</td>
+                        <td class="text-end fw-semibold">@r.TongTien.ToString("N0")₫</td>
+                        <td><span class="badge rounded-pill @badgeClass" style="font-size:0.78rem">@r.TrangThai</span></td>
+                        <td class="text-muted">@(string.IsNullOrEmpty(r.PhuongThuc) ? "—" : r.PhuongThuc)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

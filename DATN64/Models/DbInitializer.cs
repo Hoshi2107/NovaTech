@@ -96,6 +96,161 @@ namespace DATN64.Models
                     VALUES (N'Siêu thị NovaTech', 'contact@novatech.vn', '1900 1000', N'123 Đường Điện Biên Phủ, TP.HCM', '/uploads/logo/default_logo.png');
                 END
             ");
+
+            // Create Role table
+            ExecuteSql(db, @"
+                IF OBJECT_ID('dbo.Role', 'U') IS NULL
+                CREATE TABLE dbo.Role (
+                    Id INT IDENTITY(1,1) PRIMARY KEY,
+                    Name NVARCHAR(50) NOT NULL,
+                    Description NVARCHAR(255) NULL
+                );
+            ");
+
+            // Create RolePermission table
+            ExecuteSql(db, @"
+                IF OBJECT_ID('dbo.RolePermission', 'U') IS NULL
+                CREATE TABLE dbo.RolePermission (
+                    Id INT IDENTITY(1,1) PRIMARY KEY,
+                    RoleName NVARCHAR(50) NOT NULL,
+                    PermissionName NVARCHAR(100) NOT NULL
+                );
+            ");
+
+            // Create NhanVienRole table
+            ExecuteSql(db, @"
+                IF OBJECT_ID('dbo.NhanVienRole', 'U') IS NULL
+                CREATE TABLE dbo.NhanVienRole (
+                    Id INT IDENTITY(1,1) PRIMARY KEY,
+                    MaNhanVien INT NOT NULL,
+                    RoleId INT NOT NULL
+                );
+            ");
+
+            // Seed default roles if Role table is empty
+            ExecuteSql(db, @"
+                IF NOT EXISTS (SELECT 1 FROM dbo.Role)
+                BEGIN
+                    INSERT INTO dbo.Role (Name, Description) VALUES 
+                    (N'Admin', N'Quản trị viên toàn hệ thống'),
+                    (N'Quản lý kho', N'Quản lý hàng hóa, tồn kho, xuất nhập kho'),
+                    (N'Nhân viên bán hàng', N'Xem sản phẩm, bán hàng và quản lý khách hàng'),
+                    (N'CSKH', N'Chăm sóc khách hàng và xem đơn hàng');
+                END
+            ");
+
+            // Seed default permissions if RolePermission table is empty
+            ExecuteSql(db, @"
+                IF NOT EXISTS (SELECT 1 FROM dbo.RolePermission)
+                BEGIN
+                    -- Admin permissions
+                    INSERT INTO dbo.RolePermission (RoleName, PermissionName) VALUES 
+                    ('Admin', 'View_Product'), ('Admin', 'Create_Product'), ('Admin', 'Edit_Product'), ('Admin', 'Delete_Product'),
+                    ('Admin', 'View_Inventory'), ('Admin', 'Import_Inventory'), ('Admin', 'Export_Inventory'),
+                    ('Admin', 'View_Order'), ('Admin', 'Approve_Order'), ('Admin', 'View_Customer'), ('Admin', 'Create_Customer'),
+                    ('Admin', 'View_Promotion'), ('Admin', 'View_Employee'), ('Admin', 'Create_Employee'), ('Admin', 'Assign_Role'),
+                    ('Admin', 'Delete_Employee'), ('Admin', 'View_Report'), ('Admin', 'View_Setting'), ('Admin', 'Edit_Setting'),
+                    ('Admin', 'View_TikTok'), ('Admin', 'Sync_TikTok');
+
+                    -- Quản lý kho permissions
+                    INSERT INTO dbo.RolePermission (RoleName, PermissionName) VALUES 
+                    (N'Quản lý kho', 'View_Product'), (N'Quản lý kho', 'Create_Product'), (N'Quản lý kho', 'Edit_Product'),
+                    (N'Quản lý kho', 'View_Inventory'), (N'Quản lý kho', 'Import_Inventory'), (N'Quản lý kho', 'Export_Inventory');
+
+                    -- Nhân viên bán hàng permissions
+                    INSERT INTO dbo.RolePermission (RoleName, PermissionName) VALUES 
+                    (N'Nhân viên bán hàng', 'View_Product'),
+                    (N'Nhân viên bán hàng', 'View_Order'), (N'Nhân viên bán hàng', 'Approve_Order'),
+                    (N'Nhân viên bán hàng', 'View_Customer'), (N'Nhân viên bán hàng', 'Create_Customer'),
+                    (N'Nhân viên bán hàng', 'View_Promotion');
+
+                    -- CSKH permissions
+                    INSERT INTO dbo.RolePermission (RoleName, PermissionName) VALUES 
+                    ('CSKH', 'View_Customer'), ('CSKH', 'View_Order');
+                END
+            ");
+
+            // Seed Export_Report permission (idempotent)
+            ExecuteSql(db, @"
+                IF NOT EXISTS (SELECT 1 FROM dbo.RolePermission WHERE PermissionName = 'Export_Report')
+                BEGIN
+                    INSERT INTO dbo.RolePermission (RoleName, PermissionName) VALUES
+                    ('Admin', 'Export_Report'),
+                    (N'Quản lý kho', 'Export_Report');
+                END
+            ");
+
+            // Clean up legacy roles in NhanVien table
+            ExecuteSql(db, @"
+                UPDATE dbo.NhanVien SET VaiTro = N'Nhân viên bán hàng' WHERE VaiTro = N'Nhân viên';
+                UPDATE dbo.NhanVien SET VaiTro = N'Quản lý kho' WHERE VaiTro = N'Nhân viên kho';
+                UPDATE dbo.NhanVien SET VaiTro = N'Admin' WHERE VaiTro = N'Quản lý';
+                UPDATE dbo.NhanVien SET TrangThai = N'Hoạt động' WHERE TrangThai IS NULL OR TrangThai = '';
+            ");
+
+            // Dynamic C# migrations: Hashing passwords and migrating user roles
+            try
+            {
+                var passwordHasher = new Microsoft.AspNetCore.Identity.PasswordHasher<NhanVien>();
+                var staff = context.NhanViens.ToList();
+                foreach (var emp in staff)
+                {
+                    if (string.IsNullOrEmpty(emp.MatKhau)) continue;
+
+                    // Robust check if password is not hashed yet
+                    bool isHashed = false;
+                    if (emp.MatKhau.Length >= 60 && emp.MatKhau.Length <= 200)
+                    {
+                        try
+                        {
+                            var bytes = Convert.FromBase64String(emp.MatKhau);
+                            if (bytes.Length > 40)
+                            {
+                                isHashed = true;
+                            }
+                        }
+                        catch { }
+                    }
+
+                    if (!isHashed)
+                    {
+                        emp.MatKhau = passwordHasher.HashPassword(emp, emp.MatKhau);
+                    }
+                }
+                context.SaveChanges();
+
+                var rolesInDb = context.Roles.ToList();
+                foreach (var emp in staff)
+                {
+                    if (string.IsNullOrEmpty(emp.VaiTro)) continue;
+
+                    var empRoles = emp.VaiTro.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(r => r.Trim())
+                        .ToList();
+
+                    foreach (var roleName in empRoles)
+                    {
+                        var role = rolesInDb.FirstOrDefault(r => r.Name.Equals(roleName, StringComparison.OrdinalIgnoreCase));
+                        if (role != null)
+                        {
+                            bool mappingExists = context.NhanVienRoles.Any(nr => nr.MaNhanVien == emp.MaNhanVien && nr.RoleId == role.Id);
+                            if (!mappingExists)
+                            {
+                                context.NhanVienRoles.Add(new NhanVienRole
+                                {
+                                    MaNhanVien = emp.MaNhanVien,
+                                    RoleId = role.Id
+                                });
+                            }
+                        }
+                    }
+                }
+                context.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error running C# migrations in DbInitializer: " + ex.Message);
+            }
         }
 
         private static void ExecuteSql(DatabaseFacade db, string sql)

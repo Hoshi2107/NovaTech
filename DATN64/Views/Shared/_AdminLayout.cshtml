@@ -66,6 +66,7 @@
         });
     </script>
     @await Html.PartialAsync("_ToastNotification")
+    @await RenderSectionAsync("Modals", required: false)
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
