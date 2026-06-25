@@ -259,6 +259,8 @@
     </footer>
 
     <!-- Modal Lựa Chọn Đăng Nhập / Đăng Ký -->
+    
+
     <div class="modal fade" id="loginChoiceModal" tabindex="-1" aria-labelledby="loginChoiceModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden; background: radial-gradient(circle at center, #0f172a 0%, #020617 100%); border: 1px solid rgba(255, 255, 255, 0.08);">
@@ -298,25 +300,31 @@
         </div>
       </div>
     </div>
+    <CustomerMessenger />
   </div>
 </template>
 
 <script>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { authState, authService } from '../services/auth'
 import { cartService } from '../services/cart'
 import novatechLogo from '../assets/novatech_logo.png'
+import CustomerMessenger from './CustomerMessenger.vue'
 
 export default {
   name: 'OnlineLayout',
+
+  components: {
+    CustomerMessenger
+  },
+
   setup() {
     const router = useRouter()
     const activePanel = ref('dt')
 
     const isLogged = computed(() => !!authState.user)
     const user = computed(() => authState.user)
-
     const cartCount = computed(() => cartService.count.value)
 
     const logout = async () => {
@@ -325,8 +333,8 @@ export default {
     }
 
     const goTo = (path) => {
-      // Dismiss Bootstrap modal
       const modalElement = document.getElementById('loginChoiceModal')
+
       if (modalElement) {
         if (window.bootstrap && window.bootstrap.Modal) {
           const modalInstance = window.bootstrap.Modal.getInstance(modalElement)
@@ -334,20 +342,23 @@ export default {
             modalInstance.hide()
           }
         }
-        
-        // Robust manual cleanup of modal classes and backdrop
+
         modalElement.classList.remove('show')
         modalElement.style.display = 'none'
         document.body.classList.remove('modal-open')
         document.body.style.overflow = ''
         document.body.style.paddingRight = ''
+
         const backdrop = document.querySelector('.modal-backdrop')
         if (backdrop) {
           backdrop.remove()
         }
       }
+
       router.push(path)
     }
+
+    onMounted(() => {})
 
     return {
       activePanel,

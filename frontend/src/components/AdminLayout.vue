@@ -75,7 +75,13 @@
 
           <!-- Bán hàng -->
           <template v-if="hasPerm('View_Order') || hasPerm('View_Customer') || hasPerm('View_Promotion')">
-            <li class="nav-item-header text-xs text-uppercase tracking-widest text-muted-custom mt-3 mb-2 px-3">Bán hàng & CSKH</li>
+            <li class="nav-item-header text-xs text-uppercase tracking-widest text-muted-custom mt-3 mb-2 px-3">Bán hàng và chăm sóc khách hàng</li>
+            <li class="nav-item">
+              <router-link to="/erp/sales-cskh" class="nav-link-custom d-flex align-items-center gap-3 py-2.5 px-3 rounded-3" active-class="active">
+                <i class="fa-solid fa-headset text-cyan fs-5"></i>
+                <span>Trả lời khách hàng</span>
+              </router-link>
+            </li>
             <li v-if="hasPerm('View_Order')" class="nav-item">
               <router-link to="/erp/orders" class="nav-link-custom d-flex align-items-center gap-3 py-2.5 px-3 rounded-3" active-class="active">
                 <i class="fa-solid fa-file-invoice-dollar text-cyan fs-5"></i>

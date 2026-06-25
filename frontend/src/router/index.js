@@ -23,6 +23,7 @@ import Orders from '../views/erp/Orders.vue'
 import OrderDetail from '../views/erp/OrderDetail.vue'
 import Customers from '../views/erp/Customers.vue'
 import Promotions from '../views/erp/Promotions.vue'
+import SalesCSKH from '../views/erp/SalesCSKH.vue'
 import TikTokShop from '../views/erp/TikTokShop.vue'
 import AiAssistant from '../views/erp/AiAssistant.vue'
 import Employees from '../views/erp/Employees.vue'
@@ -69,6 +70,7 @@ const routes = [
       { path: 'orders/:id', component: OrderDetail, meta: { permission: 'View_Order' } },
       { path: 'customers', component: Customers, meta: { permission: 'View_Customer' } },
       { path: 'promotions', component: Promotions, meta: { permission: 'View_Promotion' } },
+      { path: 'sales-cskh', component: SalesCSKH },
       { path: 'tiktok', component: TikTokShop, meta: { permission: 'View_TikTok' } },
       { path: 'ai', component: AiAssistant },
       { path: 'employees', component: Employees, meta: { permission: 'View_Employee' } },

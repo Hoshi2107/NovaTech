@@ -15,7 +15,7 @@ const initialDb = {
       price: 27990000, 
       originalPrice: 32990000,
       discountRate: 15,
-      discountExpiry: new Date(Date.now() + 86400000 * 2).toISOString(), // 2 days from now
+      discountExpiry: new Date(Date.now() + 86400000 * 2).toISOString(),
       isBestSeller: true,
       stock: 15,
       specifications: "Màn hình: 6.7 inch Super Retina XDR OLED 120Hz\nChip: Apple A17 Pro 3nm\nRAM: 8GB\nBộ nhớ: 256GB\nCamera: Chính 48MP & 2 phụ 12MP",
@@ -184,6 +184,52 @@ const initialDb = {
     { id: 2, name: "Lê Hồng Thắm", phone: "0918765432", email: "hongtham@gmail.com", address: "Quận Bình Thạnh, TP.HCM", points: 450, membershipRank: "Bạc", createdDate: new Date(2025, 8, 10).toISOString() },
     { id: 3, name: "Nguyễn Hữu Khang", phone: "0923456789", email: "huukhang@gmail.com", address: "Quận 7, TP.HCM", points: 3200, membershipRank: "Kim Cương", createdDate: new Date(2024, 10, 5).toISOString() }
   ],
+  customerInboxThreads: [
+    {
+      id: 1,
+      customerId: 1,
+      customerName: "Tran Minh Quan",
+      customerPhone: "0909876543",
+      channel: "Store",
+      subject: "Warranty question for iPhone 15",
+      status: "Unread",
+      priority: "High",
+      updatedAt: new Date(Date.now() - 3600000).toISOString(),
+      messages: [
+        { id: 1, sender: "customer", text: "Hi, how long is the warranty for the iPhone I bought last week?", timestamp: new Date(Date.now() - 7200000).toISOString(), isRead: false }
+      ]
+    },
+    {
+      id: 2,
+      customerId: 2,
+      customerName: "Le Hong Tham",
+      customerPhone: "0918765432",
+      channel: "Store",
+      subject: "Can I change color?",
+      status: "Processing",
+      priority: "Medium",
+      updatedAt: new Date(Date.now() - 86400000).toISOString(),
+      messages: [
+        { id: 1, sender: "customer", text: "Can I exchange my MacBook for another color?", timestamp: new Date(Date.now() - 86400000).toISOString(), isRead: true },
+        { id: 2, sender: "staff", text: "We are checking the exchange policy for you.", timestamp: new Date(Date.now() - 86000000).toISOString(), isRead: true }
+      ]
+    },
+    {
+      id: 3,
+      customerId: 3,
+      customerName: "Nguyen Huu Khang",
+      customerPhone: "0923456789",
+      channel: "Store",
+      subject: "Accessory bundle question",
+      status: "Replied",
+      priority: "Low",
+      updatedAt: new Date(Date.now() - 172800000).toISOString(),
+      messages: [
+        { id: 1, sender: "customer", text: "Any keyboard + mouse bundle discount available?", timestamp: new Date(Date.now() - 172800000).toISOString(), isRead: true },
+        { id: 2, sender: "staff", text: "Yes, we sent 2 suitable bundles to your email.", timestamp: new Date(Date.now() - 171500000).toISOString(), isRead: true }
+      ]
+    }
+  ],
   orders: [
     {
       id: 1,
@@ -191,7 +237,7 @@ const initialDb = {
       customerName: "Trần Minh Quân",
       customerPhone: "0909876543",
       customerAddress: "Quận 1, TP.HCM",
-      orderDate: new Date(Date.now() - 86400000 * 5).toISOString(), // 5 days ago
+      orderDate: new Date(Date.now() - 86400000 * 5).toISOString(),
       status: "Hoàn thành",
       channel: "Website",
       paymentMethod: "COD",
@@ -209,7 +255,7 @@ const initialDb = {
       customerName: "Khách Hàng Vãng Lai",
       customerPhone: "0987654321",
       customerAddress: "Mua trực tiếp tại cửa hàng",
-      orderDate: new Date(Date.now() - 86400000 * 2).toISOString(), // 2 days ago
+      orderDate: new Date(Date.now() - 86400000 * 2).toISOString(),
       status: "Hoàn thành",
       channel: "Cửa hàng",
       paymentMethod: "Tiền mặt",
@@ -250,17 +296,48 @@ const initialDb = {
 };
 
 // 2. Helper to load and save data from/to localStorage
+const normalizeDb = (db = {}) => {
+  const normalized = { ...initialDb, ...db };
+
+  Object.keys(initialDb).forEach((key) => {
+    const defaultValue = initialDb[key];
+    const currentValue = normalized[key];
+
+    if (Array.isArray(defaultValue)) {
+      normalized[key] = Array.isArray(currentValue) ? currentValue : [...defaultValue];
+      return;
+    }
+
+    if (defaultValue && typeof defaultValue === 'object') {
+      normalized[key] =
+        currentValue && typeof currentValue === 'object' && !Array.isArray(currentValue)
+          ? { ...defaultValue, ...currentValue }
+          : { ...defaultValue };
+    }
+  });
+
+  return normalized;
+};
+
 const getDb = () => {
-  const data = localStorage.getItem('novatech_db');
-  if (!data) {
-    localStorage.setItem('novatech_db', JSON.stringify(initialDb));
-    return initialDb;
+  try {
+    const data = localStorage.getItem('novatech_db');
+    const parsedDb = data ? JSON.parse(data) : {};
+    const normalizedDb = normalizeDb(parsedDb);
+
+    localStorage.setItem('novatech_db', JSON.stringify(normalizedDb));
+    return normalizedDb;
+  } catch (err) {
+    console.error('Cannot load NovaTech mock database:', err);
+
+    const normalizedDb = normalizeDb();
+    localStorage.setItem('novatech_db', JSON.stringify(normalizedDb));
+    return normalizedDb;
   }
-  return JSON.parse(data);
 };
 
 const saveDb = (db) => {
-  localStorage.setItem('novatech_db', JSON.stringify(db));
+  localStorage.setItem('novatech_db', JSON.stringify(normalizeDb(db)));
 };
 
 const getSession = () => {
@@ -283,7 +360,6 @@ const handleMockRequest = async (endpoint, method, body, config) => {
   let data = null;
 
   try {
-    // Endpoints processing
     if (endpoint === 'GetSession' && method === 'GET') {
       const sess = getSession();
       if (!sess) {
@@ -302,7 +378,6 @@ const handleMockRequest = async (endpoint, method, body, config) => {
           status = 400;
           data = { message: "Tài khoản của bạn đang bị khóa." };
         } else {
-          // Get permissions
           let permissions = [];
           emp.roles.forEach(r => {
             const roleObj = db.roles.find(rp => rp.roleName === r);
@@ -310,7 +385,7 @@ const handleMockRequest = async (endpoint, method, body, config) => {
               permissions = [...permissions, ...roleObj.permissions];
             }
           });
-          permissions = [...new Set(permissions)]; // distinct
+          permissions = [...new Set(permissions)];
 
           const userSession = {
             fullName: emp.fullName,
@@ -412,7 +487,6 @@ const handleMockRequest = async (endpoint, method, body, config) => {
       };
     } 
     else if (endpoint.startsWith('GetProducts') && method === 'GET') {
-      // Parse query params if any
       const urlObj = new URL(config.url, 'http://localhost');
       const search = urlObj.searchParams.get('search');
       const category = urlObj.searchParams.get('category');
@@ -646,7 +720,6 @@ const handleMockRequest = async (endpoint, method, body, config) => {
           };
           db.orders.push(newOrder);
 
-          // Add notification
           db.notifications.unshift({
             id: db.notifications.length > 0 ? Math.max(...db.notifications.map(n => n.id)) + 1 : 1,
             title: "Đơn hàng POS mới",
@@ -712,7 +785,6 @@ const handleMockRequest = async (endpoint, method, body, config) => {
           };
           db.orders.push(newOrder);
 
-          // Add notification
           db.notifications.unshift({
             id: db.notifications.length > 0 ? Math.max(...db.notifications.map(n => n.id)) + 1 : 1,
             title: "Đơn Online mới",
@@ -797,6 +869,202 @@ const handleMockRequest = async (endpoint, method, body, config) => {
     else if (endpoint === 'GetTiktokLogs' && method === 'GET') {
       data = db.tiktokLogs;
     } 
+    else if (endpoint === 'GetCustomerInbox' && method === 'GET') {
+      db.customerInboxThreads = Array.isArray(db.customerInboxThreads) ? db.customerInboxThreads : [];
+
+      const threads = db.customerInboxThreads.map(thread => {
+        const messages = Array.isArray(thread.messages) ? thread.messages : [];
+
+        return {
+          id: thread.id,
+          customerId: thread.customerId,
+          customerName: thread.customerName,
+          customerPhone: thread.customerPhone,
+          channel: thread.channel,
+          subject: thread.subject,
+          status: thread.status,
+          priority: thread.priority,
+          updatedAt: thread.updatedAt,
+          unreadCount: messages.filter(message => message.sender === 'customer' && !message.isRead).length,
+          lastMessage: messages[messages.length - 1]?.text || ''
+        };
+      }).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
+      data = threads;
+    }
+    else if (endpoint === 'GetCustomerThread' && method === 'GET') {
+      db.customerInboxThreads = Array.isArray(db.customerInboxThreads) ? db.customerInboxThreads : [];
+
+      const urlObj = new URL(config.url, 'http://localhost');
+      const id = Number(urlObj.searchParams.get('id'));
+
+      const thread = db.customerInboxThreads.find(item => Number(item.id) === id);
+
+      if (!thread) {
+        status = 404;
+        data = { message: 'Không tìm thấy hội thoại.' };
+      } else {
+        thread.messages = Array.isArray(thread.messages) ? thread.messages : [];
+        data = thread;
+      }
+    }
+    else if (endpoint === 'MarkCustomerThreadRead' && method === 'POST') {
+      db.customerInboxThreads = Array.isArray(db.customerInboxThreads) ? db.customerInboxThreads : [];
+
+      const thread = db.customerInboxThreads.find(item => Number(item.id) === Number(body?.threadId));
+
+      if (!thread) {
+        status = 404;
+        data = { message: 'Không tìm thấy hội thoại.' };
+      } else {
+        thread.messages = Array.isArray(thread.messages) ? thread.messages : [];
+
+        thread.messages.forEach(item => {
+          if (item.sender === 'customer') {
+            item.isRead = true;
+          }
+        });
+
+        thread.status = thread.status === 'Unread' ? 'Processing' : thread.status;
+        thread.updatedAt = new Date().toISOString();
+
+        saveDb(db);
+
+        data = {
+          message: 'Đã đánh dấu đã đọc.',
+          thread
+        };
+      }
+    }
+    else if (endpoint === 'ReplyCustomerMessage' && method === 'POST') {
+      db.customerInboxThreads = Array.isArray(db.customerInboxThreads) ? db.customerInboxThreads : [];
+
+      const thread = db.customerInboxThreads.find(item => Number(item.id) === Number(body?.threadId));
+      const messageText = (body?.message || '').trim();
+
+      if (!thread) {
+        status = 404;
+        data = { message: 'Không tìm thấy hội thoại.' };
+      } else if (!messageText) {
+        status = 400;
+        data = { message: 'Vui lòng nhập nội dung phản hồi.' };
+      } else {
+        thread.messages = Array.isArray(thread.messages) ? thread.messages : [];
+
+        const message = {
+          id: thread.messages.length > 0
+            ? Math.max(...thread.messages.map(item => Number(item.id) || 0)) + 1
+            : 1,
+          sender: 'staff',
+          text: messageText,
+          timestamp: new Date().toISOString(),
+          isRead: true
+        };
+
+        thread.messages.push(message);
+        thread.status = body?.status || 'Replied';
+        thread.updatedAt = new Date().toISOString();
+
+        thread.messages.forEach(item => {
+          if (item.sender === 'customer') {
+            item.isRead = true;
+          }
+        });
+
+        saveDb(db);
+
+        data = {
+          message: 'Đã gửi phản hồi cho khách hàng.',
+          thread
+        };
+      }
+    }
+    else if (endpoint === 'CreateCustomerInquiry' && method === 'POST') {
+      db.customers = Array.isArray(db.customers) ? db.customers : [];
+      db.customerInboxThreads = Array.isArray(db.customerInboxThreads) ? db.customerInboxThreads : [];
+
+      const customerName = (body?.customerName || '').trim();
+      const customerPhone = (body?.customerPhone || '').trim();
+      const subjectText = (body?.subject || 'Hỏi về sản phẩm').trim() || 'Hỏi về sản phẩm';
+      const messageText = (body?.message || '').trim();
+
+      if (!customerName || !messageText) {
+        status = 400;
+        data = { message: 'Vui lòng nhập họ tên và nội dung câu hỏi.' };
+      } else {
+        const customer = db.customers.find(item => item.phone === customerPhone) || null;
+
+        const thread = {
+          id: db.customerInboxThreads.length > 0
+            ? Math.max(...db.customerInboxThreads.map(item => Number(item.id) || 0)) + 1
+            : 1,
+          customerId: customer?.id || 0,
+          customerName: customerName,
+          customerPhone: customerPhone,
+          channel: 'Store',
+          subject: subjectText,
+          status: 'Unread',
+          priority: 'Medium',
+          updatedAt: new Date().toISOString(),
+          messages: [
+            {
+              id: 1,
+              sender: 'customer',
+              text: messageText,
+              timestamp: new Date().toISOString(),
+              isRead: false
+            }
+          ]
+        };
+
+        db.customerInboxThreads.unshift(thread);
+        saveDb(db);
+
+        data = {
+          message: 'Đã gửi câu hỏi thành công.',
+          thread
+        };
+      }
+    }
+    else if (endpoint === 'AddCustomerInquiryMessage' && method === 'POST') {
+      db.customerInboxThreads = Array.isArray(db.customerInboxThreads) ? db.customerInboxThreads : [];
+
+      const threadId = Number(body?.threadId);
+      const messageText = (body?.message || '').trim();
+
+      const thread = db.customerInboxThreads.find(item => Number(item.id) === threadId);
+
+      if (!thread) {
+        status = 404;
+        data = { message: 'Không tìm thấy hội thoại.' };
+      } else if (!messageText) {
+        status = 400;
+        data = { message: 'Vui lòng nhập nội dung tin nhắn.' };
+      } else {
+        thread.messages = Array.isArray(thread.messages) ? thread.messages : [];
+
+        const message = {
+          id: thread.messages.length > 0
+            ? Math.max(...thread.messages.map(item => Number(item.id) || 0)) + 1
+            : 1,
+          sender: 'customer',
+          text: messageText,
+          timestamp: new Date().toISOString(),
+          isRead: false
+        };
+
+        thread.messages.push(message);
+        thread.status = 'Unread';
+        thread.updatedAt = new Date().toISOString();
+
+        saveDb(db);
+
+        data = {
+          message: 'Đã gửi tin nhắn.',
+          thread
+        };
+      }
+    }
     else if (endpoint === 'GetChatHistory' && method === 'GET') {
       data = db.chatHistory;
     } 
@@ -871,7 +1139,6 @@ const handleMockRequest = async (endpoint, method, body, config) => {
       const totalRevenue = orders.filter(o => o.status === "Hoàn thành").reduce((sum, o) => sum + o.total, 0);
       const completedCount = orders.filter(o => o.status === "Hoàn thành").length;
 
-      // Group by channel
       const channelStatsMap = {};
       orders.forEach(o => {
         const channelName = o.channel || 'Cửa hàng';
@@ -905,10 +1172,9 @@ const handleMockRequest = async (endpoint, method, body, config) => {
   } catch (err) {
     console.error("Mock Request Error:", err);
     status = 500;
-    data = { message: "Internal server error in Mock Interceptor.", error: err.message };
+    data = { message: "Có lỗi xảy ra trong hệ thống mock API.", error: err.message };
   }
 
-  // Return formatted Axios response
   return {
     data: data,
     status: status,
@@ -925,7 +1191,7 @@ axios.defaults.adapter = async function (config) {
   const { url, method, data } = config;
   
   if (url && url.startsWith('/api/')) {
-    const endpoint = url.split('?')[0].substring(5); // remove '/api/' and queries
+    const endpoint = url.split('?')[0].substring(5);
     let body = data;
     if (typeof data === 'string') {
       try {
@@ -935,21 +1201,18 @@ axios.defaults.adapter = async function (config) {
       }
     }
     
-    // Simulate network latency (200ms)
     await new Promise(resolve => setTimeout(resolve, 200));
     
     const mockRes = await handleMockRequest(endpoint, method.toUpperCase(), body, config);
     if (mockRes.status >= 200 && mockRes.status < 300) {
       return mockRes;
     } else {
-      // Axios expects rejected promise for non-2xx codes
       const error = new Error(mockRes.data?.message || 'Mock Request Error');
       error.response = mockRes;
       throw error;
     }
   }
 
-  // Fallback for non-api requests
   if (originalAdapter) {
     return originalAdapter(config);
   }
