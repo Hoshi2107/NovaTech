@@ -1,15 +1,180 @@
 @model DATN64.Models.TikTokShopConfig
-@{ Layout = "~/Views/Shared/_Layout.cshtml"; ViewData["Title"] = "TikTok Sync"; }
-<div class="container my-5">
-    <h2>Cấu hình TikTok Shop</h2>
-    <p>Trạng thái: @(Model?.IsConnected == true ? "Đã kết nối" : "Chưa kết nối")</p>
-    <p>Shop ID: @Model?.ShopId</p>
-    <p>Đồng bộ cuối: @Model?.LastSyncTime.ToString("dd/MM/yyyy HH:mm:ss")</p>
-    <form asp-action="TriggerSync" method="post">
-        <select name="syncType" class="form-control mb-2 w-25">
-            <option value="Đơn hàng">Đồng bộ Đơn hàng</option>
-            <option value="Sản phẩm">Đồng bộ Sản phẩm</option>
-        </select>
-        <button type="submit" class="btn btn-primary">Đồng bộ ngay</button>
-    </form>
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Đồng bộ TikTok Shop";
+    var syncLogs = ViewBag.SyncLogs as List<DATN64.Models.TikTokSyncLog> ?? new List<DATN64.Models.TikTokSyncLog>();
+}
+
+<div class="container-fluid py-4 animate-fade-in">
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-6">
+            <h2 class="fw-bold text-gradient mb-0"><i class="fa-brands fa-tiktok me-2"></i>Đồng bộ TikTok Shop</h2>
+            <p class="text-muted mb-0">Quản lý tích hợp, đồng bộ hóa sản phẩm và đơn hàng đa kênh.</p>
+        </div>
+        <div class="col-md-6 text-md-end mt-3 mt-md-0">
+            <span class="badge bg-dark-subtle text-light border border-secondary border-opacity-25 px-3 py-2 rounded-pill">
+                <i class="fa-solid fa-link text-success me-1"></i> API Connection: Active
+            </span>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- LEFT: INTEGRATION CONFIG -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 mb-4 bg-glass">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-sliders me-2 text-primary"></i>Trạng Thái Cấu Hình</h5>
+                    <hr class="opacity-10 my-3">
+                    
+                    <div class="mb-3 d-flex align-items-center justify-content-between">
+                        <span class="text-muted text-sm">Trạng thái kết nối:</span>
+                        @if (Model?.IsConnected == true)
+                        {
+                            <span class="badge bg-success-subtle text-success rounded-pill px-3 py-1 fw-bold">
+                                <i class="fa-solid fa-circle-check me-1"></i>Đã kết nối
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger-subtle text-danger rounded-pill px-3 py-1 fw-bold">
+                                <i class="fa-solid fa-circle-xmark me-1"></i>Chưa kết nối
+                            </span>
+                        }
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="text-muted text-xs fw-bold text-uppercase d-block mb-1">Tên Cửa Hàng</label>
+                        <div class="fw-semibold">@(string.IsNullOrEmpty(Model?.ShopName) ? "NovaTech TikTok Shop (Fake)" : Model.ShopName)</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="text-muted text-xs fw-bold text-uppercase d-block mb-1">Mã Cửa Hàng (Shop ID)</label>
+                        <div class="font-monospace text-secondary">@(string.IsNullOrEmpty(Model?.ShopId) ? "TT-NOVATECH" : Model.ShopId)</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="text-muted text-xs fw-bold text-uppercase d-block mb-1">Lần đồng bộ cuối</label>
+                        <div class="text-secondary">
+                            <i class="fa-regular fa-clock me-1"></i>
+                            @(Model != null ? Model.LastSyncTime.ToString("dd/MM/yyyy HH:mm:ss") : "Chưa thực hiện")
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="text-muted text-xs fw-bold text-uppercase d-block mb-1">Trình trạng đồng bộ</label>
+                        <span class="badge bg-info-subtle text-info">@(Model?.SyncStatus ?? "Sẵn sàng")</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SYNC ACTIONS CARD -->
+            <div class="card border-0 shadow-sm rounded-4 bg-glass">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-rotate me-2 text-primary"></i>Kích Hoạt Đồng Bộ Thủ Công</h5>
+                    <hr class="opacity-10 my-3">
+                    
+                    <form asp-action="TriggerSync" method="post">
+                        <div class="mb-3">
+                            <label class="form-label text-muted text-xs fw-bold text-uppercase">Loại Dữ Liệu Đồng Bộ</label>
+                            <select name="syncType" class="form-select rounded-3">
+                                <option value="Đơn hàng">Đồng bộ Đơn hàng (Từ Simulator)</option>
+                                <option value="Sản phẩm">Đồng bộ Sản phẩm (Mock Sync)</option>
+                            </select>
+                            <small class="text-muted mt-1 d-block">Khi đồng bộ Đơn hàng, hệ thống sẽ gọi API tới Trình Giả Lập TikTok Shop để lấy các đơn hàng mới về.</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 py-2 rounded-3 shadow-sm">
+                            <i class="fa-solid fa-arrows-rotate me-2"></i>Đồng bộ ngay
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: SYNC LOGS -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 bg-glass h-100">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-list-check me-2 text-primary"></i>Nhật Ký Đồng Bộ Mới Nhất</h5>
+                    <hr class="opacity-10 my-3">
+
+                    @if (syncLogs.Count == 0)
+                    {
+                        <div class="text-center py-5">
+                            <i class="fa-solid fa-terminal fs-1 text-muted opacity-50 mb-3"></i>
+                            <p class="text-muted">Chưa ghi nhận lịch sử đồng bộ nào.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th class="px-3 py-2 text-muted text-xs fw-bold text-uppercase">Thời Gian</th>
+                                        <th class="px-3 py-2 text-muted text-xs fw-bold text-uppercase">Loại Đồng Bộ</th>
+                                        <th class="px-3 py-2 text-muted text-xs fw-bold text-uppercase">Trạng Thái</th>
+                                        <th class="px-3 py-2 text-muted text-xs fw-bold text-uppercase">Nội Dung Chi Tiết</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var log in syncLogs)
+                                    {
+                                        <tr>
+                                            <td class="px-3 font-monospace text-xs text-secondary">
+                                                @log.Timestamp.ToString("dd/MM/yyyy HH:mm:ss")
+                                            </td>
+                                            <td class="px-3">
+                                                <span class="badge bg-secondary-subtle text-secondary-custom">
+                                                    @log.Type
+                                                </span>
+                                            </td>
+                                            <td class="px-3">
+                                                @if (log.Status == "Thành công")
+                                                {
+                                                    <span class="badge bg-success-subtle text-success rounded-pill px-2 py-1">
+                                                        <i class="fa-solid fa-circle-check me-1"></i>Thành công
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-danger-subtle text-danger rounded-pill px-2 py-1">
+                                                        <i class="fa-solid fa-circle-exclamation me-1"></i>Thất bại
+                                                    </span>
+                                                }
+                                            </td>
+                                            <td class="px-3 text-sm text-secondary">
+                                                @log.Message
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<style>
+    .bg-glass {
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+    }
+    .text-gradient {
+        background: linear-gradient(45deg, #4e73df, #224abe);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .text-secondary-custom {
+        color: #5a5c69;
+    }
+    .animate-fade-in {
+        animation: fadeIn 0.4s ease-out;
+    }
+    @@keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>

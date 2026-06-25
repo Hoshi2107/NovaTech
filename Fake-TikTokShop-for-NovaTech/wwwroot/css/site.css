@@ -1,0 +1,200 @@
+body {
+    font-family: 'Outfit', sans-serif;
+    background-color: #0b0c10;
+    color: #e5e7eb;
+}
+
+/* Scrollbar Customization */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #0f1016;
+}
+::-webkit-scrollbar-thumb {
+    background: #1f2833;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #45f3ff;
+}
+
+/* Theme Colors */
+.bg-dark-custom {
+    background-color: #0b0c10;
+}
+.text-light-custom {
+    color: #e5e7eb;
+}
+
+.text-tiktok-red {
+    color: #FE2C55;
+}
+.text-tiktok-teal {
+    color: #25F4EE;
+}
+
+.bg-tiktok-card {
+    background-color: #12131a;
+    border: 1px solid #232533;
+    border-radius: 16px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(5px);
+}
+
+.bg-tiktok-navbar {
+    background-color: #0d0e14;
+    border-bottom: 1px solid #1f2230;
+}
+
+/* Buttons */
+.btn-tiktok-primary {
+    background: linear-gradient(135deg, #FE2C55 0%, #dd2447 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+.btn-tiktok-primary:hover {
+    background: linear-gradient(135deg, #ff4165 0%, #eb2b4f 100%);
+    box-shadow: 0 0 15px rgba(254, 44, 85, 0.4);
+    color: white;
+}
+
+.btn-tiktok-secondary {
+    background: linear-gradient(135deg, #25F4EE 0%, #1eccd1 100%);
+    color: #0b0c10;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+.btn-tiktok-secondary:hover {
+    background: linear-gradient(135deg, #4df6f1 0%, #2bdde2 100%);
+    box-shadow: 0 0 15px rgba(37, 244, 238, 0.4);
+    color: #0b0c10;
+}
+
+.btn-tiktok-dark {
+    background-color: #1a1c27;
+    color: #e5e7eb;
+    border: 1px solid #2e3247;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+.btn-tiktok-dark:hover {
+    background-color: #232738;
+    border-color: #404664;
+    color: white;
+}
+
+/* Form Controls */
+.form-control-tiktok {
+    background-color: #161822;
+    border: 1px solid #2a2e40;
+    color: white;
+    border-radius: 8px;
+}
+.form-control-tiktok:focus {
+    background-color: #1d202e;
+    border-color: #25F4EE;
+    color: white;
+    box-shadow: 0 0 8px rgba(37, 244, 238, 0.2);
+}
+
+.form-select-tiktok {
+    background-color: #161822;
+    border: 1px solid #2a2e40;
+    color: white;
+    border-radius: 8px;
+}
+.form-select-tiktok:focus {
+    background-color: #1d202e;
+    border-color: #25F4EE;
+    color: white;
+    box-shadow: 0 0 8px rgba(37, 244, 238, 0.2);
+}
+
+/* Badges */
+.badge-status {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-awaiting {
+    background-color: rgba(254, 44, 85, 0.15);
+    color: #FE2C55;
+    border: 1px solid rgba(254, 44, 85, 0.3);
+}
+.badge-shipped {
+    background-color: rgba(255, 193, 7, 0.15);
+    color: #ffc107;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+.badge-delivered {
+    background-color: rgba(40, 167, 69, 0.15);
+    color: #28a745;
+    border: 1px solid rgba(40, 167, 69, 0.3);
+}
+.badge-cancelled {
+    background-color: rgba(108, 117, 125, 0.15);
+    color: #6c757d;
+    border: 1px solid rgba(108, 117, 125, 0.3);
+}
+
+.badge-sync-success {
+    background-color: rgba(40, 167, 69, 0.15);
+    color: #28a745;
+}
+.badge-sync-failed {
+    background-color: rgba(220, 53, 69, 0.15);
+    color: #dc3545;
+}
+.badge-sync-pending {
+    background-color: rgba(108, 117, 125, 0.15);
+    color: #6c757d;
+}
+
+/* Tabs */
+.nav-tabs-tiktok {
+    border-bottom: 1px solid #1f2230;
+}
+.nav-tabs-tiktok .nav-link {
+    color: #8c90a6;
+    border: none;
+    background: none;
+    padding: 12px 20px;
+    font-weight: 500;
+    position: relative;
+}
+.nav-tabs-tiktok .nav-link.active {
+    color: white;
+    background: none;
+}
+.nav-tabs-tiktok .nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, #FE2C55 0%, #25F4EE 100%);
+}
+
+/* Animations */
+.animate-fade-in {
+    animation: fadeIn 0.4s ease-out;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+[v-cloak] {
+    display: none;
+}

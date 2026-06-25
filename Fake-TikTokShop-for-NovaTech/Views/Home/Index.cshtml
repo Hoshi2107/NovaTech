@@ -1,0 +1,719 @@
+@{
+    ViewData["Title"] = "Seller Center";
+}
+
+<div id="app" class="container-fluid py-4" v-cloak>
+    <!-- TOPBAR -->
+    <nav class="navbar navbar-expand-lg bg-tiktok-navbar rounded-4 mb-4 px-4 py-3 shadow-sm">
+        <div class="container-fluid p-0 d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <i class="fa-brands fa-tiktok fs-2 text-tiktok-red me-2 animate-bounce"></i>
+                <div>
+                    <h4 class="mb-0 fw-bold text-white">TikTok Shop <span class="text-tiktok-teal">Seller Center</span></h4>
+                    <small class="text-muted-custom text-xs">Trình Giả Lập Đa Kênh & Đồng Bộ Hóa</small>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill d-flex align-items-center gap-2">
+                    <span class="spinner-grow spinner-grow-sm text-success" role="status"></span>
+                    Môi trường: Simulator (Active)
+                </span>
+                <span class="text-muted">|</span>
+                <div class="text-end">
+                    <small class="text-muted d-block">Cửa hàng tích hợp</small>
+                    <strong class="text-tiktok-teal">NovaTech Shop (Fake)</strong>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="row g-4">
+        <!-- LEFT COLUMN: CREATE ORDER & SETTINGS -->
+        <div class="col-xl-4 col-lg-5">
+            <!-- SETTINGS CARD -->
+            <div class="card bg-tiktok-card mb-4">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-3 text-white d-flex align-items-center justify-content-between">
+                        <span><i class="fa-solid fa-gears text-tiktok-teal me-2"></i>Cấu Hình Kết Nối</span>
+                        <span class="badge bg-primary-subtle text-primary text-xs">Webhook API</span>
+                    </h5>
+                    <hr class="border-secondary opacity-25">
+                    <div class="mb-3">
+                        <label class="form-label text-muted text-xs fw-bold text-uppercase">Base URL Của Web Bán Hàng</label>
+                        <input type="text" class="form-control form-control-tiktok" v-model="settings.novaTechBaseUrl" placeholder="http://localhost:5018">
+                        <small class="text-muted mt-1 d-block">Endpoint webhook sẽ tự động gọi tới: <code>${settings.novaTechBaseUrl}/api/tiktok/webhook</code></small>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" role="switch" id="autoPush" v-model="settings.autoPushWebhook">
+                        <label class="form-check-label text-light" for="autoPush">Tự động đẩy Webhook khi có sự thay đổi đơn hàng</label>
+                    </div>
+                    <button class="btn btn-tiktok-secondary w-100 py-2" @@click="saveSettings" :disabled="savingSettings">
+                        <i class="fa-solid fa-save me-2"></i>Lưu Cấu Hình
+                    </button>
+                </div>
+            </div>
+
+            <!-- ORDER GENERATOR -->
+            <div class="card bg-tiktok-card">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-3 text-white"><i class="fa-solid fa-cart-plus text-tiktok-red me-2"></i>Tạo Đơn Hàng Giả Lập</h5>
+                    <hr class="border-secondary opacity-25">
+                    
+                    <form @@submit.prevent="createOrder">
+                        <div class="mb-3">
+                            <label class="form-label text-muted text-xs fw-bold text-uppercase">Tên Người Nhận <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-tiktok" v-model="newOrder.customerName" required placeholder="Nguyễn Văn A">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label text-muted text-xs fw-bold text-uppercase">Số Điện Thoại <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-tiktok" v-model="newOrder.phone" required placeholder="09xxxxxxxx">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label text-muted text-xs fw-bold text-uppercase">Địa Chỉ Giao Hàng <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-tiktok" v-model="newOrder.address" required placeholder="Số 1 Đại Cồ Việt, Hai Bà Trưng, Hà Nội">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-muted text-xs fw-bold text-uppercase">Ghi chú người mua</label>
+                            <textarea class="form-control form-control-tiktok" v-model="newOrder.note" rows="2" placeholder="Giao giờ hành chính..."></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-muted text-xs fw-bold text-uppercase">Phương Thức Thanh Toán</label>
+                            <select class="form-select form-select-tiktok" v-model="newOrder.paymentMethod">
+                                <option value="COD">Thanh toán khi nhận hàng (COD)</option>
+                                <option value="Chuyển khoản">Chuyển khoản ngân hàng</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-muted text-xs fw-bold text-uppercase d-flex justify-content-between">
+                                <span>Sản Phẩm Đặt Mua</span>
+                                <span class="text-tiktok-teal cursor-pointer" @@click="syncProducts" style="font-size: 0.8rem;">
+                                    <i class="fa-solid fa-arrows-rotate me-1"></i>Làm mới catalog
+                                </span>
+                            </label>
+                            
+                            <div v-if="productsCache.length === 0" class="text-center py-3 border border-secondary border-dashed rounded-3 mb-2">
+                                <p class="text-muted mb-2 text-xs">Chưa có dữ liệu sản phẩm của NovaTech</p>
+                                <button type="button" class="btn btn-sm btn-tiktok-secondary px-3" @@click="syncProducts">
+                                    <i class="fa-solid fa-cloud-arrow-down me-1"></i>Đồng bộ catalog ngay
+                                </button>
+                            </div>
+                            
+                            <div v-else>
+                                <div class="row g-2 mb-2 align-items-center" v-for="(item, index) in newOrder.items" :key="index">
+                                    <div class="col-8">
+                                        <select class="form-select form-select-tiktok" v-model="item.productId" @@change="onProductChange(index)" required>
+                                            <option value="" disabled>-- Chọn sản phẩm --</option>
+                                            <option v-for="p in productsCache" :value="p.productId" :disabled="p.stock <= 0">
+                                                ${p.name} - ${formatCurrency(p.price)} (Tồn: ${p.stock})
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <div class="col-3">
+                                        <input type="number" class="form-control form-control-tiktok text-center" v-model.number="item.quantity" min="1" required>
+                                    </div>
+                                    <div class="col-1 text-end">
+                                        <button type="button" class="btn btn-link text-tiktok-red p-0" @@click="removeItem(index)" v-if="newOrder.items.length > 1">
+                                            <i class="fa-solid fa-trash-can"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-tiktok-dark mt-2" @@click="addItem">
+                                    <i class="fa-solid fa-plus me-1"></i>Thêm sản phẩm
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="border-top border-secondary border-dashed pt-3 mt-3 d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="text-muted-custom text-xs">Tổng cộng dự kiến:</span>
+                                <h4 class="text-tiktok-teal mb-0 fw-bold">${formatCurrency(calculateTotalPrice())}</h4>
+                            </div>
+                            <button type="submit" class="btn btn-tiktok-primary py-2 px-4" :disabled="creatingOrder || productsCache.length === 0">
+                                <span v-if="creatingOrder" class="spinner-border spinner-border-sm me-2"></span>
+                                <i class="fa-solid fa-paper-plane me-2"></i>Tạo & Gửi Đơn
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: METRICS, ORDERS & LOGS -->
+        <div class="col-xl-8 col-lg-7">
+            <!-- METRICS ROW -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="card bg-tiktok-card border-0 h-100">
+                        <div class="card-body p-3 d-flex align-items-center">
+                            <div class="rounded-3 p-3 bg-tiktok-red bg-opacity-10 text-tiktok-red me-3">
+                                <i class="fa-solid fa-box-archive fs-3"></i>
+                            </div>
+                            <div>
+                                <span class="text-muted text-xs d-block text-uppercase fw-bold">Tổng đơn hàng</span>
+                                <h3 class="mb-0 fw-bold text-white">${orders.length}</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-tiktok-card border-0 h-100">
+                        <div class="card-body p-3 d-flex align-items-center">
+                            <div class="rounded-3 p-3 bg-tiktok-teal bg-opacity-10 text-tiktok-teal me-3">
+                                <i class="fa-solid fa-money-bill-wave fs-3"></i>
+                            </div>
+                            <div>
+                                <span class="text-muted text-xs d-block text-uppercase fw-bold">Doanh thu tạm tính</span>
+                                <h3 class="mb-0 fw-bold text-white">${formatCurrency(calculateRevenue())}</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-tiktok-card border-0 h-100">
+                        <div class="card-body p-3 d-flex align-items-center">
+                            <div class="rounded-3 p-3 bg-success bg-opacity-10 text-success me-3">
+                                <i class="fa-solid fa-circle-check fs-3"></i>
+                            </div>
+                            <div>
+                                <span class="text-muted text-xs d-block text-uppercase fw-bold">Đồng bộ Webhook</span>
+                                <h3 class="mb-0 fw-bold text-white">${getSyncStats()}%</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TABS AREA -->
+            <div class="card bg-tiktok-card">
+                <div class="card-header bg-transparent border-0 p-0">
+                    <ul class="nav nav-tabs nav-tabs-tiktok px-4 pt-3" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="orders-tab" data-bs-toggle="tab" data-bs-target="#orders-panel" type="button" role="tab">
+                                <i class="fa-solid fa-list-check me-2"></i>Đơn Hàng TikTok (${orders.length})
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="logs-tab" data-bs-toggle="tab" data-bs-target="#logs-panel" type="button" role="tab" @@click="fetchLogs">
+                                <i class="fa-solid fa-file-invoice-dollar me-2"></i>Nhật Ký Webhook (${webhookLogs.length})
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="catalog-tab" data-bs-toggle="tab" data-bs-target="#catalog-panel" type="button" role="tab">
+                                <i class="fa-solid fa-warehouse me-2"></i>Catalog Sản Phẩm (${productsCache.length})
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body p-4">
+                    <div class="tab-content">
+                        <!-- TAB 1: ORDERS -->
+                        <div class="tab-pane fade show active animate-fade-in" id="orders-panel" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold mb-0 text-white"><i class="fa-solid fa-list text-tiktok-teal me-2"></i>Danh sách đơn hàng giả lập</h6>
+                                <div class="d-flex gap-2">
+                                    <button v-if="orders.length > 0" class="btn btn-sm btn-outline-danger" @@click="clearData">
+                                        <i class="fa-solid fa-trash-can me-1"></i>Xóa hết dữ liệu
+                                    </button>
+                                    <button class="btn btn-sm btn-tiktok-dark" @@click="fetchOrders">
+                                        <i class="fa-solid fa-arrows-rotate me-1"></i>Tải lại
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div v-if="orders.length === 0" class="text-center py-5">
+                                <i class="fa-solid fa-receipt fs-1 text-muted mb-3 opacity-50"></i>
+                                <p class="text-muted">Chưa có đơn hàng nào được tạo.</p>
+                            </div>
+
+                            <div v-else class="table-responsive">
+                                <table class="table table-hover align-middle text-light border-secondary border-opacity-10 mb-0">
+                                    <thead>
+                                        <tr class="text-muted border-secondary">
+                                            <th>Mã Đơn Hàng</th>
+                                            <th>Khách Hàng</th>
+                                            <th>Chi Tiết</th>
+                                            <th>Tổng Tiền</th>
+                                            <th>Trạng Thái</th>
+                                            <th>Đồng Bộ</th>
+                                            <th class="text-end">Hành Động</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="order in orders" :key="order.orderId" class="border-secondary border-opacity-10">
+                                            <td>
+                                                <strong class="text-tiktok-teal font-monospace">${order.orderId}</strong>
+                                                <small class="text-muted d-block">${formatDate(order.createdAt)}</small>
+                                            </td>
+                                            <td>
+                                                <div class="fw-semibold text-white">${order.customerName}</div>
+                                                <small class="text-muted font-monospace">${order.phone}</small>
+                                            </td>
+                                            <td>
+                                                <div v-for="item in order.orderItems" :key="item.id" class="text-xs">
+                                                    &bull; ${item.productName} <span class="text-muted">x${item.quantity}</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="fw-bold text-success">${formatCurrency(order.totalPrice)}</span>
+                                                <small class="text-muted d-block text-xs">${order.paymentMethod}</small>
+                                            </td>
+                                            <td>
+                                                <select class="form-select form-select-sm form-select-tiktok w-auto text-xs py-1" 
+                                                        v-model="order.status" 
+                                                        @@change="updateStatus(order.orderId, order.status)">
+                                                    <option value="Awaiting Shipment">Chờ giao hàng</option>
+                                                    <option value="Shipped">Đang giao</option>
+                                                    <option value="Delivered">Đã giao</option>
+                                                    <option value="Cancelled">Đã hủy</option>
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <span v-if="order.syncStatus === 'Success'" class="badge badge-status badge-sync-success">
+                                                    <i class="fa-solid fa-circle-check me-1"></i>Ok
+                                                </span>
+                                                <span v-else-if="order.syncStatus === 'Failed'" class="badge badge-status badge-sync-failed cursor-pointer" 
+                                                      :title="order.webhookErrorMessage" @@click="showErrorDetail(order)">
+                                                    <i class="fa-solid fa-circle-exclamation me-1"></i>Lỗi
+                                                </span>
+                                                <span v-else class="badge badge-status badge-sync-pending">
+                                                    <i class="fa-solid fa-clock me-1"></i>Chờ
+                                                </span>
+                                            </td>
+                                            <td class="text-end">
+                                                <button class="btn btn-sm btn-tiktok-primary" @@click="pushWebhook(order.orderId)" title="Gửi Webhook sang web NovaTech">
+                                                    <i class="fa-solid fa-rotate me-1"></i>Gửi Webhook
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- TAB 2: WEBHOOK LOGS -->
+                        <div class="tab-pane fade animate-fade-in" id="logs-panel" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold mb-0 text-white"><i class="fa-solid fa-terminal text-tiktok-red me-2"></i>Nhật ký đẩy Webhook sang NovaTech</h6>
+                                <button class="btn btn-sm btn-tiktok-dark" @@click="fetchLogs">
+                                    <i class="fa-solid fa-arrows-rotate me-1"></i>Tải lại
+                                </button>
+                            </div>
+                            
+                            <div v-if="webhookLogs.length === 0" class="text-center py-5">
+                                <i class="fa-solid fa-terminal fs-1 text-muted mb-3 opacity-50"></i>
+                                <p class="text-muted">Chưa có bản ghi webhook nào.</p>
+                            </div>
+
+                            <div v-else class="table-responsive">
+                                <table class="table table-hover align-middle text-light border-secondary border-opacity-10 mb-0">
+                                    <thead>
+                                        <tr class="text-muted border-secondary">
+                                            <th>Thời Gian</th>
+                                            <th>Mã Đơn</th>
+                                            <th>Hành Động</th>
+                                            <th>HTTP Code</th>
+                                            <th>Thông Điệp Chi Tiết</th>
+                                            <th class="text-end">Dữ Liệu</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="log in webhookLogs" :key="log.id" class="border-secondary border-opacity-10">
+                                            <td class="text-xs font-monospace">${formatDate(log.timestamp)}</td>
+                                            <td><strong class="text-tiktok-teal font-monospace">${log.orderId}</strong></td>
+                                            <td>
+                                                <span class="badge bg-secondary-subtle text-light-custom text-xs">${log.actionType}</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge text-white" :class="log.httpStatus >= 200 && log.httpStatus < 300 ? 'bg-success' : 'bg-danger'">
+                                                    ${log.httpStatus || 'N/A'}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="text-xs text-truncate" style="max-width: 250px;" :title="log.message">${log.message}</div>
+                                            </td>
+                                            <td class="text-end">
+                                                <button class="btn btn-sm btn-tiktok-dark py-1 px-2" @@click="viewPayload(log)">
+                                                    <i class="fa-solid fa-eye me-1"></i>Payload
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- TAB 3: PRODUCTS CATALOG -->
+                        <div class="tab-pane fade animate-fade-in" id="catalog-panel" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold mb-0 text-white"><i class="fa-solid fa-warehouse text-tiktok-teal me-2"></i>Catalog sản phẩm đồng bộ từ NovaTech</h6>
+                                <button class="btn btn-sm btn-tiktok-secondary" @@click="syncProducts" :disabled="syncingProducts">
+                                    <span v-if="syncingProducts" class="spinner-border spinner-border-sm me-1"></span>
+                                    <i class="fa-solid fa-arrows-rotate me-1"></i>Đồng bộ catalog sản phẩm
+                                </button>
+                            </div>
+                            
+                            <div v-if="productsCache.length === 0" class="text-center py-5">
+                                <i class="fa-solid fa-box-open fs-1 text-muted mb-3 opacity-50"></i>
+                                <p class="text-muted">Chưa đồng bộ danh mục sản phẩm từ NovaTech.</p>
+                            </div>
+
+                            <div v-else class="row g-3">
+                                <div class="col-md-6" v-for="p in productsCache" :key="p.productId">
+                                    <div class="card bg-tiktok-dark border-secondary border-opacity-25 h-100">
+                                        <div class="card-body p-3 d-flex align-items-center">
+                                            <img :src="p.imageUrl || 'https://via.placeholder.com/80'" class="rounded-3 object-fit-cover me-3 bg-secondary" width="64" height="64" alt="Product Image">
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1 text-white fw-bold text-truncate" style="max-width: 250px;">${p.name}</h6>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <span class="text-success fw-bold">${formatCurrency(p.price)}</span>
+                                                    <span class="badge bg-secondary-subtle text-muted text-xs">Mã: #${p.productId}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        new Vue({
+            el: '#app',
+            delimiters: ['${', '}'],
+            data: {
+                orders: [],
+                webhookLogs: [],
+                productsCache: [],
+                settings: {
+                    novaTechBaseUrl: 'http://localhost:5018',
+                    autoPushWebhook: true
+                },
+                newOrder: {
+                    customerName: '',
+                    phone: '',
+                    address: '',
+                    note: '',
+                    paymentMethod: 'COD',
+                    items: [
+                        { productId: '', quantity: 1, price: 0, productName: '', productSku: '' }
+                    ]
+                },
+                creatingOrder: false,
+                savingSettings: false,
+                syncingProducts: false
+            },
+            mounted() {
+                this.fetchSettings();
+                this.fetchProductsCache();
+                this.fetchOrders();
+            },
+            methods: {
+                formatCurrency(val) {
+                    if (!val && val !== 0) return '0 ₫';
+                    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
+                },
+                formatDate(dateStr) {
+                    if (!dateStr) return '';
+                    const date = new Date(dateStr);
+                    return date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                },
+                calculateTotalPrice() {
+                    return this.newOrder.items.reduce((total, item) => {
+                        const prod = this.productsCache.find(p => p.productId === item.productId);
+                        const price = prod ? prod.price : 0;
+                        return total + (price * item.quantity);
+                    }, 0);
+                },
+                calculateRevenue() {
+                    return this.orders
+                        .filter(o => o.status !== 'Cancelled')
+                        .reduce((total, o) => total + o.totalPrice, 0);
+                },
+                getSyncStats() {
+                    if (this.orders.length === 0) return 100;
+                    const success = this.orders.filter(o => o.syncStatus === 'Success').length;
+                    return Math.round((success / this.orders.length) * 100);
+                },
+                addItem() {
+                    this.newOrder.items.push({ productId: '', quantity: 1, price: 0, productName: '', productSku: '' });
+                },
+                removeItem(index) {
+                    this.newOrder.items.splice(index, 1);
+                },
+                onProductChange(index) {
+                    const item = this.newOrder.items[index];
+                    const prod = this.productsCache.find(p => p.productId === item.productId);
+                    if (prod) {
+                        item.price = prod.price;
+                        item.productName = prod.name;
+                        item.productSku = prod.sku;
+                    }
+                },
+                async fetchSettings() {
+                    try {
+                        const res = await axios.get('/api/tiktok/settings');
+                        if (res.data) {
+                            this.settings = res.data;
+                        }
+                    } catch (err) {
+                        console.error('Lỗi fetch settings:', err);
+                    }
+                },
+                async saveSettings() {
+                    this.savingSettings = true;
+                    try {
+                        await axios.post('/api/tiktok/settings', this.settings);
+                        Swal.fire({
+                            title: 'Thành công!',
+                            text: 'Đã lưu cấu hình kết nối.',
+                            icon: 'success',
+                            background: '#12131a',
+                            color: '#fff',
+                            confirmButtonColor: '#FE2C55'
+                        });
+                    } catch (err) {
+                        Swal.fire('Lỗi', 'Không thể lưu cấu hình!', 'error');
+                    } finally {
+                        this.savingSettings = false;
+                    }
+                },
+                async fetchProductsCache() {
+                    try {
+                        const res = await axios.get('/api/tiktok/products-cache');
+                        this.productsCache = res.data;
+                    } catch (err) {
+                        console.error('Lỗi tải sản phẩm cache:', err);
+                    }
+                },
+                async syncProducts() {
+                    this.syncingProducts = true;
+                    try {
+                        const res = await axios.post('/api/tiktok/sync-products');
+                        Swal.fire({
+                            title: 'Đồng bộ catalog!',
+                            text: res.data.message,
+                            icon: 'success',
+                            background: '#12131a',
+                            color: '#fff',
+                            confirmButtonColor: '#25F4EE'
+                        });
+                        this.fetchProductsCache();
+                    } catch (err) {
+                        const msg = err.response?.data?.message || 'Không thể đồng bộ sản phẩm từ NovaTech. Hãy đảm bảo web NovaTech đang chạy trên port tương ứng!';
+                        Swal.fire({
+                            title: 'Thất bại!',
+                            text: msg,
+                            icon: 'error',
+                            background: '#12131a',
+                            color: '#fff',
+                            confirmButtonColor: '#FE2C55'
+                        });
+                    } finally {
+                        this.syncingProducts = false;
+                    }
+                },
+                async fetchOrders() {
+                    try {
+                        const res = await axios.get('/api/tiktok/orders');
+                        this.orders = res.data;
+                    } catch (err) {
+                        console.error('Lỗi tải đơn hàng:', err);
+                    }
+                },
+                async createOrder() {
+                    // Check items
+                    if (this.newOrder.items.some(i => !i.productId)) {
+                        Swal.fire('Lỗi', 'Vui lòng chọn sản phẩm đầy đủ cho các dòng!', 'warning');
+                        return;
+                    }
+
+                    // Client-side stock check
+                    for (const item of this.newOrder.items) {
+                        const prod = this.productsCache.find(p => p.productId === item.productId);
+                        if (!prod) continue;
+                        if (prod.stock <= 0) {
+                            Swal.fire({
+                                title: 'Hết hàng!',
+                                text: `Sản phẩm '${prod.name}' đã hết hàng trong kho!`,
+                                icon: 'error',
+                                background: '#12131a',
+                                color: '#fff',
+                                confirmButtonColor: '#FE2C55'
+                            });
+                            return;
+                        }
+                        if (item.quantity > prod.stock) {
+                            Swal.fire({
+                                title: 'Không đủ tồn kho!',
+                                text: `Sản phẩm '${prod.name}' chỉ còn ${prod.stock} chiếc trong kho (Yêu cầu: ${item.quantity}).`,
+                                icon: 'error',
+                                background: '#12131a',
+                                color: '#fff',
+                                confirmButtonColor: '#FE2C55'
+                            });
+                            return;
+                        }
+                    }
+                    
+                    this.creatingOrder = true;
+                    try {
+                        const res = await axios.post('/api/tiktok/orders', this.newOrder);
+                        Swal.fire({
+                            title: 'Đã tạo đơn!',
+                            text: `Mã đơn hàng TikTok: ${res.data.orderId}`,
+                            icon: 'success',
+                            background: '#12131a',
+                            color: '#fff',
+                            confirmButtonColor: '#25F4EE'
+                        });
+                        // Reset form
+                        this.newOrder.customerName = '';
+                        this.newOrder.phone = '';
+                        this.newOrder.address = '';
+                        this.newOrder.note = '';
+                        this.newOrder.items = [{ productId: '', quantity: 1, price: 0, productName: '', productSku: '' }];
+                        this.fetchOrders();
+                        this.fetchProductsCache(); // Refresh stock cache
+                    } catch (err) {
+                        const errMsg = err.response?.data?.message || 'Có lỗi xảy ra khi tạo đơn hàng giả lập!';
+                        Swal.fire({
+                            title: 'Thất bại!',
+                            text: errMsg,
+                            icon: 'error',
+                            background: '#12131a',
+                            color: '#fff',
+                            confirmButtonColor: '#FE2C55'
+                        });
+                    } finally {
+                        this.creatingOrder = false;
+                    }
+                },
+                async updateStatus(orderId, status) {
+                    try {
+                        const res = await axios.post(`/api/tiktok/orders/${orderId}/status`, { status });
+                        const toast = Swal.mixin({
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 2500,
+                            background: '#12131a',
+                            color: '#fff'
+                        });
+                        toast.fire({
+                            icon: 'success',
+                            title: res.data.message
+                        });
+                        this.fetchOrders();
+                    } catch (err) {
+                        Swal.fire('Lỗi', 'Không thể cập nhật trạng thái đơn hàng!', 'error');
+                    }
+                },
+                async pushWebhook(orderId) {
+                    try {
+                        const res = await axios.post(`/api/tiktok/orders/${orderId}/push-webhook`);
+                        Swal.fire({
+                            title: 'Đẩy thành công!',
+                            text: res.data.message,
+                            icon: 'success',
+                            background: '#12131a',
+                            color: '#fff',
+                            confirmButtonColor: '#25F4EE'
+                        });
+                        this.fetchOrders();
+                    } catch (err) {
+                        const msg = err.response?.data?.error || 'Có lỗi xảy ra khi gửi webhook!';
+                        Swal.fire({
+                            title: 'Thất bại!',
+                            text: msg,
+                            icon: 'error',
+                            background: '#12131a',
+                            color: '#fff',
+                            confirmButtonColor: '#FE2C55'
+                        });
+                        this.fetchOrders();
+                    }
+                },
+                async fetchLogs() {
+                    try {
+                        const res = await axios.get('/api/tiktok/webhook-logs');
+                        this.webhookLogs = res.data;
+                    } catch (err) {
+                        console.error('Lỗi fetch logs:', err);
+                    }
+                },
+                showErrorDetail(order) {
+                    Swal.fire({
+                        title: 'Chi Tiết Lỗi Đồng Bộ',
+                        text: order.webhookErrorMessage,
+                        icon: 'error',
+                        background: '#12131a',
+                        color: '#fff',
+                        confirmButtonColor: '#FE2C55'
+                    });
+                },
+                viewPayload(log) {
+                    try {
+                        const formattedJson = JSON.stringify(JSON.parse(log.payload), null, 2);
+                        Swal.fire({
+                            title: 'Dữ Liệu Payload Webhook',
+                            html: `<pre class="text-start bg-dark p-3 rounded text-light-custom font-monospace text-xs" style="max-height: 400px; overflow-y: auto;">${formattedJson}</pre>`,
+                            width: '600px',
+                            background: '#12131a',
+                            color: '#fff',
+                            confirmButtonColor: '#25F4EE'
+                        });
+                    } catch (err) {
+                        Swal.fire('Payload', log.payload, 'info');
+                    }
+                },
+                async clearData() {
+                    const result = await Swal.fire({
+                        title: 'Xóa sạch dữ liệu?',
+                        text: "Toàn bộ đơn hàng và nhật ký webhook trên trình giả lập sẽ bị xóa vĩnh viễn!",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Đồng ý xóa',
+                        cancelButtonText: 'Hủy',
+                        background: '#12131a',
+                        color: '#fff',
+                        confirmButtonColor: '#FE2C55',
+                        cancelButtonColor: '#3085d6'
+                    });
+
+                    if (result.isConfirmed) {
+                        try {
+                            const res = await axios.post('/api/tiktok/clear-data');
+                            Swal.fire({
+                                title: 'Đã xóa!',
+                                text: res.data.message,
+                                icon: 'success',
+                                background: '#12131a',
+                                color: '#fff',
+                                confirmButtonColor: '#25F4EE'
+                            });
+                            this.fetchOrders();
+                            this.fetchLogs();
+                        } catch (err) {
+                            Swal.fire('Lỗi', 'Không thể xóa dữ liệu!', 'error');
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+}
