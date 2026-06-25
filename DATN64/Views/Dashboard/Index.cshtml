@@ -10,10 +10,10 @@
         <div class="card card-glass p-3 text-white">
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <span class="text-xs text-muted-custom text-uppercase">Doanh Thu Hoàn Thành</span>
-                <span class="badge bg-success bg-opacity-25 text-success rounded-pill px-2.5 py-1 text-xs"><i class="fa-solid fa-arrow-trend-up"></i> +12%</span>
+                <span class="badge bg-success bg-opacity-25 text-success rounded-pill px-2.5 py-1 text-xs"></span>
             </div>
             <h3 class="fw-bold mb-1 text-cyan">@ViewBag.TotalRevenue.ToString("N0") đ</h3>
-            <span class="text-xxs text-muted">Hôm nay: 18,500,000 đ</span>
+            <span class="text-xxs text-muted">Hôm nay: @ViewBag.TodayRevenue.ToString("N0") đ</span>
         </div>
     </div>
     <div class="col-md-3">
@@ -43,7 +43,7 @@
                 <span class="badge bg-primary bg-opacity-25 text-primary rounded-pill px-2.5 py-1 text-xs"><i class="fa-solid fa-user-plus"></i> +3 mới</span>
             </div>
             <h3 class="fw-bold mb-1 text-neon">@ViewBag.TotalCustomers TV</h3>
-            <span class="text-xxs text-muted">Lượt mua trung bình: 1.5 lần</span>
+            <span class="text-xxs text-muted">Lượt mua trung bình: @ViewBag.AvgOrdersPerCustomer.ToString("F1") lần</span>
         </div>
     </div>
 </div>
@@ -66,7 +66,7 @@
                     <div class="p-2.5 rounded-3 bg-danger bg-opacity-10 border border-danger border-opacity-25 d-flex justify-content-between align-items-center">
                         <div>
                             <span class="text-xs fw-bold text-danger d-block">Sắp hết hàng</span>
-                            <span class="text-xs text-light">@p.TenSanPham</span>
+                            <span class="text-xs text-dark fw-medium">@p.TenSanPham</span>
                         </div>
                         <span class="badge bg-danger">Còn @p.SoLuongTon chiếc</span>
                     </div>
@@ -100,16 +100,21 @@
                             <th>Tên Sản Phẩm</th>
                             <th>SKU</th>
                             <th>Giá Bán</th>
+                            <th>Số Lần Đặt</th>
+                            <th>Số Lượng Bán</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var p in (List<DATN64.Models.SanPham>)ViewBag.TopProducts)
+                        @foreach (var item in (List<DATN64.Models.TopProductViewModel>)ViewBag.TopProducts)
                         {
+                            var p = item.SanPham;
                             <tr>
                                 <td><img src="@p.HinhAnh" class="rounded-3" style="width: 32px; height: 32px; object-fit: cover;"></td>
                                 <td class="fw-bold">@p.TenSanPham</td>
                                 <td>@p.MaSanPham</td>
                                 <td class="text-info fw-bold">@p.GiaBan.ToString("N0") đ</td>
+                                <td><span class="badge bg-primary bg-opacity-10 text-primary px-2.5 py-1 text-xs">@item.OrderCount lần</span></td>
+                                <td><span class="badge bg-success bg-opacity-10 text-success px-2.5 py-1 text-xs">@item.QuantitySold chiếc</span></td>
                             </tr>
                         }
                     </tbody>
@@ -126,18 +131,38 @@
                         <tr>
                             <th>Tên Khách Hàng</th>
                             <th>SĐT</th>
-                            <th>Tích Điểm</th>
-                            <th>Điểm Tích Lũy</th>
+                            <th>Số Lần Đặt</th>
+                            <th>Tổng Chi Tiêu</th>
+                            <th>Phân Hạng</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var c in (List<DATN64.Models.KhachHang>)ViewBag.TopCustomers)
+                        @foreach (var item in (List<DATN64.Models.TopCustomerViewModel>)ViewBag.TopCustomers)
                         {
+                            var c = item.KhachHang;
                             <tr>
                                 <td class="fw-bold">@c.HoTen</td>
                                 <td>@c.SoDienThoai</td>
-                                <td>@c.DiemTichLuy điểm</td>
-                                <td><span class="badge bg-gradient-cyan text-dark rounded-pill">VIP</span></td>
+                                <td class="fw-semibold">@item.OrderCount đơn</td>
+                                <td class="text-neon fw-bold">@item.TotalSpent.ToString("N0") đ</td>
+                                <td>
+                                    @if (item.OrderCount >= 10 || item.TotalSpent >= 50000000)
+                                    {
+                                        <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2.5 py-1 text-xs">Diamond</span>
+                                    }
+                                    else if (item.OrderCount >= 5 || item.TotalSpent >= 20000000)
+                                    {
+                                        <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-2.5 py-1 text-xs">Gold</span>
+                                    }
+                                    else if (item.OrderCount >= 2 || item.TotalSpent >= 5000000)
+                                    {
+                                        <span class="badge bg-gradient-cyan text-dark rounded-pill px-2.5 py-1 text-xs">Silver</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-2.5 py-1 text-xs">Member</span>
+                                    }
+                                </td>
                             </tr>
                         }
                     </tbody>
@@ -150,23 +175,27 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+        const chartLabels = @Html.Raw(Json.Serialize(ViewBag.ChartLabels));
+        const chartRevenue = @Html.Raw(Json.Serialize(ViewBag.ChartRevenue));
+        const chartOrderCounts = @Html.Raw(Json.Serialize(ViewBag.ChartOrderCounts));
+
         const ctx = document.getElementById('revenueChart').getContext('2d');
         const revenueChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'],
+                labels: chartLabels,
                 datasets: [{
-                    label: 'Doanh thu (triệu đ)',
-                    data: [12, 19, 15, 25, 22, 30, 45],
-                    borderColor: '#00f2fe',
-                    backgroundColor: 'rgba(0, 242, 254, 0.1)',
+                    label: 'Doanh thu (đ)',
+                    data: chartRevenue,
+                    borderColor: '#0284c7',
+                    backgroundColor: 'rgba(2, 132, 199, 0.1)',
                     borderWidth: 3,
                     fill: true,
                     tension: 0.4
                 }, {
                     label: 'Đơn hàng (chiếc)',
-                    data: [5, 12, 8, 15, 10, 18, 24],
-                    borderColor: '#4facfe',
+                    data: chartOrderCounts,
+                    borderColor: '#7c3aed',
                     backgroundColor: 'transparent',
                     borderWidth: 2,
                     tension: 0.3
@@ -177,18 +206,18 @@
                 plugins: {
                     legend: {
                         labels: {
-                            color: '#94a3b8'
+                            color: '#64748b'
                         }
                     }
                 },
                 scales: {
                     x: {
-                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                        ticks: { color: '#94a3b8' }
+                        grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                        ticks: { color: '#64748b' }
                     },
                     y: {
-                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                        ticks: { color: '#94a3b8' }
+                        grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                        ticks: { color: '#64748b' }
                     }
                 }
             }

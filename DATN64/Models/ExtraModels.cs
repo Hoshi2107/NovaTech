@@ -63,4 +63,18 @@ namespace DATN64.Models
         public string Message { get; set; } = "";
         public DateTime Timestamp { get; set; } = DateTime.Now;
     }
+
+    public class TopProductViewModel
+    {
+        public SanPham SanPham { get; set; } = null!;
+        public int OrderCount { get; set; }
+        public int QuantitySold { get; set; }
+    }
+
+    public class TopCustomerViewModel
+    {
+        public KhachHang KhachHang { get; set; } = null!;
+        public int OrderCount { get; set; }
+        public decimal TotalSpent { get; set; }
+    }
 }
