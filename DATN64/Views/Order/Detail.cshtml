@@ -1,16 +1,221 @@
-@model DATN64.Models.DonHang
-@{ Layout = "~/Views/Shared/_Layout.cshtml"; ViewData["Title"] = "Chi tiết đơn hàng"; }
-<div class="container my-5">
-    <h2>Chi tiết đơn hàng #@Model.MaDonHang</h2>
-    <p>Khách hàng: @(Model.KhachHang?.HoTen ?? "Không rõ")</p>
-    <p>Trạng thái: @Model.TrangThai</p>
-    <p>Tổng tiền: @Model.TongTien?.ToString("N0") đ</p>
-    <h4>Danh sách sản phẩm</h4>
-    <ul>
-        @if(Model.ChiTietDonHangs != null) {
-            foreach(var c in Model.ChiTietDonHangs) {
-                <li>@(c.SanPham?.TenSanPham ?? "SP") - SL: @c.SoLuong - Đơn giá: @c.DonGia.ToString("N0") đ</li>
-            }
-        }
-    </ul>
+@model DATN64.ViewModels.OrderDetailViewModel
+
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Chi tiết đơn hàng";
+    ViewData["BreadcrumbActive"] = "Chi tiết đơn hàng";
+}
+
+@functions {
+    string GetStatusClass(string status)
+    {
+        return status switch
+        {
+            "Đơn mới" => "bg-info text-dark",
+            "Chờ duyệt" => "bg-warning text-dark",
+            "Đã thanh toán" => "bg-primary text-white",
+            "Đang giao" => "bg-secondary text-white",
+            "Hoàn thành" => "bg-success text-white",
+            "Đã hủy" => "bg-danger text-white",
+            _ => "bg-light text-dark"
+        };
+    }
+}
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0 rounded-4 mb-4">
+            <div class="card-body p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                    <div>
+                        <h3 class="fw-bold mb-2">
+                            Đơn hàng #@Model.MaDonHang
+                        </h3>
+                        <div class="text-muted small mb-2">
+                            Ngày đặt: @Model.NgayDat.ToString("HH:mm - dd/MM/yyyy")
+                        </div>
+                        <span class="badge rounded-pill px-3 py-2 @GetStatusClass(Model.TrangThai)">
+                            @Model.TrangThai
+                        </span>
+                    </div>
+
+                    <div class="text-end">
+                        <div class="text-muted small">Tổng thanh toán</div>
+                        <div class="fs-4 fw-bold text-info">
+                            @Model.TongTien.ToString("N0") đ
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0 rounded-4 mb-4">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-4">
+                    <i class="fa-solid fa-user me-2 text-info"></i>
+                    Thông tin khách hàng
+                </h5>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="text-muted small">Họ tên</div>
+                        <div class="fw-semibold">@Model.TenKhachHang</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="text-muted small">Số điện thoại</div>
+                        <div class="fw-semibold">
+                            @(string.IsNullOrWhiteSpace(Model.SoDienThoaiKhachHang) ? "Chưa cập nhật" : Model.SoDienThoaiKhachHang)
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="text-muted small">Email</div>
+                        <div class="fw-semibold">
+                            @(string.IsNullOrWhiteSpace(Model.EmailKhachHang) ? "Chưa cập nhật" : Model.EmailKhachHang)
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="text-muted small">Nhân viên phụ trách</div>
+                        <div class="fw-semibold">
+                            @(string.IsNullOrWhiteSpace(Model.TenNhanVien) ? "Chưa cập nhật" : Model.TenNhanVien)
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="text-muted small">Địa chỉ</div>
+                        <div class="fw-semibold">
+                            @(string.IsNullOrWhiteSpace(Model.DiaChiKhachHang) ? "Chưa cập nhật" : Model.DiaChiKhachHang)
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-4">
+                    <i class="fa-solid fa-box-open me-2 text-info"></i>
+                    Danh sách sản phẩm
+                </h5>
+
+                @if (Model.Items == null || !Model.Items.Any())
+                {
+                    <div class="text-muted">Đơn hàng chưa có sản phẩm.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Sản phẩm</th>
+                                    <th class="text-center">Số lượng</th>
+                                    <th class="text-end">Đơn giá</th>
+                                    <th class="text-end">Thành tiền</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.Items)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-3">
+                                                <img src="@(string.IsNullOrWhiteSpace(item.HinhAnh) ? "https://via.placeholder.com/64x64?text=SP" : item.HinhAnh)"
+                                                     alt="@item.TenSanPham"
+                                                     style="width:64px;height:64px;object-fit:cover;border-radius:12px;border:1px solid #e5e7eb;" />
+
+                                                <div>
+                                                    <div class="fw-semibold">@item.TenSanPham</div>
+                                                    <div class="text-muted small">Mã SP: @item.MaSanPham</div>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        <td class="text-center fw-semibold">
+                                            @item.SoLuong
+                                        </td>
+
+                                        <td class="text-end">
+                                            @item.DonGia.ToString("N0") đ
+                                        </td>
+
+                                        <td class="text-end fw-bold text-info">
+                                            @item.ThanhTien.ToString("N0") đ
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="3" class="text-end fw-bold">Tổng thanh toán</td>
+                                    <td class="text-end fw-bold text-danger fs-5">
+                                        @Model.TongTien.ToString("N0") đ
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0 rounded-4 mb-4">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-4">
+                    <i class="fa-solid fa-clipboard-check me-2 text-info"></i>
+                    Xử lý đơn hàng
+                </h5>
+
+                <form method="post" action="@Url.Action("UpdateStatus", "Order")">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.MaDonHang" />
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Kênh bán</label>
+                        <input class="form-control" value="@Model.KenhBan" readonly />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Phương thức thanh toán</label>
+                        <input class="form-control" value="@Model.PhuongThucThanhToan" readonly />
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Trạng thái đơn hàng</label>
+                        <select name="trangThai" class="form-select">
+                            <option value="Đơn mới" selected="@(Model.TrangThai == "Đơn mới")">Đơn mới</option>
+                            <option value="Chờ duyệt" selected="@(Model.TrangThai == "Chờ duyệt")">Chờ duyệt</option>
+                            <option value="Đã thanh toán" selected="@(Model.TrangThai == "Đã thanh toán")">Đã thanh toán</option>
+                            <option value="Đang giao" selected="@(Model.TrangThai == "Đang giao")">Đang giao</option>
+                            <option value="Hoàn thành" selected="@(Model.TrangThai == "Hoàn thành")">Hoàn thành</option>
+                            <option value="Đã hủy" selected="@(Model.TrangThai == "Đã hủy")">Đã hủy</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-info text-white w-100 rounded-pill fw-bold">
+                        Cập nhật trạng thái
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-3">
+                    <i class="fa-solid fa-circle-info me-2 text-info"></i>
+                    Ghi chú
+                </h5>
+
+                <ul class="text-muted small ps-3 mb-0">
+                    <li>Chỉ nên cập nhật trạng thái, không sửa trực tiếp nội dung đơn hàng.</li>
+                    <li>Khi đơn hàng chuyển sang Hoàn thành, có thể cộng điểm tích lũy cho khách hàng.</li>
+                    <li>Nếu cần, bước sau mình sẽ làm luôn phần cộng điểm tự động.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
 </div>

@@ -29,12 +29,20 @@ namespace DATN64.Models
         public DbSet<Role> Roles { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
         public DbSet<NhanVienRole> NhanVienRoles { get; set; }
+        public DbSet<CustomerInboxThread> CustomerInboxThreads { get; set; }
+        public DbSet<CustomerInboxMessage> CustomerInboxMessages { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<DonHang_Voucher>()
                 .HasKey(e => new { e.MaDonHang, e.MaVoucher });
-            
+
+            modelBuilder.Entity<CustomerInboxMessage>()
+                .HasOne(m => m.Thread)
+                .WithMany(t => t.Messages)
+                .HasForeignKey(m => m.ThreadId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             base.OnModelCreating(modelBuilder);
         }
     }

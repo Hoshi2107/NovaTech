@@ -1,0 +1,381 @@
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Bán hàng & Chăm sóc khách hàng";
+    ViewData["BreadcrumbActive"] = "Bán hàng & Chăm sóc khách hàng";
+}
+
+@section Styles {
+    <style>
+        .cskh-shell {
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            gap: 18px;
+            min-height: 660px;
+        }
+
+        .cskh-panel {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 18px;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+            overflow: hidden;
+        }
+
+        .thread-list {
+            max-height: 610px;
+            overflow-y: auto;
+        }
+
+        .thread-item {
+            padding: 14px 16px;
+            border-bottom: 1px solid #e2e8f0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .thread-item:hover,
+        .thread-item.active {
+            background: #eff6ff;
+        }
+
+        .thread-name {
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .thread-subject {
+            font-size: 13px;
+            color: #475569;
+            margin-top: 4px;
+        }
+
+        .thread-last {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .badge-unread {
+            background: #ef4444;
+            color: #ffffff;
+            border-radius: 999px;
+            padding: 3px 8px;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .chat-main {
+            display: flex;
+            flex-direction: column;
+            min-height: 660px;
+        }
+
+        .chat-main-header {
+            padding: 18px;
+            border-bottom: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 18px;
+            overflow-y: auto;
+            background: #f8fafc;
+        }
+
+        .chat-message {
+            display: flex;
+            margin-bottom: 12px;
+        }
+
+        .chat-message.customer {
+            justify-content: flex-start;
+        }
+
+        .chat-message.staff {
+            justify-content: flex-end;
+        }
+
+        .chat-bubble {
+            max-width: 70%;
+            padding: 11px 13px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.45;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+        }
+
+        .chat-message.customer .chat-bubble {
+            background: #ffffff;
+            color: #0f172a;
+            border: 1px solid #e2e8f0;
+            border-bottom-left-radius: 4px;
+        }
+
+        .chat-message.staff .chat-bubble {
+            background: #2563eb;
+            color: #ffffff;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-sender {
+            font-size: 11px;
+            font-weight: 800;
+            opacity: 0.75;
+            margin-bottom: 4px;
+        }
+
+        .chat-time {
+            display: block;
+            font-size: 10px;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+
+        .reply-box {
+            padding: 16px;
+            border-top: 1px solid #e2e8f0;
+            background: #ffffff;
+        }
+
+        .empty-state {
+            height: 100%;
+            min-height: 520px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            text-align: center;
+        }
+    </style>
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold text-dark mb-1">
+            <i class="fa-solid fa-headset text-info me-2"></i>
+            Bán hàng & Chăm sóc khách hàng
+        </h3>
+        <div class="text-muted small">Quản lý hội thoại khách hàng từ website NovaTech Store.</div>
+    </div>
+
+    <button class="btn btn-outline-primary rounded-pill" onclick="loadInbox()">
+        <i class="fa-solid fa-rotate me-2"></i>Làm mới
+    </button>
+</div>
+
+<div class="cskh-shell">
+    <div class="cskh-panel">
+        <div class="p-3 border-bottom bg-white">
+            <h6 class="fw-bold mb-0">Hộp thư khách hàng</h6>
+        </div>
+
+        <div id="threadList" class="thread-list">
+            <div class="p-4 text-center text-muted">Đang tải hội thoại...</div>
+        </div>
+    </div>
+
+    <div class="cskh-panel chat-main">
+        <div id="chatHeader" class="chat-main-header">
+            <div class="fw-bold text-dark">Chưa chọn hội thoại</div>
+            <div class="text-muted small">Chọn một khách hàng bên trái để xem nội dung.</div>
+        </div>
+
+        <div id="chatMessages" class="chat-messages">
+            <div class="empty-state">
+                <div>
+                    <i class="fa-regular fa-comments fs-1 mb-3 text-info"></i>
+                    <div>Chọn hội thoại để bắt đầu chăm sóc khách hàng.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="reply-box">
+            <textarea id="replyText" class="form-control mb-2" rows="3" placeholder="Nhập phản hồi cho khách hàng..."></textarea>
+            <div class="d-flex justify-content-between align-items-center">
+                <div id="replyStatus" class="small text-muted"></div>
+                <button class="btn btn-primary rounded-pill px-4" onclick="sendReply()">
+                    <i class="fa-solid fa-paper-plane me-2"></i>Gửi phản hồi
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let selectedThreadId = null;
+        let currentThreads = [];
+
+        const formatTime = (value) => {
+            if (!value) return '';
+            return new Date(value).toLocaleString('vi-VN', {
+                hour: '2-digit',
+                minute: '2-digit',
+                day: '2-digit',
+                month: '2-digit'
+            });
+        };
+
+        const escapeHtml = (value) => {
+            return String(value || '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        };
+
+        const postJson = async (url, body) => {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Có lỗi xảy ra.');
+            }
+
+            return data;
+        };
+
+        const loadInbox = async () => {
+            const list = document.getElementById('threadList');
+            list.innerHTML = '<div class="p-4 text-center text-muted">Đang tải hội thoại...</div>';
+
+            try {
+                const response = await fetch('/SalesCSKH/GetCustomerInbox');
+                currentThreads = await response.json();
+
+                if (!currentThreads.length) {
+                    list.innerHTML = '<div class="p-4 text-center text-muted">Chưa có hội thoại nào.</div>';
+                    return;
+                }
+
+                list.innerHTML = currentThreads.map(thread => `
+                    <div class="thread-item ${selectedThreadId === thread.id ? 'active' : ''}" onclick="selectThread(${thread.id})">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div class="thread-name">${escapeHtml(thread.customerName || 'Khách vãng lai')}</div>
+                            ${thread.unreadCount > 0 ? `<span class="badge-unread">${thread.unreadCount}</span>` : ''}
+                        </div>
+                        <div class="thread-subject">${escapeHtml(thread.subject || '')}</div>
+                        <div class="thread-last">${escapeHtml(thread.lastMessage || '')}</div>
+                        <div class="small text-muted mt-1">${formatTime(thread.updatedAt)}</div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                list.innerHTML = `<div class="p-4 text-danger text-center">${escapeHtml(err.message)}</div>`;
+            }
+        };
+
+        const selectThread = async (id) => {
+            selectedThreadId = id;
+
+            document.getElementById('replyStatus').textContent = '';
+            document.getElementById('replyText').value = '';
+
+            await loadThread(id);
+            await postJson('/SalesCSKH/MarkCustomerThreadRead', { threadId: id });
+            await loadInbox();
+        };
+
+        const loadThread = async (id) => {
+            const header = document.getElementById('chatHeader');
+            const messagesBox = document.getElementById('chatMessages');
+
+            messagesBox.innerHTML = '<div class="p-4 text-center text-muted">Đang tải nội dung...</div>';
+
+            try {
+                const response = await fetch(`/SalesCSKH/GetCustomerThread?id=${id}`);
+                const thread = await response.json();
+
+                header.innerHTML = `
+                    <div class="fw-bold text-dark">${escapeHtml(thread.customerName || 'Khách vãng lai')}</div>
+                    <div class="text-muted small">
+                        ${escapeHtml(thread.subject || '')}
+                        ${thread.customerPhone ? ` · ${escapeHtml(thread.customerPhone)}` : ''}
+                    </div>
+                `;
+
+                const messages = Array.isArray(thread.messages) ? thread.messages : [];
+
+                if (!messages.length) {
+                    messagesBox.innerHTML = '<div class="empty-state">Hội thoại chưa có tin nhắn.</div>';
+                    return;
+                }
+
+                messagesBox.innerHTML = messages.map(message => `
+                    <div class="chat-message ${message.sender === 'customer' ? 'customer' : 'staff'}">
+                        <div class="chat-bubble">
+                            <div class="chat-sender">${message.sender === 'customer' ? 'Khách hàng' : 'NovaTech'}</div>
+                            <div>${escapeHtml(message.text)}</div>
+                            <span class="chat-time">${formatTime(message.timestamp)}</span>
+                        </div>
+                    </div>
+                `).join('');
+
+                messagesBox.scrollTop = messagesBox.scrollHeight;
+            } catch (err) {
+                messagesBox.innerHTML = `<div class="p-4 text-danger text-center">${escapeHtml(err.message)}</div>`;
+            }
+        };
+
+        const sendReply = async () => {
+            const status = document.getElementById('replyStatus');
+            const input = document.getElementById('replyText');
+            const message = input.value.trim();
+
+            status.textContent = '';
+
+            if (!selectedThreadId) {
+                status.textContent = 'Vui lòng chọn hội thoại.';
+                status.className = 'small text-danger';
+                return;
+            }
+
+            if (!message) {
+                status.textContent = 'Vui lòng nhập nội dung phản hồi.';
+                status.className = 'small text-danger';
+                return;
+            }
+
+            try {
+                status.textContent = 'Đang gửi...';
+                status.className = 'small text-muted';
+
+                await postJson('/SalesCSKH/ReplyCustomerMessage', {
+                    threadId: selectedThreadId,
+                    message: message,
+                    status: 'Replied'
+                });
+
+                input.value = '';
+                status.textContent = 'Đã gửi phản hồi.';
+                status.className = 'small text-success';
+
+                await loadThread(selectedThreadId);
+                await loadInbox();
+            } catch (err) {
+                status.textContent = err.message;
+                status.className = 'small text-danger';
+            }
+        };
+
+        loadInbox();
+
+        setInterval(() => {
+            loadInbox();
+            if (selectedThreadId) {
+                loadThread(selectedThreadId);
+            }
+        }, 3000);
+    </script>
+}

@@ -1,20 +1,169 @@
 @model List<DATN64.Models.Voucher>
-@{ Layout = "~/Views/Shared/_Layout.cshtml"; ViewData["Title"] = "Quản lý Khuyến Mãi"; }
-<div class="container my-5">
-    <h2>Quản lý Voucher Khuyến Mãi</h2>
-    <table class="table">
-        <thead><tr><th>Mã Voucher</th><th>Mã Code</th><th>Giá Trị</th><th>Số Lượng</th><th>Ngày Bắt Đầu</th><th>Ngày Kết Thúc</th></tr></thead>
-        <tbody>
-            @foreach(var item in Model) {
-                <tr>
-                    <td>@item.MaVoucher</td>
-                    <td>@item.MaCode</td>
-                    <td>@item.GiaTri?.ToString("N0") đ</td>
-                    <td>@item.SoLuong</td>
-                    <td>@item.NgayBatDau?.ToString("dd/MM/yyyy")</td>
-                    <td>@item.NgayKetThuc?.ToString("dd/MM/yyyy")</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Khuyến mãi";
+    ViewData["BreadcrumbActive"] = "Khuyến mãi";
+}
+
+@functions {
+    string GetStringProp(object obj, string propName, string fallback = "")
+    {
+        var prop = obj.GetType().GetProperty(propName);
+        var value = prop?.GetValue(obj);
+        return value?.ToString() ?? fallback;
+    }
+
+    decimal? GetDecimalProp(object obj, string propName)
+    {
+        var prop = obj.GetType().GetProperty(propName);
+        var value = prop?.GetValue(obj);
+
+        if (value is decimal dec) return dec;
+        if (decimal.TryParse(value?.ToString(), out var parsed)) return parsed;
+
+        return null;
+    }
+
+    string FormatMoney(decimal? value)
+    {
+        return value.HasValue ? value.Value.ToString("N0") + " đ" : "0 đ";
+    }
+
+    string FormatDiscount(DATN64.Models.Voucher item)
+    {
+        var type = GetStringProp(item, "HinhThuc", "Giảm % hóa đơn");
+        var value = item.GiaTri ?? 0;
+
+        if (type.Contains("%")) return value.ToString("N0") + " %";
+
+        return value.ToString("N0") + " đ";
+    }
+}
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card card-glass p-4 text-dark">
+            <h5 class="fw-bold mb-4 text-cyan">
+                Tạo Voucher khuyến mãi
+            </h5>
+
+            <form method="post" action="@Url.Action("Create", "Promotion")">
+                <div class="mb-3">
+                    <label class="form-label text-xs">Mã giảm giá</label>
+                    <input type="text"
+                           name="MaCode"
+                           class="form-control"
+                           required
+                           placeholder="SUMMER50">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-xs">Loại áp dụng</label>
+                    <select name="HinhThuc" class="form-select" required>
+                        <option value="Giảm % hóa đơn">Giảm % hóa đơn</option>
+                        <option value="Giảm tiền trực tiếp">Giảm số tiền trực tiếp</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-xs">Giá trị giảm</label>
+                    <input type="number"
+                           name="GiaTri"
+                           class="form-control"
+                           required
+                           placeholder="10 hoặc 500000">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-xs">Đơn tối thiểu</label>
+                    <input type="number"
+                           name="DonHangToiThieu"
+                           class="form-control"
+                           required
+                           value="500000"
+                           placeholder="500000">
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label text-xs">Số lượng phát hành</label>
+                    <input type="number"
+                           name="SoLuong"
+                           class="form-control"
+                           required
+                           value="50">
+                </div>
+
+                <button type="submit" class="btn btn-info rounded-pill px-4 w-100 fw-bold">
+                    Kích hoạt Voucher
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card card-glass p-4">
+            <h5 class="fw-bold mb-4 text-cyan">
+                <i class="fa-solid fa-gift me-2"></i>
+                Chiến dịch khuyến mãi & Voucher
+            </h5>
+
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 text-sm align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Mã Voucher</th>
+                            <th>Hình thức</th>
+                            <th>Mức Giảm</th>
+                            <th>Đơn hàng tối thiểu</th>
+                            <th>Số lượng</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @if (Model == null || !Model.Any())
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">
+                                    Chưa có voucher nào.
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            foreach (var item in Model)
+                            {
+                                var hinhThuc = GetStringProp(item, "HinhThuc", "Giảm % hóa đơn");
+                                var donToiThieu = GetDecimalProp(item, "DonHangToiThieu") ?? 0;
+                                var trangThai = GetStringProp(item, "TrangThai", "Đang diễn ra");
+
+                                <tr>
+                                    <td>
+                                        <code class="fs-6 text-warning fw-bold">
+                                            @item.MaCode
+                                        </code>
+                                    </td>
+
+                                    <td>@hinhThuc</td>
+
+                                    <td>@FormatDiscount(item)</td>
+
+                                    <td>@FormatMoney(donToiThieu)</td>
+
+                                    <td>@item.SoLuong Voucher</td>
+
+                                    <td>
+                                        <span class="badge bg-success">
+                                            @trangThai
+                                        </span>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>

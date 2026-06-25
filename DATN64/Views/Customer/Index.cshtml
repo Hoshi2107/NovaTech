@@ -1,13 +1,234 @@
 @model List<DATN64.Models.KhachHang>
-@{ Layout = "~/Views/Shared/_Layout.cshtml"; ViewData["Title"] = "Quản lý khách hàng"; }
-<div class="container my-5">
-    <h2>Quản lý Khách Hàng</h2>
-    <table class="table">
-        <thead><tr><th>Mã KH</th><th>Họ Tên</th><th>Điện Thoại</th><th>Điểm Tích Lũy</th></tr></thead>
-        <tbody>
-            @foreach(var item in Model) {
-                <tr><td>@item.MaKhachHang</td><td>@item.HoTen</td><td>@item.SoDienThoai</td><td>@item.DiemTichLuy</td></tr>
-            }
-        </tbody>
-    </table>
+
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Khách hàng";
+    ViewData["BreadcrumbActive"] = "Khách hàng";
+}
+
+@functions {
+    string GetRank(int points)
+    {
+        if (points >= 3000) return "Kim Cương";
+        if (points >= 1500) return "Vàng";
+        if (points >= 500) return "Bạc";
+        return "Đồng";
+    }
+
+    string GetNextRankText(int points)
+    {
+        if (points < 500) return $"Còn {500 - points} điểm để lên Bạc";
+        if (points < 1500) return $"Còn {1500 - points} điểm để lên Vàng";
+        if (points < 3000) return $"Còn {3000 - points} điểm để lên Kim Cương";
+        return "Đã đạt hạng cao nhất";
+    }
+
+    string GetRankBadgeClass(string rank)
+    {
+        return rank switch
+        {
+            "Kim Cương" => "bg-primary text-white",
+            "Vàng" => "bg-warning text-dark",
+            "Bạc" => "bg-secondary text-white",
+            _ => "bg-info text-dark"
+        };
+    }
+
+    string GetStatusBadgeClass(string? status)
+    {
+        return status == "Hoạt động"
+            ? "bg-success text-white"
+            : "bg-danger text-white";
+    }
+}
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card card-glass p-4 mb-4">
+            <h5 class="fw-bold mb-4 text-cyan">
+                <i class="fa-solid fa-user-plus me-2"></i>
+                Đăng ký khách hàng mới
+            </h5>
+
+            <form method="post" action="@Url.Action("Create", "Customer")">
+                @Html.AntiForgeryToken()
+
+                <div class="mb-3">
+                    <label class="form-label text-xs">Họ và tên</label>
+                    <input type="text"
+                           name="HoTen"
+                           class="form-control"
+                           required
+                           placeholder="Nguyễn Văn A">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-xs">Số điện thoại</label>
+                    <input type="text"
+                           name="SoDienThoai"
+                           class="form-control"
+                           placeholder="09...">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-xs">Địa chỉ Email</label>
+                    <input type="email"
+                           name="Email"
+                           class="form-control"
+                           required
+                           placeholder="khachhang@gmail.com">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-xs">Mật khẩu tạm thời</label>
+                    <input type="password"
+                           name="MatKhau"
+                           class="form-control"
+                           required
+                           placeholder="Nhập mật khẩu cho khách hàng">
+                    <div class="text-xxs text-muted mt-1">
+                        Mật khẩu sẽ được lưu dưới dạng hash, không lưu mật khẩu thường.
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label text-xs">Địa chỉ</label>
+                    <input type="text"
+                           name="DiaChi"
+                           class="form-control"
+                           placeholder="TP. Hồ Chí Minh">
+                </div>
+
+                <button type="submit" class="btn btn-info rounded-pill px-4 w-100 fw-bold">
+                    Tạo tài khoản thành viên
+                </button>
+            </form>
+        </div>
+
+        <div class="card card-glass p-4">
+            <h5 class="fw-bold mb-3 text-cyan">
+                <i class="fa-solid fa-ranking-star me-2"></i>
+                Quy tắc tích điểm & thăng hạng
+            </h5>
+
+            <div class="text-sm text-dark">
+                <div class="mb-2">
+                    <b>+1 điểm</b> cho mỗi <b>10,000 đ</b> từ đơn hàng hoàn thành.
+                </div>
+
+                <div class="mb-2">
+                    Đơn hàng bị hủy hoặc hoàn trả sẽ không được cộng điểm.
+                </div>
+
+                <hr />
+
+                <div class="d-grid gap-2">
+                    <div>
+                        <span class="badge bg-info text-dark me-2">Đồng</span>
+                        0 - 499 điểm
+                    </div>
+
+                    <div>
+                        <span class="badge bg-secondary text-white me-2">Bạc</span>
+                        500 - 1499 điểm
+                    </div>
+
+                    <div>
+                        <span class="badge bg-warning text-dark me-2">Vàng</span>
+                        1500 - 2999 điểm
+                    </div>
+
+                    <div>
+                        <span class="badge bg-primary text-white me-2">Kim Cương</span>
+                        từ 3000 điểm
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card card-glass p-4">
+            <h5 class="fw-bold mb-4 text-cyan">
+                <i class="fa-solid fa-user-group me-2"></i>
+                Thành viên mua sắm
+            </h5>
+
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 text-sm align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Khách hàng</th>
+                            <th>Liên hệ</th>
+                            <th>Tích điểm</th>
+                            <th>Phân hạng</th>
+                            <th>Tiến độ</th>
+                            <th>Ngày gia nhập</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @if (Model == null || !Model.Any())
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    Chưa có khách hàng nào.
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            foreach (var item in Model)
+                            {
+                                var rank = GetRank(item.DiemTichLuy);
+
+                                <tr>
+                                    <td>
+                                        <div class="fw-bold text-dark">@item.HoTen</div>
+                                        <div class="text-xxs text-muted">Mã KH: @item.MaKhachHang</div>
+                                    </td>
+
+                                    <td>
+                                        <div class="text-xs">
+                                            @(string.IsNullOrWhiteSpace(item.SoDienThoai) ? "Chưa có SĐT" : item.SoDienThoai)
+                                        </div>
+                                        <div class="text-xxs text-muted">
+                                            @(string.IsNullOrWhiteSpace(item.Email) ? "Chưa có email" : item.Email)
+                                        </div>
+                                    </td>
+
+                                    <td class="fw-bold">
+                                        @item.DiemTichLuy điểm
+                                    </td>
+
+                                    <td>
+                                        <span class="badge rounded-pill px-2 @GetRankBadgeClass(rank)">
+                                            @rank
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        <span class="text-xs text-muted">
+                                            @GetNextRankText(item.DiemTichLuy)
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        @item.NgayTao.ToString("dd/MM/yyyy")
+                                    </td>
+
+                                    <td>
+                                        <span class="badge rounded-pill px-2 @GetStatusBadgeClass(item.TrangThai)">
+                                            @(item.TrangThai ?? "Hoạt động")
+                                        </span>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>

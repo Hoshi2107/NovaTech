@@ -74,6 +74,38 @@ namespace DATN64.Models
                     Timestamp DATETIME NOT NULL DEFAULT GETDATE()
                 );
             ");
+            // Create CustomerInboxThread
+            ExecuteSql(db, @"
+    IF OBJECT_ID('dbo.CustomerInboxThread', 'U') IS NULL
+    CREATE TABLE dbo.CustomerInboxThread (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        CustomerId INT NOT NULL DEFAULT 0,
+        CustomerName NVARCHAR(150) NOT NULL DEFAULT '',
+        CustomerPhone NVARCHAR(20) NULL,
+        Channel NVARCHAR(50) NOT NULL DEFAULT 'Store',
+        Subject NVARCHAR(255) NOT NULL DEFAULT N'Chat hỗ trợ NovaTech',
+        Status NVARCHAR(50) NOT NULL DEFAULT 'Unread',
+        Priority NVARCHAR(50) NOT NULL DEFAULT 'Medium',
+        UpdatedAt DATETIME NOT NULL DEFAULT GETDATE()
+    );
+");
+
+            // Create CustomerInboxMessage
+            ExecuteSql(db, @"
+    IF OBJECT_ID('dbo.CustomerInboxMessage', 'U') IS NULL
+    CREATE TABLE dbo.CustomerInboxMessage (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        ThreadId INT NOT NULL,
+        Sender NVARCHAR(50) NOT NULL DEFAULT 'customer',
+        Text NVARCHAR(MAX) NOT NULL DEFAULT '',
+        Timestamp DATETIME NOT NULL DEFAULT GETDATE(),
+        IsRead BIT NOT NULL DEFAULT 0,
+        IsAutoReply BIT NOT NULL DEFAULT 0,
+        CONSTRAINT FK_CustomerInboxMessage_CustomerInboxThread
+            FOREIGN KEY (ThreadId) REFERENCES dbo.CustomerInboxThread(Id)
+            ON DELETE CASCADE
+    );
+");
 
             // Create CauHinh
             ExecuteSql(db, @"

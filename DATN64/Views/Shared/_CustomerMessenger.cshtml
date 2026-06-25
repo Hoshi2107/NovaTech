@@ -1,0 +1,73 @@
+@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    var session = HttpContextAccessor.HttpContext?.Session;
+    var userEmail = session?.GetString("UserEmail") ?? "";
+    var userName = session?.GetString("UserName") ?? "";
+    var userRoles = session?.GetString("UserRoles") ?? "";
+
+    var isLogged = !string.IsNullOrWhiteSpace(userEmail);
+
+    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+    var loginUrl = Url.Action("Login", "Account", new { returnUrl = returnUrl });
+}
+
+<link rel="stylesheet" href="~/css/customer-messenger.css" asp-append-version="true" />
+
+@if (!isLogged)
+{
+    <div id="customerMessenger" class="customer-chat">
+        <a class="chat-toggle text-decoration-none" href="@loginUrl">
+            <span>💬</span>
+            <span>Đăng nhập để chat</span>
+        </a>
+    </div>
+}
+else
+{
+    <div
+        id="customerMessenger"
+        class="customer-chat"
+        data-user-email="@userEmail"
+        data-user-name="@userName"
+        data-user-roles="@userRoles"
+    >
+        <button id="customerChatToggle" class="chat-toggle" type="button">
+            <span>💬</span>
+            <span>Chat với NovaTech</span>
+            <b id="customerChatBadge" style="display:none;">0</b>
+        </button>
+
+        <div id="customerChatBox" class="chat-box" style="display:none;">
+            <div class="chat-header">
+                <div>
+                    <h3>NovaTech Support</h3>
+                    <p>Thường phản hồi trong vài phút</p>
+                </div>
+                <button id="customerChatClose" type="button">×</button>
+            </div>
+
+            <div id="customerChatMessages" class="chat-messages">
+                <div class="chat-empty">
+                    Chào bạn 👋 Hãy nhập tin nhắn để bắt đầu chat với NovaTech.
+                </div>
+            </div>
+
+            <div class="chat-reply">
+                <textarea
+                    id="customerChatInput"
+                    placeholder="Nhập tin nhắn..."
+                ></textarea>
+
+                <button id="customerChatSend" type="button">
+                    Gửi
+                </button>
+            </div>
+
+            <div id="customerChatStatus" class="chat-status" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script src="~/js/customer-messenger.js" asp-append-version="true"></script>
+}

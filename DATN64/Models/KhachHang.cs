@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -22,6 +24,15 @@ namespace DATN64.Models
         [StringLength(255)]
         public string? DiaChi { get; set; }
 
+        public string MatKhau { get; set; } = "";
+
         public int DiemTichLuy { get; set; } = 0;
+
+        [StringLength(50)]
+        public string? TrangThai { get; set; } = "Hoạt động";
+
+        public DateTime NgayTao { get; set; } = DateTime.Now;
+
+        public ICollection<DonHang> DonHangs { get; set; } = new List<DonHang>();
     }
 }

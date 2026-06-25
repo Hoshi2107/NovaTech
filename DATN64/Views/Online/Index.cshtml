@@ -21,24 +21,62 @@
 
 <!-- Category Navigation Row -->
 <div class="container my-5 animate-fade-in">
-    <h5 class="fw-bold mb-4 text-dark"><i class="fa-solid fa-layer-group text-primary me-2"></i>Danh mục sản phẩm</h5>
+    <h5 class="fw-bold mb-4 text-dark">
+        <i class="fa-solid fa-layer-group text-primary me-2"></i>Danh mục sản phẩm
+    </h5>
+
     <div class="d-flex flex-wrap justify-content-center justify-content-md-between gap-3">
         <a href="@Url.Action("ProductsList", "Online", new { category = "Điện thoại" })" class="text-decoration-none">
             <div class="chotot-cat-card">
-                <div class="chotot-cat-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
+                <div class="chotot-cat-icon">
+                    <i class="fa-solid fa-mobile-screen-button"></i>
+                </div>
                 <div class="chotot-cat-title">Điện thoại</div>
             </div>
         </a>
+
         <a href="@Url.Action("ProductsList", "Online", new { category = "Laptop" })" class="text-decoration-none">
             <div class="chotot-cat-card">
-                <div class="chotot-cat-icon"><i class="fa-solid fa-laptop"></i></div>
+                <div class="chotot-cat-icon">
+                    <i class="fa-solid fa-laptop"></i>
+                </div>
                 <div class="chotot-cat-title">Laptop</div>
             </div>
         </a>
+
+        <a href="@Url.Action("ProductsList", "Online", new { category = "Máy tính bảng" })" class="text-decoration-none">
+            <div class="chotot-cat-card">
+                <div class="chotot-cat-icon">
+                    <i class="fa-solid fa-tablet-screen-button"></i>
+                </div>
+                <div class="chotot-cat-title">Máy tính<br />bảng</div>
+            </div>
+        </a>
+
+        <a href="@Url.Action("ProductsList", "Online", new { category = "Tai nghe" })" class="text-decoration-none">
+            <div class="chotot-cat-card">
+                <div class="chotot-cat-icon">
+                    <i class="fa-solid fa-headphones"></i>
+                </div>
+                <div class="chotot-cat-title">Tai nghe</div>
+            </div>
+        </a>
+
         <a href="@Url.Action("ProductsList", "Online", new { category = "Phụ kiện" })" class="text-decoration-none">
             <div class="chotot-cat-card">
-                <div class="chotot-cat-icon"><i class="fa-solid fa-keyboard"></i></div>
+                <div class="chotot-cat-icon">
+                    <i class="fa-solid fa-keyboard"></i>
+                </div>
                 <div class="chotot-cat-title">Phụ kiện</div>
+            </div>
+        </a>
+
+        <a href="@Url.Action("ProductsList", "Online", new { category = "Loa" })" class="text-decoration-none">
+            <div class="chotot-cat-card">
+                <div class="chotot-cat-icon">
+                    <i class="fa-solid fa-volume-high"></i>
+                </div>
+                <div class="chotot-cat-title">Loa & Âm<br />thanh</div>
             </div>
         </a>
     </div>

@@ -1,20 +1,137 @@
 @model List<DATN64.Models.DonHang>
-@{ Layout = "~/Views/Shared/_Layout.cshtml"; ViewData["Title"] = "Quản lý đơn hàng"; }
-<div class="container my-5">
-    <h2>Quản lý đơn hàng</h2>
-    <table class="table">
-        <thead><tr><th>Mã ĐH</th><th>Khách Hàng</th><th>Ngày Đặt</th><th>Tổng Tiền</th><th>Trạng Thái</th><th>Thao tác</th></tr></thead>
-        <tbody>
-            @foreach(var item in Model) {
+
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Đơn hàng";
+    ViewData["BreadcrumbActive"] = "Đơn hàng";
+}
+
+@functions {
+    string GetStringProp(object obj, string propName, string fallback = "")
+    {
+        var prop = obj.GetType().GetProperty(propName);
+        var value = prop?.GetValue(obj);
+        return value?.ToString() ?? fallback;
+    }
+
+    string FormatMoney(decimal? value)
+    {
+        return value.HasValue ? value.Value.ToString("N0") + " đ" : "0 đ";
+    }
+
+    string FormatDate(DateTime? value)
+    {
+        return value.HasValue ? value.Value.ToString("HH:mm - dd/MM/yyyy") : "";
+    }
+
+    string GetOrderCode(DATN64.Models.DonHang item)
+    {
+        var code = GetStringProp(item, "MaDonHangHienThi", "");
+        if (!string.IsNullOrWhiteSpace(code)) return code;
+
+        var date = item.NgayDat ?? DateTime.Now;
+        return $"ORD-{date:yyMMdd}{item.MaDonHang:D2}";
+    }
+
+    string GetChannelIcon(string channel)
+    {
+        if (channel == "Website") return "fa-globe text-primary";
+        if (channel == "TikTok Shop") return "fa-brands fa-tiktok text-dark";
+        return "fa-store text-warning";
+    }
+
+    string GetStatusBadge(string? status)
+    {
+        return status switch
+        {
+            "Đơn mới" => "bg-info text-dark",
+            "Đã xác nhận" => "bg-primary text-white",
+            "Đang đóng gói" => "bg-warning text-dark",
+            "Đang giao" => "bg-info text-white",
+            "Hoàn thành" => "bg-success text-white",
+            _ => "bg-success text-white"
+        };
+    }
+}
+
+<div class="card card-glass p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold m-0">
+            <i class="fa-solid fa-file-invoice-dollar text-cyan me-2"></i>
+            Danh sách đơn hàng đa kênh
+        </h4>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 text-sm align-middle">
+            <thead class="table-light">
                 <tr>
-                    <td>@item.MaDonHang</td>
-                    <td>@(item.KhachHang?.HoTen ?? "Khách vãng lai")</td>
-                    <td>@item.NgayDat?.ToString("dd/MM/yyyy")</td>
-                    <td>@item.TongTien?.ToString("N0") đ</td>
-                    <td>@item.TrangThai</td>
-                    <td><a href="@Url.Action("Detail", "Order", new { id = item.MaDonHang })" class="btn btn-sm btn-primary">Chi tiết</a></td>
+                    <th>Mã Đơn</th>
+                    <th>Khách hàng</th>
+                    <th>Ngày đặt</th>
+                    <th>Kênh bán</th>
+                    <th>Tổng thanh toán</th>
+                    <th>Trạng thái</th>
+                    <th class="text-end">Hành động</th>
                 </tr>
-            }
-        </tbody>
-    </table>
-</div>
+            </thead>
+            <tbody>
+                @if (Model == null || !Model.Any())
+                {
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            Chưa có đơn hàng nào.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (var item in Model)
+                    {
+                        var channel = GetStringProp(item, "KenhBan", "Cửa hàng");
+                        var status = item.TrangThai ?? "Hoàn thành";
+
+                        <tr>
+                            <td>
+                                <code class="text-danger fw-bold">@GetOrderCode(item)</code>
+                            </td>
+
+                            <td>
+                                <div class="fw-bold text-dark">
+                                    @(item.KhachHang?.HoTen ?? "Khách Hàng Vãng Lai")
+                                </div>
+                                <span class="text-xs text-muted">
+                                    @(item.KhachHang?.SoDienThoai ?? "")
+                                </span>
+                            </td>
+
+                            <td>@FormatDate(item.NgayDat)</td>
+
+                            <td>
+                                <i class="fa-solid @GetChannelIcon(channel)"></i>
+                                <span class="ms-1">@channel</span>
+                            </td>
+
+                            <td class="text-info fw-bold">
+                                @FormatMoney(item.TongTien)
+                            </td>
+
+                            <td>
+                                <span class="badge px-2 py-1 @GetStatusBadge(status)">
+                                    @status
+                                </span>
+                            </td>
+
+                            <td class="text-end">
+                                <a href="@Url.Action("Detail", "Order", new { id = item.MaDonHang })"
+                                   class="btn btn-sm btn-outline-info rounded-pill px-3 text-xs">
+                                    <i class="fa-solid fa-circle-info me-1"></i>Chi tiết
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div> 

@@ -81,16 +81,24 @@
                 </li>
             }
 
-            @if (AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Order"))
-            {
-                <li class="nav-item-header text-xs text-uppercase tracking-widest text-muted-custom mt-3 mb-2 px-3">Bán hàng & CSKH</li>
-                <li class="nav-item">
-                    <a href="@Url.Action("Index", "Order")" class="nav-link-custom @(ctrl == "Order" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
-                        <i class="fa-solid fa-file-invoice-dollar text-cyan fs-5"></i>
-                        <span>Đơn hàng</span>
-                    </a>
-                </li>
-            }
+           @if (AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Order"))
+{
+    <li class="nav-item-header text-xs text-uppercase tracking-widest text-muted-custom mt-3 mb-2 px-3">Bán hàng & CSKH</li>
+
+    <li class="nav-item">
+        <a href="@Url.Action("Index", "Order")" class="nav-link-custom @(ctrl == "Order" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+            <i class="fa-solid fa-file-invoice-dollar text-cyan fs-5"></i>
+            <span>Đơn hàng</span>
+        </a>
+    </li>
+
+    <li class="nav-item">
+        <a href="@Url.Action("Index", "SalesCSKH")" class="nav-link-custom @(ctrl == "SalesCSKH" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+            <i class="fa-solid fa-headset text-cyan fs-5"></i>
+            <span>Chăm sóc khách hàng</span>
+        </a>
+    </li>
+}
 
             @if (AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Customer"))
             {
