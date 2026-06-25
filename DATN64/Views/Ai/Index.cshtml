@@ -1,16 +1,227 @@
 @model List<DATN64.Models.ChatMessage>
-@{ Layout = "~/Views/Shared/_Layout.cshtml"; ViewData["Title"] = "NovaTech AI"; }
-<div class="container my-5">
-    <h2>Tr? l� AI NovaTech</h2>
-    <div class="chat-box border p-3 mb-3" style="height:400px; overflow-y:auto;">
-        @foreach(var msg in Model) {
-            <p><strong>@msg.Sender:</strong> @msg.Message <small class="text-muted">(@msg.Timestamp.ToString("HH:mm"))</small></p>
-        }
-    </div>
-    <form asp-action="AskAi" method="post">
-        <div class="input-group">
-            <input type="text" name="question" class="form-control" placeholder="H?i tr? l� AI..." />
-            <button class="btn btn-primary" type="submit">G?i</button>
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "NovaTech AI Assistant";
+    ViewData["BreadcrumbActive"] = "AI Assistant";
+}
+
+<div class="row justify-content-center animate-fade-in">
+    <div class="col-xl-9 col-lg-10 col-md-12">
+        <div class="card card-glass overflow-hidden shadow-lg border border-opacity-10 border-info">
+            
+            <!-- Header -->
+            <div class="card-header bg-glass py-3 px-4 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="avatar bg-info bg-opacity-10 p-2.5 rounded-3 border border-info border-opacity-25 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                        <i class="fa-solid fa-robot text-cyan fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="m-0 fw-bold text-dark">Trợ lý ảo NovaTech AI</h5>
+                        <span class="text-xs text-success d-flex align-items-center gap-1.5 fw-semibold">
+                            <span class="d-inline-block rounded-circle bg-success animate-pulse" style="width: 8px; height: 8px;"></span>
+                            Đang trực tuyến (Gemini 1.5 Flash)
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Clear history button -->
+                <form asp-action="ClearHistory" method="post" onsubmit="return confirm('Bạn có chắc chắn muốn xóa toàn bộ lịch sử trò chuyện?');">
+                    <button type="submit" class="btn btn-outline-danger btn-sm text-xs rounded-pill d-flex align-items-center gap-1.5 px-3 py-1.5 hover-bg-light transition-all">
+                        <i class="fa-solid fa-trash-can"></i>
+                        Xóa lịch sử
+                    </button>
+                </form>
+            </div>
+
+            <!-- Chat box body -->
+            <div class="card-body p-4 bg-light bg-opacity-50" id="chatBoxContainer" style="height: 480px; overflow-y: auto; background-color: #fcfdfe;">
+                <div class="d-flex flex-column gap-3.5" id="chatBox">
+                    
+                    <!-- Welcome message if history is empty -->
+                    @if (!Model.Any())
+                    {
+                        <div class="welcome-box text-center py-5 my-3 animate-fade-in">
+                            <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center p-4 mb-3 border border-info border-opacity-25 animate-pulse" style="width: 80px; height: 80px;">
+                                <i class="fa-solid fa-wand-magic-sparkles text-cyan fs-1"></i>
+                            </div>
+                            <h4 class="fw-bold text-dark mb-2">Xin chào! Tôi có thể giúp gì cho bạn?</h4>
+                            <p class="text-muted-custom text-sm mx-auto" style="max-width: 480px;">
+                                Tôi là trợ lý AI được kết nối trực tiếp với dữ liệu thực tế của hệ thống ERP NovaTech. Bạn có thể hỏi tôi về doanh thu, đơn hàng cần xử lý hoặc các sản phẩm sắp hết hàng.
+                            </p>
+                        </div>
+                    }
+
+                    <!-- Messages list -->
+                    @foreach (var msg in Model)
+                    {
+                        if (msg.Sender == "User")
+                        {
+                            <!-- User Message -->
+                            <div class="d-flex justify-content-end animate-fade-in">
+                                <div class="d-flex flex-column align-items-end" style="max-width: 75%;">
+                                    <div class="p-3 text-white shadow-sm" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border-radius: 16px 16px 2px 16px;">
+                                        <p class="text-sm m-0" style="white-space: pre-wrap; line-height: 1.5;">@msg.Message</p>
+                                    </div>
+                                    <span class="text-xxs text-muted-custom mt-1.5">
+                                        <i class="fa-solid fa-user me-1"></i> Bạn • @msg.Timestamp.ToString("HH:mm")
+                                    </span>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <!-- AI Message -->
+                            <div class="d-flex justify-content-start animate-fade-in">
+                                <div class="d-flex gap-3" style="max-width: 80%;">
+                                    <div class="avatar bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center border border-info border-opacity-10" style="width: 38px; height: 38px; flex-shrink: 0;">
+                                        <i class="fa-solid fa-robot text-cyan"></i>
+                                    </div>
+                                    <div class="d-flex flex-column">
+                                        <div class="p-3 text-dark bg-white border shadow-sm ai-response-content" style="border-radius: 2px 16px 16px 16px; border-color: #e2e8f0 !important;">
+                                            <p class="text-sm m-0" style="white-space: pre-wrap; line-height: 1.6;">@msg.Message</p>
+                                        </div>
+                                        <span class="text-xxs text-muted-custom mt-1.5">
+                                            NovaTech AI • @msg.Timestamp.ToString("HH:mm")
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+
+            <!-- Suggestion Chips & Input Footer -->
+            <div class="card-footer bg-glass p-3 border-top border-secondary border-opacity-10">
+                
+                <!-- Suggestion Chips -->
+                <div class="suggestion-chips d-flex flex-wrap gap-2 mb-3">
+                    <span class="text-xs text-muted-custom d-flex align-items-center me-1.5"><i class="fa-solid fa-lightbulb text-warning me-1.5"></i> Gợi ý nhanh:</span>
+                    <button type="button" class="btn btn-outline-info btn-xs rounded-pill text-xs px-3 py-1 hover-bg-light chip-btn" data-question="Báo cáo nhanh doanh thu và tình trạng đơn hàng hôm nay">
+                        📊 Doanh thu & Đơn hàng
+                    </button>
+                    <button type="button" class="btn btn-outline-info btn-xs rounded-pill text-xs px-3 py-1 hover-bg-light chip-btn" data-question="Sản phẩm nào sắp hết hàng và số lượng tồn hiện tại thế nào?">
+                        ⚠️ Cảnh báo hết hàng
+                    </button>
+                    <button type="button" class="btn btn-outline-info btn-xs rounded-pill text-xs px-3 py-1 hover-bg-light chip-btn" data-question="Phân tích sơ lược tình hình kinh doanh hiện tại của cửa hàng và đề xuất">
+                        💡 Đề xuất & Phân tích
+                    </button>
+                </div>
+
+                <!-- Input form -->
+                <form asp-action="AskAi" method="post" id="chatForm">
+                    <div class="input-group bg-white p-1 border rounded-pill shadow-sm" style="border-color: #cbd5e1 !important;">
+                        <input type="text" name="question" id="chatInput" autocomplete="off" class="form-control border-0 px-4 rounded-pill text-sm" placeholder="Nhập câu hỏi về doanh thu, tồn kho, đơn hàng..." required style="box-shadow: none !important;" />
+                        <button class="btn btn-info rounded-pill px-4 d-flex align-items-center gap-2 fw-semibold text-sm" type="submit" id="sendBtn" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none;">
+                            <span id="btnText">Gửi đi</span>
+                            <i class="fa-solid fa-paper-plane" id="btnIcon"></i>
+                            <div class="spinner-border spinner-border-sm text-white d-none" id="btnSpinner" role="status"></div>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
         </div>
-    </form>
+    </div>
 </div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const chatBoxContainer = document.getElementById("chatBoxContainer");
+            const chatForm = document.getElementById("chatForm");
+            const chatInput = document.getElementById("chatInput");
+            const sendBtn = document.getElementById("sendBtn");
+            const btnText = document.getElementById("btnText");
+            const btnIcon = document.getElementById("btnIcon");
+            const btnSpinner = document.getElementById("btnSpinner");
+            const chipBtns = document.querySelectorAll(".chip-btn");
+            const aiResponses = document.querySelectorAll(".ai-response-content p");
+
+            // Simple Markdown Parser (Regex)
+            function parseMarkdown(text) {
+                let html = text;
+                
+                // 1. Double asterisks for Bold: **bold** -> <strong>bold</strong>
+                html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="fw-bold text-dark">$1</strong>');
+                
+                // 2. Single asterisks for Italic: *italic* -> <em>italic</em>
+                html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+                
+                // 3. Bullet lists: "- Item" -> "<div class='ps-3 mb-1.5'><i class='fa-solid fa-circle text-info me-2' style='font-size: 6px; vertical-align: middle;'></i>$1</div>"
+                html = html.split('\n').map(line => {
+                    const trimmed = line.trim();
+                    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+                        const content = trimmed.substring(2);
+                        return `<div class="ps-3 mb-1.5 d-flex align-items-start"><i class="fa-solid fa-circle text-cyan mt-1.5 me-2" style="font-size: 5px; flex-shrink: 0;"></i><span>${content}</span></div>`;
+                    }
+                    return line;
+                }).join('\n');
+
+                return html;
+            }
+
+            // Parse all AI messages on load
+            aiResponses.forEach(el => {
+                const rawText = el.innerHTML;
+                el.innerHTML = parseMarkdown(rawText);
+            });
+
+            // Auto-scroll to bottom of chat
+            function scrollToBottom() {
+                chatBoxContainer.scrollTop = chatBoxContainer.scrollHeight;
+            }
+            scrollToBottom();
+
+            // Handle Suggestion Chips click
+            chipBtns.forEach(btn => {
+                btn.addEventListener("click", function () {
+                    const question = this.getAttribute("data-question");
+                    chatInput.value = question;
+                    submitForm();
+                });
+            });
+
+            // Form Submit handler
+            chatForm.addEventListener("submit", function (e) {
+                if (!chatInput.value.trim()) {
+                    e.preventDefault();
+                    return;
+                }
+                submitForm();
+            });
+
+            function submitForm() {
+                // Show loading state
+                chatInput.readOnly = true;
+                sendBtn.disabled = true;
+                
+                btnText.textContent = "AI đang xử lý...";
+                btnIcon.classList.add("d-none");
+                btnSpinner.classList.remove("d-none");
+                
+                // Submit form
+                chatForm.submit();
+            }
+        });
+    </script>
+}
+
+<style>
+    /* Custom button sizing for extra small */
+    .btn-xs {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.7rem;
+        line-height: 1.2;
+        border-radius: 0.2rem;
+    }
+    
+    .gap-3\.5 {
+        gap: 0.875rem !important;
+    }
+    
+    /* Animation helper */
+    .welcome-box {
+        animation: fadeInUp 0.5s ease forwards;
+    }
+</style>

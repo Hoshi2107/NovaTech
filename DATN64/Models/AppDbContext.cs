@@ -25,6 +25,7 @@ namespace DATN64.Models
         public DbSet<TikTokShopConfig> TikTokShopConfigs { get; set; }
         public DbSet<TikTokSyncLog> TikTokSyncLogs { get; set; }
         public DbSet<ChatMessage> ChatMessages { get; set; }
+        public DbSet<CauHinh> CauHinhs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

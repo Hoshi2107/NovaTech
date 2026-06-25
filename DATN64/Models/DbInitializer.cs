@@ -74,6 +74,28 @@ namespace DATN64.Models
                     Timestamp DATETIME NOT NULL DEFAULT GETDATE()
                 );
             ");
+
+            // Create CauHinh
+            ExecuteSql(db, @"
+                IF OBJECT_ID('dbo.CauHinh', 'U') IS NULL
+                CREATE TABLE dbo.CauHinh (
+                    Id INT IDENTITY(1,1) PRIMARY KEY,
+                    TenCuaHang NVARCHAR(255) NOT NULL DEFAULT 'NovaTech',
+                    Email NVARCHAR(100) NULL,
+                    SoDienThoai NVARCHAR(20) NULL,
+                    DiaChi NVARCHAR(255) NULL,
+                    Logo NVARCHAR(500) NULL
+                );
+            ");
+
+            // Seed default CauHinh if empty
+            ExecuteSql(db, @"
+                IF NOT EXISTS (SELECT 1 FROM dbo.CauHinh)
+                BEGIN
+                    INSERT INTO dbo.CauHinh (TenCuaHang, Email, SoDienThoai, DiaChi, Logo)
+                    VALUES (N'Siêu thị NovaTech', 'contact@novatech.vn', '1900 1000', N'123 Đường Điện Biên Phủ, TP.HCM', '/uploads/logo/default_logo.png');
+                END
+            ");
         }
 
         private static void ExecuteSql(DatabaseFacade db, string sql)

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DATN64")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+08c6007834feb3b9d926c71d513d4ff0ae11a42d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3052836baa33858a65ce9a061d1d4b1b30375366")]
 [assembly: System.Reflection.AssemblyProductAttribute("DATN64")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DATN64")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
