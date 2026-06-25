@@ -6,7 +6,6 @@
     
     var roles = ViewBag.RolesList as List<DATN64.Models.Role> ?? new List<DATN64.Models.Role>();
     var empRolesDict = ViewBag.EmployeeRolesDict as Dictionary<int, List<DATN64.Models.Role>> ?? new Dictionary<int, List<DATN64.Models.Role>>();
-    var permCategories = ViewBag.PermissionCategories as Dictionary<string, List<string>> ?? new Dictionary<string, List<string>>();
 }
 
 @section Styles {
@@ -191,25 +190,8 @@
     </div>
 </div>
 
-<!-- Tabs Navigation -->
-<ul class="nav nav-tabs nav-tabs-custom mb-4" id="rbacTabs" role="tablist">
-    <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="staff-tab" data-bs-toggle="tab" data-bs-target="#staff-pane" type="button" role="tab" aria-controls="staff-pane" aria-selected="true">
-            <i class="fa-solid fa-users-viewfinder me-2"></i>Danh sách Nhân viên
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="role-tab" data-bs-toggle="tab" data-bs-target="#role-pane" type="button" role="tab" aria-controls="role-pane" aria-selected="false">
-            <i class="fa-solid fa-shield-halved me-2"></i>Vai trò & Phân quyền
-        </button>
-    </li>
-</ul>
-
-<!-- Tabs Content -->
-<div class="tab-content" id="rbacTabsContent">
-    
-    <!-- Tab 1: Staff List -->
-    <div class="tab-pane fade show active" id="staff-pane" role="tabpanel" aria-labelledby="staff-tab" tabindex="0">
+<div class="row">
+    <div class="col-12">
         <div class="card card-glass p-4">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div class="search-box position-relative" style="width: 280px;">
@@ -281,96 +263,27 @@
                                             title="Sửa nhân viên">
                                         <i class="fa-solid fa-pen fa-xs"></i>
                                     </button>
-                                    <button class="btn btn-outline-danger btn-xs rounded-circle p-2" 
-                                            onclick="confirmDelete(@emp.MaNhanVien, '@Html.Raw(emp.HoTen)')" 
-                                            title="Xóa nhân viên">
-                                        <i class="fa-solid fa-trash fa-xs"></i>
-                                    </button>
+                                    @if (emp.TrangThai == "Hoạt động")
+                                    {
+                                        <button class="btn btn-outline-warning btn-xs rounded-circle p-2" 
+                                                onclick="toggleStatus(@emp.MaNhanVien, '@Html.Raw(emp.HoTen)', 'Bị khóa')" 
+                                                title="Vô hiệu hóa tài khoản">
+                                            <i class="fa-solid fa-lock fa-xs"></i>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-outline-success btn-xs rounded-circle p-2" 
+                                                onclick="toggleStatus(@emp.MaNhanVien, '@Html.Raw(emp.HoTen)', 'Hoạt động')" 
+                                                title="Mở khóa tài khoản">
+                                            <i class="fa-solid fa-unlock fa-xs"></i>
+                                        </button>
+                                    }
                                 </td>
                             </tr>
                         }
                     </tbody>
                 </table>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Tab 2: Roles & Permissions Matrix -->
-    <div class="tab-pane fade" id="role-pane" role="tabpanel" aria-labelledby="role-tab" tabindex="0">
-        <div class="row g-4">
-            <!-- Roles Selector List -->
-            <div class="col-md-3">
-                <div class="card card-glass p-3 h-100">
-                    <h6 class="fw-bold text-white mb-3"><i class="fa-solid fa-user-shield me-2 text-cyan"></i>Danh sách Vai trò</h6>
-                    <div class="list-group" id="rolesListGroup" role="tablist">
-                        @for (int i = 0; i < roles.Count; i++)
-                        {
-                            var role = roles[i];
-                            <button class="list-group-item list-group-item-action list-group-item-custom @(i == 0 ? "active" : "")" 
-                                    id="role-btn-@role.Id" 
-                                    data-bs-toggle="list" 
-                                    type="button" 
-                                    onclick="selectRole('@Html.Raw(role.Name)')">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span>@role.Name</span>
-                                    <i class="fa-solid fa-chevron-right text-xs opacity-50"></i>
-                                </div>
-                                @if (!string.IsNullOrEmpty(role.Description))
-                                {
-                                    <small class="d-block text-muted text-xxs mt-1 fw-normal">@role.Description</small>
-                                }
-                            </button>
-                        }
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Permissions Form -->
-            <div class="col-md-9">
-                <div class="card card-glass p-4 h-100 position-relative">
-                    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom border-secondary border-opacity-10">
-                        <div>
-                            <h5 class="fw-bold text-white mb-1">
-                                <i class="fa-solid fa-key me-2 text-cyan"></i>Bảng phân quyền: <span id="selectedRoleTitle" class="text-info">@Html.Raw(roles.FirstOrDefault()?.Name ?? "")</span>
-                            </h5>
-                            <p class="text-muted-custom text-xs mb-0">Tích chọn các chức năng vai trò này được phép truy cập.</p>
-                        </div>
-                        <button type="button" class="btn btn-info btn-sm text-dark fw-bold px-3 rounded-pill" onclick="savePermissions()">
-                            <i class="fa-solid fa-floppy-disk me-1"></i>Lưu phân quyền
-                        </button>
-                    </div>
-                    
-                    <!-- Loading Mask -->
-                    <div id="permissionsLoading" class="position-absolute top-50 start-50 translate-middle d-none text-center">
-                        <div class="spinner-border text-info mb-2" role="status"></div>
-                        <p class="text-muted text-xs">Đang cập nhật phân quyền...</p>
-                    </div>
-                    
-                    <div class="row g-3" id="permissionsGrid">
-                        @foreach (var cat in permCategories)
-                        {
-                            <div class="col-md-6">
-                                <div class="perm-category-card">
-                                    <div class="perm-category-title">@cat.Key</div>
-                                    <div class="d-flex flex-column gap-2">
-                                        @foreach (var p in cat.Value)
-                                        {
-                                            <div class="form-check">
-                                                <input class="form-check-input form-check-input-custom permission-checkbox" 
-                                                       type="checkbox" 
-                                                       value="@p" 
-                                                       id="perm-@p">
-                                                <label class="form-check-label form-check-label-custom" for="perm-@p">
-                                                    <code>@p</code> - @GetFriendlyPermissionName(p)
-                                                </label>
-                                            </div>
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -497,29 +410,15 @@
     </div>
 </div>
 
-<!-- Form delete employee hidden -->
-<form id="deleteForm" asp-action="Delete" method="post" style="display:none;">
-    <input type="hidden" name="id" id="deleteId">
+<!-- Form toggle status hidden -->
+<form id="toggleStatusForm" asp-action="ToggleStatus" method="post" style="display:none;">
+    <input type="hidden" name="id" id="toggleId">
 </form>
 
 }
 
 @section Scripts {
     <script>
-        // Load the roles mapping data dynamically
-        var rolePermissionsData = {
-            @foreach (var r in roles)
-            {
-                var perms = (ViewBag.RolePermissions as List<DATN64.Models.RolePermission>)
-                    ?.Where(rp => rp.RoleName == r.Name)
-                    .Select(rp => rp.PermissionName)
-                    .ToList() ?? new List<string>();
-                @: "@Html.Raw(r.Name)": [@Html.Raw(string.Join(",", perms.Select(p => $"\"{p}\"")))],
-            }
-        };
-
-        var currentRoleName = "@Html.Raw(roles.FirstOrDefault()?.Name ?? "")";
-
         // Filter employees list by name
         function filterEmployees() {
             var input = document.getElementById("employeeSearch");
@@ -558,158 +457,13 @@
             editModal.show();
         }
 
-        // Delete action trigger
-        function confirmDelete(id, name) {
-            if (confirm("Bạn có chắc chắn muốn xóa nhân viên '" + name + "' khỏi hệ thống?")) {
-                document.getElementById('deleteId').value = id;
-                document.getElementById('deleteForm').submit();
+        // Toggle status action trigger
+        function toggleStatus(id, name, newStatus) {
+            var actionText = newStatus === 'Bị khóa' ? 'VÔ HIỆU HÓA' : 'MỞ KHÓA';
+            if (confirm("Bạn có chắc chắn muốn " + actionText + " tài khoản '" + name + "'?")) {
+                document.getElementById('toggleId').value = id;
+                document.getElementById('toggleStatusForm').submit();
             }
         }
-
-        // Select role dynamically in permissions matrix
-        function selectRole(roleName) {
-            currentRoleName = roleName;
-            document.getElementById('selectedRoleTitle').innerText = roleName;
-            
-            // Clear checked
-            var checkBoxes = document.getElementsByClassName('permission-checkbox');
-            for (var i = 0; i < checkBoxes.length; i++) {
-                checkBoxes[i].checked = false;
-            }
-            
-            // Load checked permissions from local object
-            var perms = rolePermissionsData[roleName] || [];
-            perms.forEach(function(perm) {
-                var cb = document.getElementById('perm-' + perm);
-                if (cb) {
-                    cb.checked = true;
-                }
-            });
-        }
-
-        // Save selected permissions for current role via AJAX
-        function savePermissions() {
-            var selectedPerms = [];
-            var checkBoxes = document.getElementsByClassName('permission-checkbox');
-            for (var i = 0; i < checkBoxes.length; i++) {
-                if (checkBoxes[i].checked) {
-                    selectedPerms.push(checkBoxes[i].value);
-                }
-            }
-            
-            var loading = document.getElementById('permissionsLoading');
-            var grid = document.getElementById('permissionsGrid');
-            
-            loading.classList.remove('d-none');
-            grid.style.opacity = '0.3';
-            
-            var formData = new URLSearchParams();
-            formData.append('roleName', currentRoleName);
-            selectedPerms.forEach(function(p) {
-                formData.append('selectedPermissions', p);
-            });
-            
-            fetch('@Url.Action("SaveRolePermissions", "Employee")', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: formData.toString()
-            })
-            .then(response => response.json())
-            .then(data => {
-                loading.classList.add('d-none');
-                grid.style.opacity = '1';
-                
-                if (data.success) {
-                    // Update local permissions cache
-                    rolePermissionsData[currentRoleName] = selectedPerms;
-                    showToast(data.message, "success");
-                } else {
-                    showToast(data.message || "Đã xảy ra lỗi!", "danger");
-                }
-            })
-            .catch(error => {
-                loading.classList.add('d-none');
-                grid.style.opacity = '1';
-                console.error('Error saving role permissions:', error);
-                showToast("Lỗi kết nối máy chủ!", "danger");
-            });
-        }
-
-        // Show toast notification
-        function showToast(message, type) {
-            const toastContainer = document.querySelector('.toast-container');
-            if (!toastContainer) {
-                alert(message);
-                return;
-            }
-            
-            const toastId = 'toast_' + Date.now();
-            const typeClass = type === 'success' ? 'bg-success' : 'bg-danger';
-            const iconClass = type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation';
-            
-            const toastHtml = `
-                <div id="${toastId}" class="toast align-items-center text-white ${typeClass} border-0 show" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000">
-                    <div class="d-flex">
-                        <div class="toast-body d-flex align-items-center">
-                            <i class="fa-solid ${iconClass} me-2 fs-5"></i>
-                            <div>${message}</div>
-                        </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                    </div>
-                </div>
-            `;
-            
-            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
-            const toastEl = document.getElementById(toastId);
-            
-            // Auto remove after delay
-            setTimeout(() => {
-                if (toastEl) {
-                    toastEl.classList.remove('show');
-                    setTimeout(() => toastEl.remove(), 500);
-                }
-            }, 4000);
-        }
-
-        // Initialize state on load
-        document.addEventListener("DOMContentLoaded", function() {
-            // Check permissions for first role initially
-            if (currentRoleName) {
-                selectRole(currentRoleName);
-            }
-        });
     </script>
-}
-
-@functions {
-    public string GetFriendlyPermissionName(string perm)
-    {
-        return perm switch
-        {
-            "View_Product" => "Xem sản phẩm",
-            "Create_Product" => "Thêm sản phẩm",
-            "Edit_Product" => "Sửa sản phẩm",
-            "Delete_Product" => "Xóa sản phẩm",
-            "View_Inventory" => "Xem tồn kho",
-            "Import_Inventory" => "Nhập kho",
-            "Export_Inventory" => "Xuất kho",
-            "View_Order" => "Xem đơn hàng",
-            "Approve_Order" => "Duyệt đơn hàng",
-            "View_Customer" => "Xem khách hàng",
-            "Create_Customer" => "Thêm khách hàng",
-            "View_Promotion" => "Quản lý khuyến mãi",
-            "View_Employee" => "Xem nhân sự",
-            "Create_Employee" => "Thêm nhân sự",
-            "Assign_Role" => "Phân quyền & Vai trò",
-            "Delete_Employee" => "Xóa nhân sự",
-            "View_Report" => "Xem báo cáo",
-            "View_Setting" => "Xem cấu hình hệ thống",
-            "Edit_Setting" => "Cập nhật cấu hình",
-            "View_TikTok" => "Xem đồng bộ TikTok",
-            "Sync_TikTok" => "Thực hiện đồng bộ TikTok",
-            _ => perm
-        };
-    }
 }

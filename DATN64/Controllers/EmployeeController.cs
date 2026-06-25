@@ -48,18 +48,6 @@ namespace DATN64.Controllers
             }
             ViewBag.EmployeeRolesDict = empRolesDict;
             
-            // Dictionary of permissions organized by categories for a premium UI
-            var permissionCategories = new Dictionary<string, List<string>>
-            {
-                { "Quản lý sản phẩm", new List<string> { "View_Product", "Create_Product", "Edit_Product", "Delete_Product" } },
-                { "Quản lý kho", new List<string> { "View_Inventory", "Import_Inventory", "Export_Inventory" } },
-                { "Quản lý đơn hàng", new List<string> { "View_Order", "Approve_Order" } },
-                { "Khách hàng & Khuyến mãi", new List<string> { "View_Customer", "Create_Customer", "View_Promotion" } },
-                { "Quản trị hệ thống", new List<string> { "View_Employee", "Create_Employee", "Assign_Role", "Delete_Employee", "View_Report", "View_Setting", "Edit_Setting" } },
-                { "Liên kết TikTok", new List<string> { "View_TikTok", "Sync_TikTok" } }
-            };
-            ViewBag.PermissionCategories = permissionCategories;
-
             return View(employees);
         }
 
@@ -176,8 +164,8 @@ namespace DATN64.Controllers
         }
 
         [HttpPost]
-        [HasPermission("Delete_Employee")]
-        public IActionResult Delete(int id)
+        [HasPermission("Assign_Role")]
+        public IActionResult ToggleStatus(int id)
         {
             var target = _context.NhanViens.FirstOrDefault(e => e.MaNhanVien == id);
             if (target == null)
@@ -187,56 +175,42 @@ namespace DATN64.Controllers
                 return RedirectToAction("Index");
             }
 
-            // Kiểm tra nhân viên có đơn hàng liên kết không
-            bool hasOrders = _context.DonHangs.Any(d => d.MaNhanVien == id);
-            if (hasOrders)
+            if (target.TrangThai == "Hoạt động")
             {
-                TempData["ToastMessage"] = $"Không thể xóa nhân viên \"{target.HoTen}\" vì đã có đơn hàng liên kết trong hệ thống. Hãy chuyển trạng thái sang \"Bị khóa\" để ngăn đăng nhập.";
-                TempData["ToastType"] = "warning";
-                return RedirectToAction("Index");
-            }
-
-            // Xóa mapping vai trò trước (FK từ NhanVienRole)
-            var oldRoles = _context.NhanVienRoles.Where(nr => nr.MaNhanVien == id);
-            _context.NhanVienRoles.RemoveRange(oldRoles);
-
-            _context.NhanViens.Remove(target);
-            _context.SaveChanges();
-
-            TempData["ToastMessage"] = $"Đã xóa nhân viên \"{target.HoTen}\" khỏi hệ thống!";
-            TempData["ToastType"] = "success";
-            return RedirectToAction("Index");
-        }
-
-        [HttpPost]
-        [HasPermission("Assign_Role")]
-        public IActionResult SaveRolePermissions(string roleName, List<string> selectedPermissions)
-        {
-            if (string.IsNullOrEmpty(roleName))
-            {
-                return Json(new { success = false, message = "Tên vai trò không hợp lệ!" });
-            }
-
-            // Clear old permissions
-            var oldPerms = _context.RolePermissions.Where(rp => rp.RoleName == roleName);
-            _context.RolePermissions.RemoveRange(oldPerms);
-
-            // Add new permissions
-            if (selectedPermissions != null)
-            {
-                foreach (var perm in selectedPermissions)
+                // Cannot lock the only admin
+                var adminRoleId = _context.Roles.FirstOrDefault(r => r.Name == "Admin")?.Id;
+                if (adminRoleId != null)
                 {
-                    _context.RolePermissions.Add(new RolePermission
+                    bool isAdmin = _context.NhanVienRoles.Any(nr => nr.MaNhanVien == id && nr.RoleId == adminRoleId);
+                    if (isAdmin)
                     {
-                        RoleName = roleName,
-                        PermissionName = perm
-                    });
+                        int activeAdmins = (from n in _context.NhanViens
+                                            join nr in _context.NhanVienRoles on n.MaNhanVien equals nr.MaNhanVien
+                                            where nr.RoleId == adminRoleId && n.TrangThai == "Hoạt động"
+                                            select n).Count();
+                        
+                        if (activeAdmins <= 1)
+                        {
+                            TempData["ToastMessage"] = "Không thể vô hiệu hóa tài khoản Admin duy nhất!";
+                            TempData["ToastType"] = "danger";
+                            return RedirectToAction("Index");
+                        }
+                    }
                 }
+                
+                target.TrangThai = "Bị khóa";
+                TempData["ToastMessage"] = $"Đã vô hiệu hóa tài khoản \"{target.HoTen}\"!";
+                TempData["ToastType"] = "warning";
+            }
+            else
+            {
+                target.TrangThai = "Hoạt động";
+                TempData["ToastMessage"] = $"Đã kích hoạt lại tài khoản \"{target.HoTen}\"!";
+                TempData["ToastType"] = "success";
             }
 
             _context.SaveChanges();
-
-            return Json(new { success = true, message = $"Đã cập nhật quyền cho vai trò '{roleName}' thành công!" });
+            return RedirectToAction("Index");
         }
     }
 }
