@@ -8,6 +8,7 @@
     var hasDash = roles.Contains("Super Admin") || roles.Contains("Admin") || roles.Contains("Quản lý cửa hàng") || roles.Contains("Nhân viên bán hàng") || roles.Contains("Nhân viên kho") || roles.Contains("Quản lý kho") || roles.Contains("Kế toán") || roles.Contains("Marketing");
     var ctrl = ViewContext.RouteData.Values["controller"]?.ToString();
     var act = ViewContext.RouteData.Values["action"]?.ToString();
+    var tab = HttpContextAccessor.HttpContext?.Request.Query["tab"].ToString() ?? "";
 }
 <aside class="sidebar position-fixed top-0 bottom-0 start-0 z-3 p-3">
     <div class="sidebar-brand d-flex align-items-center gap-2 mb-4 pb-3 border-bottom border-secondary border-opacity-25">
@@ -62,19 +63,19 @@
             {
                 <li class="nav-item-header text-xs text-uppercase tracking-widest text-muted-custom mt-3 mb-2 px-3">Kho bãi</li>
                 <li class="nav-item">
-                    <a href="@Url.Action("Index", "Inventory")" class="nav-link-custom @(ctrl == "Inventory" && act == "Index" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                    <a href="@Url.Action("Index", "Inventory")" class="nav-link-custom @(ctrl == "Inventory" && act == "Index" && tab != "import" && tab != "export" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
                         <i class="fa-solid fa-warehouse text-cyan fs-5"></i>
                         <span>Tồn kho</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="@Url.Action("Import", "Inventory")" class="nav-link-custom @(ctrl == "Inventory" && act == "Import" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                    <a href="@Url.Action("Import", "Inventory")" class="nav-link-custom @(ctrl == "Inventory" && (act == "Import" || (act == "Index" && tab == "import")) ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
                         <i class="fa-solid fa-circle-down text-cyan fs-5"></i>
                         <span>Nhập kho</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="@Url.Action("Export", "Inventory")" class="nav-link-custom @(ctrl == "Inventory" && act == "Export" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                    <a href="@Url.Action("Export", "Inventory")" class="nav-link-custom @(ctrl == "Inventory" && (act == "Export" || (act == "Index" && tab == "export")) ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
                         <i class="fa-solid fa-circle-up text-cyan fs-5"></i>
                         <span>Xuất kho</span>
                     </a>
