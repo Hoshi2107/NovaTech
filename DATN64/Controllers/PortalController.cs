@@ -19,11 +19,17 @@ namespace DATN64.Controllers
             var rolesString = HttpContext.Session.GetString("UserRoles") ?? "";
             var roles = rolesString.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
 
+            // Redirect customer role to retail shop directly
+            if (roles.Contains("Khách hàng") && !roles.Any(r => r == "Super Admin" || r == "Admin" || r == "Quản lý cửa hàng" || r == "Nhân viên bán hàng" || r == "Nhân viên kho" || r == "Quản lý kho" || r == "Kế toán" || r == "Marketing"))
+            {
+                return RedirectToAction("Index", "Online");
+            }
+
             ViewBag.UserName = HttpContext.Session.GetString("UserName") ?? "Nhân viên";
             ViewBag.RolesString = rolesString;
             
-            // Allow access based on role
-            ViewBag.CanAccessERP = roles.Any(r => r == "Super Admin" || r == "Admin" || r == "Quản lý cửa hàng" || r == "Nhân viên bán hàng" || r == "Nhân viên kho" || r == "Quản lý kho" || r == "Kế toán" || r == "Marketing");
+            // Allow access based on role (excluding 'Nhân viên bán hàng' from ERP access)
+            ViewBag.CanAccessERP = roles.Any(r => r == "Super Admin" || r == "Admin" || r == "Quản lý cửa hàng" || r == "Nhân viên kho" || r == "Quản lý kho" || r == "Kế toán" || r == "Marketing");
             ViewBag.CanAccessPOS = roles.Any(r => r == "Super Admin" || r == "Admin" || r == "Quản lý cửa hàng" || r == "Nhân viên bán hàng");
             ViewBag.CanAccessOnline = true; // Everyone can view the retail shop
 

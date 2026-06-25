@@ -19,6 +19,19 @@ namespace DATN64.Controllers
             var userEmail = HttpContext.Session.GetString("UserEmail");
             if (string.IsNullOrEmpty(userEmail)) return RedirectToAction("Login", "Account");
 
+            var rolesString = HttpContext.Session.GetString("UserRoles") ?? "";
+            var roles = rolesString.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
+            var canAccessERP = roles.Any(r => r == "Super Admin" || r == "Admin" || r == "Quản lý cửa hàng" || r == "Nhân viên kho" || r == "Quản lý kho" || r == "Kế toán" || r == "Marketing");
+
+            if (!canAccessERP)
+            {
+                if (roles.Contains("Khách hàng"))
+                {
+                    return RedirectToAction("Index", "Online");
+                }
+                return RedirectToAction("Selection", "Portal");
+            }
+
             // Summarizing statistics
             var orders = _context.DonHangs.ToList();
             var products = _context.SanPhams.ToList();

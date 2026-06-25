@@ -34,11 +34,49 @@ namespace DATN64.Controllers
                 }
 
                 var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<NhanVien>();
-                var verificationResult = hasher.VerifyHashedPassword(emp, emp.MatKhau, password);
-                if (verificationResult == Microsoft.AspNetCore.Identity.PasswordVerificationResult.Failed)
+                bool isPasswordValid = false;
+                bool shouldUpdateHash = false;
+
+                try
+                {
+                    var verificationResult = hasher.VerifyHashedPassword(emp, emp.MatKhau, password);
+                    if (verificationResult == Microsoft.AspNetCore.Identity.PasswordVerificationResult.Success)
+                    {
+                        isPasswordValid = true;
+                    }
+                    else if (verificationResult == Microsoft.AspNetCore.Identity.PasswordVerificationResult.SuccessRehashNeeded)
+                    {
+                        isPasswordValid = true;
+                        shouldUpdateHash = true;
+                    }
+                    else
+                    {
+                        if (emp.MatKhau == password)
+                        {
+                            isPasswordValid = true;
+                            shouldUpdateHash = true;
+                        }
+                    }
+                }
+                catch (System.FormatException)
+                {
+                    if (emp.MatKhau == password)
+                    {
+                        isPasswordValid = true;
+                        shouldUpdateHash = true;
+                    }
+                }
+
+                if (!isPasswordValid)
                 {
                     ModelState.AddModelError("", "Thông tin đăng nhập không chính xác hoặc tài khoản không tồn tại.");
                     return View();
+                }
+
+                if (shouldUpdateHash && !string.IsNullOrEmpty(password))
+                {
+                    emp.MatKhau = hasher.HashPassword(emp, password);
+                    _context.SaveChanges();
                 }
 
                 // Retrieve roles dynamically from NhanVienRole junction table
@@ -66,10 +104,91 @@ namespace DATN64.Controllers
                 TempData["ToastMessage"] = "Đăng nhập thành công!";
                 TempData["ToastType"] = "success";
 
-                return RedirectToAction("Selection", "Portal");
+                if (roles.Contains("Khách hàng"))
+                {
+                    return RedirectToAction("Index", "Online");
+                }
+                else
+                {
+                    return RedirectToAction("Selection", "Portal");
+                }
             }
 
-            // Customer check (simulated)
+            // Customer check (database lookup)
+            var customer = _context.KhachHangs.FirstOrDefault(c => c.Email != null && c.Email.Equals(email));
+            if (customer != null)
+            {
+                var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<KhachHang>();
+                bool isPasswordValid = false;
+                bool shouldUpdateHash = false;
+
+                if (!string.IsNullOrEmpty(customer.MatKhau))
+                {
+                    try
+                    {
+                        // 1. Try checking if it's already hashed
+                        var verificationResult = hasher.VerifyHashedPassword(customer, customer.MatKhau, password);
+                        if (verificationResult == Microsoft.AspNetCore.Identity.PasswordVerificationResult.Success)
+                        {
+                            isPasswordValid = true;
+                        }
+                        else if (verificationResult == Microsoft.AspNetCore.Identity.PasswordVerificationResult.SuccessRehashNeeded)
+                        {
+                            isPasswordValid = true;
+                            shouldUpdateHash = true;
+                        }
+                        else
+                        {
+                            // 2. Fallback: if verification failed, check if database password matches the plain text password
+                            if (customer.MatKhau == password)
+                            {
+                                isPasswordValid = true;
+                                shouldUpdateHash = true; // Mark to hash it
+                            }
+                        }
+                    }
+                    catch (System.FormatException)
+                    {
+                        // The stored password is not a valid Base-64 string, so check if it's plain text
+                        if (customer.MatKhau == password)
+                        {
+                            isPasswordValid = true;
+                            shouldUpdateHash = true; // Mark to hash it
+                        }
+                    }
+                }
+                else
+                {
+                    if (string.IsNullOrEmpty(password))
+                    {
+                        isPasswordValid = true;
+                    }
+                }
+
+                if (!isPasswordValid)
+                {
+                    ModelState.AddModelError("", "Thông tin đăng nhập không chính xác hoặc tài khoản không tồn tại.");
+                    return View();
+                }
+
+                // If password matches plain text, update to hashed version automatically
+                if (shouldUpdateHash && !string.IsNullOrEmpty(password))
+                {
+                    customer.MatKhau = hasher.HashPassword(customer, password);
+                    _context.SaveChanges();
+                }
+
+                HttpContext.Session.SetString("UserEmail", customer.Email ?? "");
+                HttpContext.Session.SetString("UserName", customer.HoTen);
+                HttpContext.Session.SetString("UserRoles", "Khách hàng");
+                HttpContext.Session.SetString("UserPermissions", "");
+
+                TempData["ToastMessage"] = "Chào mừng bạn đến với NovaTech Store!";
+                TempData["ToastType"] = "success";
+                return RedirectToAction("Index", "Online");
+            }
+
+            // Customer check (simulated fallback)
             if (email.Equals("customer@gmail.com", System.StringComparison.OrdinalIgnoreCase))
             {
                 HttpContext.Session.SetString("UserEmail", "customer@gmail.com");
