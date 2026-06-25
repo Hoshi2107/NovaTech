@@ -23,16 +23,45 @@ namespace DATN64.Controllers
         [HttpPost]
         public IActionResult Login(string email, string password)
         {
-            var emp = _context.NhanViens.FirstOrDefault(e => e.Email.Equals(email));
+            var emp = _context.NhanViens.FirstOrDefault(e => e.Email != null && e.Email.Equals(email));
 
             if (emp != null)
             {
-                var userRoles = string.IsNullOrEmpty(emp.VaiTro) ? new string[0] : emp.VaiTro.Split(',');
-                
-                HttpContext.Session.SetString("UserEmail", emp.Email);
+                if (emp.TrangThai != "Hoạt động")
+                {
+                    ModelState.AddModelError("", "Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động.");
+                    return View();
+                }
+
+                var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<NhanVien>();
+                var verificationResult = hasher.VerifyHashedPassword(emp, emp.MatKhau, password);
+                if (verificationResult == Microsoft.AspNetCore.Identity.PasswordVerificationResult.Failed)
+                {
+                    ModelState.AddModelError("", "Thông tin đăng nhập không chính xác hoặc tài khoản không tồn tại.");
+                    return View();
+                }
+
+                // Retrieve roles dynamically from NhanVienRole junction table
+                var roles = (from nr in _context.NhanVienRoles
+                             join r in _context.Roles on nr.RoleId equals r.Id
+                             where nr.MaNhanVien == emp.MaNhanVien
+                             select r.Name).ToList();
+
+                var rolesStr = string.Join(",", roles);
+
+                // Retrieve distinct permissions associated with these roles
+                var permissions = _context.RolePermissions
+                    .Where(rp => roles.Contains(rp.RoleName))
+                    .Select(rp => rp.PermissionName)
+                    .Distinct()
+                    .ToList();
+
+                var permissionsStr = string.Join(",", permissions);
+
+                HttpContext.Session.SetString("UserEmail", emp.Email ?? "");
                 HttpContext.Session.SetString("UserName", emp.HoTen);
-                HttpContext.Session.SetString("UserRoles", emp.VaiTro ?? "");
-                HttpContext.Session.SetString("UserPermissions", "All"); // Simplified
+                HttpContext.Session.SetString("UserRoles", rolesStr);
+                HttpContext.Session.SetString("UserPermissions", permissionsStr);
 
                 TempData["ToastMessage"] = "Đăng nhập thành công!";
                 TempData["ToastType"] = "success";

@@ -33,12 +33,47 @@
         <!-- Main Body -->
         <div class="container-fluid p-4 flex-grow-1">
             <!-- Breadcrumbs -->
+            @{
+                var breadcrumbActive = ViewData["BreadcrumbActive"]?.ToString();
+                if (string.IsNullOrEmpty(breadcrumbActive))
+                {
+                    var controllerName = ViewContext.RouteData.Values["controller"]?.ToString();
+                    var actionName = ViewContext.RouteData.Values["action"]?.ToString();
+                    
+                    breadcrumbActive = controllerName switch
+                    {
+                        "Dashboard" => "Tổng quan",
+                        "Product" => actionName switch {
+                            "Index" => "Sản phẩm",
+                            "Categories" => "Danh mục",
+                            "Brands" => "Thương hiệu",
+                            "Suppliers" => "Nhà cung cấp",
+                            _ => "Hàng hóa"
+                        },
+                        "Inventory" => actionName switch {
+                            "Index" => "Tồn kho",
+                            "Import" => "Nhập kho",
+                            "Export" => "Xuất kho",
+                            _ => "Kho bãi"
+                        },
+                        "Order" => "Đơn hàng",
+                        "Customer" => "Khách hàng",
+                        "Promotion" => "Khuyến mãi",
+                        "TikTok" => "TikTok Shop",
+                        "Ai" => "AI Assistant",
+                        "Employee" => "Nhân sự & RBAC",
+                        "Report" => "Báo cáo",
+                        "Setting" => "Cấu hình",
+                        _ => controllerName
+                    };
+                }
+            }
             <nav aria-label="breadcrumb" class="mb-4">
                 <ol class="breadcrumb bg-transparent p-0 m-0">
                     <li class="breadcrumb-item"><a href="@Url.Action("Index", "Dashboard")" class="text-info text-decoration-none text-xs"><i class="fa-solid fa-house me-1"></i>Trang chủ</a></li>
-                    @if (ViewData["BreadcrumbActive"] != null)
+                    @if (!string.IsNullOrEmpty(breadcrumbActive))
                     {
-                        <li class="breadcrumb-item text-muted-custom text-xs" aria-current="page">@ViewData["BreadcrumbActive"]</li>
+                        <li class="breadcrumb-item text-muted-custom text-xs" aria-current="page">@breadcrumbActive</li>
                     }
                 </ol>
             </nav>
@@ -66,6 +101,7 @@
         });
     </script>
     @await Html.PartialAsync("_ToastNotification")
+    @await RenderSectionAsync("Modals", required: false)
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

@@ -1,82 +1,253 @@
+@model DATN64.Models.ViewModels.ReportDashboardViewModel
 @{
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
-    ViewData["Title"] = "Báo cáo thống kê kinh doanh";
-    ViewData["BreadcrumbActive"] = "Báo cáo";
+    ViewData["Title"] = "Báo cáo - Dashboard";
+    var labelsJson    = System.Text.Json.JsonSerializer.Serialize(Model.Revenue7Days.Select(x => x.NgayLabel).ToList());
+    var revenueJson   = System.Text.Json.JsonSerializer.Serialize(Model.Revenue7Days.Select(x => x.DoanhThu).ToList());
+    var topNamesJson  = System.Text.Json.JsonSerializer.Serialize(Model.TopProducts.Select(x => x.TenSanPham).ToList());
+    var topQtyJson    = System.Text.Json.JsonSerializer.Serialize(Model.TopProducts.Select(x => x.TongSoLuongBan).ToList());
 }
 
-<div class="row g-4">
-    <!-- Channel stats breakdown -->
-    <div class="col-md-6">
-        <div class="card card-glass p-4 h-100">
-            <h5 class="fw-bold mb-4 text-cyan"><i class="fa-solid fa-chart-pie me-2"></i>Doanh thu theo Kênh bán hàng</h5>
-            
-            <div class="table-responsive mb-4">
-                <table class="table table-dark table-borderless text-sm mb-0">
-                    <tr><td class="text-muted"><i class="fa-solid fa-store text-warning me-2"></i>Cửa hàng trực tiếp:</td><td class="fw-bold text-end">@ViewBag.RevenueCuaHang.ToString("N0") đ</td></tr>
-                    <tr><td class="text-muted"><i class="fa-solid fa-globe text-primary me-2"></i>Website Online:</td><td class="fw-bold text-end">@ViewBag.RevenueWebsite.ToString("N0") đ</td></tr>
-                    <tr><td class="text-muted"><i class="fa-brands fa-tiktok text-light me-2"></i>TikTok Shop:</td><td class="fw-bold text-end">@ViewBag.RevenueTikTok.ToString("N0") đ</td></tr>
-                </table>
-            </div>
+@section Styles {
+<style>
+    .kpi-card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 20px 22px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        transition: transform 0.2s, box-shadow 0.2s;
+        height: 100%;
+    }
+    .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.09); }
+    .kpi-icon {
+        width: 48px; height: 48px;
+        border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.3rem;
+    }
+    .kpi-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #64748b; }
+    .kpi-value { font-size: 1.6rem; font-weight: 700; color: #1e293b; line-height: 1.2; }
+    .kpi-sub   { font-size: 0.78rem; color: #94a3b8; margin-top: 2px; }
+    .chart-card { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+    .section-title { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:#64748b; margin-bottom:14px; }
+    .low-stock-item { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid #f1f5f9; }
+    .low-stock-item:last-child { border-bottom:none; }
+    .stock-bar { width:80px; height:6px; background:#f1f5f9; border-radius:9px; overflow:hidden; }
+    .stock-fill { height:100%; border-radius:9px; }
+</style>
+}
 
-            <canvas id="channelChart" style="max-height: 200px;"></canvas>
+<!-- Page header -->
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h3 class="fw-bold mb-1" style="color:#1e293b">
+                <i class="fa-solid fa-chart-column text-primary me-2"></i>Dashboard Báo cáo
+            </h3>
+            <p class="text-muted text-xs mb-0">Tổng quan hoạt động kinh doanh theo thời gian thực.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-controller="Report" asp-action="SaleReport" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                <i class="fa-solid fa-file-invoice me-1"></i>Báo cáo bán hàng
+            </a>
+            <a asp-controller="Report" asp-action="InventoryReport" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                <i class="fa-solid fa-warehouse me-1"></i>Báo cáo kho
+            </a>
         </div>
     </div>
+</div>
 
-    <!-- Monthly breakdown details -->
-    <div class="col-md-6">
-        <div class="card card-glass p-4 h-100">
-            <h5 class="fw-bold mb-4 text-cyan"><i class="fa-solid fa-chart-column me-2"></i>Phân tích Doanh thu Tháng</h5>
-            <canvas id="monthlyChart" style="max-height: 280px;"></canvas>
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="kpi-card">
+            <div class="kpi-icon mb-3" style="background:#eff6ff;">
+                <i class="fa-solid fa-sun" style="color:#2563eb"></i>
+            </div>
+            <div class="kpi-label">Hôm nay</div>
+            <div class="kpi-value">@Model.DoanhThuHomNay.ToString("N0")₫</div>
+            <div class="kpi-sub">Đơn hoàn thành</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="kpi-card">
+            <div class="kpi-icon mb-3" style="background:#f0fdf4;">
+                <i class="fa-solid fa-calendar-check" style="color:#16a34a"></i>
+            </div>
+            <div class="kpi-label">Tháng này</div>
+            <div class="kpi-value">@Model.DoanhThuThang.ToString("N0")₫</div>
+            <div class="kpi-sub">Đơn hoàn thành</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="kpi-card">
+            <div class="kpi-icon mb-3" style="background:#faf5ff;">
+                <i class="fa-solid fa-shopping-cart" style="color:#7c3aed"></i>
+            </div>
+            <div class="kpi-label">Tổng đơn</div>
+            <div class="kpi-value">@Model.TongDonHang.ToString("N0")</div>
+            <div class="kpi-sub">Tất cả trạng thái</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="kpi-card">
+            <div class="kpi-icon mb-3" style="background:#f0fdf4;">
+                <i class="fa-solid fa-circle-check" style="color:#16a34a"></i>
+            </div>
+            <div class="kpi-label">Hoàn thành</div>
+            <div class="kpi-value">@Model.DonHoanThanh.ToString("N0")</div>
+            <div class="kpi-sub text-success">
+                @(Model.TongDonHang > 0 ? $"{(Model.DonHoanThanh * 100.0 / Model.TongDonHang):F0}% tổng đơn" : "—")
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="kpi-card">
+            <div class="kpi-icon mb-3" style="background:#fef2f2;">
+                <i class="fa-solid fa-circle-xmark" style="color:#dc2626"></i>
+            </div>
+            <div class="kpi-label">Đã hủy</div>
+            <div class="kpi-value">@Model.DonHuy.ToString("N0")</div>
+            <div class="kpi-sub text-danger">
+                @(Model.TongDonHang > 0 ? $"{(Model.DonHuy * 100.0 / Model.TongDonHang):F0}% tổng đơn" : "—")
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="kpi-card">
+            <div class="kpi-icon mb-3" style="background:#fff7ed;">
+                <i class="fa-solid fa-users" style="color:#ea580c"></i>
+            </div>
+            <div class="kpi-label">Khách hàng</div>
+            <div class="kpi-value">@Model.TongKhachHang.ToString("N0")</div>
+            <div class="kpi-sub">Tổng trong hệ thống</div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts row -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-lg-7">
+        <div class="chart-card h-100">
+            <div class="section-title"><i class="fa-solid fa-chart-line me-1 text-primary"></i>Doanh thu 7 ngày gần nhất</div>
+            <canvas id="revenueChart" height="200"></canvas>
+        </div>
+    </div>
+    <div class="col-12 col-lg-5">
+        <div class="chart-card h-100">
+            <div class="section-title"><i class="fa-solid fa-triangle-exclamation me-1 text-warning"></i>Sản phẩm sắp hết hàng</div>
+            @if (!Model.LowStockProducts.Any())
+            {
+                <div class="text-center text-muted py-4">
+                    <i class="fa-solid fa-check-circle text-success fs-2 mb-2 d-block"></i>
+                    Không có sản phẩm sắp hết hàng
+                </div>
+            }
+            else
+            {
+                @foreach (var p in Model.LowStockProducts)
+                {
+                    var pct     = Math.Min(100, p.SoLuongTon * 20);
+                    var fillClr = p.SoLuongTon == 0 ? "#dc2626" : p.SoLuongTon <= 2 ? "#ea580c" : "#f59e0b";
+                    <div class="low-stock-item">
+                        <div class="flex-grow-1 me-3" style="min-width:0">
+                            <div class="fw-semibold text-sm text-truncate" style="color:#1e293b">@p.TenSanPham</div>
+                            <div class="stock-bar mt-1">
+                                <div class="stock-fill" style="width:@pct%;background:@fillClr"></div>
+                            </div>
+                        </div>
+                        <span class="badge rounded-pill fw-bold px-2"
+                              style="background:@(p.SoLuongTon==0?"#fef2f2":"#fff7ed");color:@(p.SoLuongTon==0?"#dc2626":"#ea580c");border:1px solid @(p.SoLuongTon==0?"#fecaca":"#fdba74");font-size:0.78rem;white-space:nowrap">
+                            @(p.SoLuongTon == 0 ? "Hết hàng" : $"Còn {p.SoLuongTon}")
+                        </span>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Top products -->
+<div class="row g-3">
+    <div class="col-12">
+        <div class="chart-card">
+            <div class="section-title mb-3"><i class="fa-solid fa-trophy me-1 text-warning"></i>Top 10 sản phẩm bán chạy (chỉ đơn Hoàn thành)</div>
+            @if (!Model.TopProducts.Any())
+            {
+                <div class="text-center text-muted py-5">
+                    <i class="fa-solid fa-box-open fs-2 mb-2 d-block"></i>Chưa có dữ liệu bán hàng hoàn thành
+                </div>
+            }
+            else
+            {
+                <canvas id="topProductsChart" height="90"></canvas>
+            }
         </div>
     </div>
 </div>
 
 @section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        // Pie Chart
-        const pieCtx = document.getElementById('channelChart').getContext('2d');
-        const channelChart = new Chart(pieCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Cửa hàng', 'Website', 'TikTok Shop'],
-                datasets: [{
-                    data: [@ViewBag.RevenueCuaHang, @ViewBag.RevenueWebsite, @ViewBag.RevenueTikTok],
-                    backgroundColor: ['#f97316', '#3b82f6', '#ec4899'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { labels: { color: '#94a3b8' } }
-                }
-            }
-        });
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    const labels7  = @Html.Raw(labelsJson);
+    const revenue7 = @Html.Raw(revenueJson);
+    const topNames = @Html.Raw(topNamesJson);
+    const topQty   = @Html.Raw(topQtyJson);
 
-        // Bar Chart
-        const barCtx = document.getElementById('monthlyChart').getContext('2d');
-        const monthlyChart = new Chart(barCtx, {
+    new Chart(document.getElementById('revenueChart'), {
+        type: 'line',
+        data: {
+            labels: labels7,
+            datasets: [{
+                label: 'Doanh thu (₫)',
+                data: revenue7,
+                borderColor: '#0284c7',
+                backgroundColor: 'rgba(2,132,199,0.08)',
+                borderWidth: 2.5,
+                pointBackgroundColor: '#0284c7',
+                pointRadius: 4,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => ctx.parsed.y.toLocaleString('vi-VN') + '₫' } }
+            },
+            scales: {
+                y: {
+                    ticks: { callback: v => v >= 1000000 ? (v/1000000).toFixed(1)+'M' : v.toLocaleString('vi-VN') },
+                    grid: { color: '#f1f5f9' }
+                },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+
+    if (document.getElementById('topProductsChart')) {
+        new Chart(document.getElementById('topProductsChart'), {
             type: 'bar',
             data: {
-                labels: ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6'],
+                labels: topNames,
                 datasets: [{
-                    label: 'Doanh thu (triệu đ)',
-                    data: [120, 150, 180, 220, 210, 260],
-                    backgroundColor: '#00f2fe',
-                    borderRadius: 8
+                    label: 'Số lượng đã bán',
+                    data: topQty,
+                    backgroundColor: ['#0284c7','#0369a1','#0ea5e9','#38bdf8','#7dd3fc','#bae6fd','#16a34a','#22c55e','#86efac','#bbf7d0'],
+                    borderRadius: 6
                 }]
             },
             options: {
                 responsive: true,
-                plugins: {
-                    legend: { labels: { color: '#94a3b8' } }
-                },
+                plugins: { legend: { display: false } },
                 scales: {
-                    x: { ticks: { color: '#94a3b8' } },
-                    y: { ticks: { color: '#94a3b8' } }
+                    y: { grid: { color: '#f1f5f9' }, ticks: { precision: 0 } },
+                    x: { grid: { display: false }, ticks: { maxRotation: 30 } }
                 }
             }
         });
-    </script>
+    }
+</script>
 }

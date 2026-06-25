@@ -1,13 +1,715 @@
 @model List<DATN64.Models.NhanVien>
-@{ Layout = "~/Views/Shared/_Layout.cshtml"; ViewData["Title"] = "Quản lý nhân viên"; }
-<div class="container my-5">
-    <h2>Quản lý Nhân Viên</h2>
-    <table class="table">
-        <thead><tr><th>Mã NV</th><th>Họ Tên</th><th>Vai Trò</th><th>Email</th></tr></thead>
-        <tbody>
-            @foreach(var item in Model) {
-                <tr><td>@item.MaNhanVien</td><td>@item.HoTen</td><td>@item.VaiTro</td><td>@item.Email</td></tr>
-            }
-        </tbody>
-    </table>
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Quản lý Nhân viên & Phân quyền";
+    ViewData["BreadcrumbActive"] = "Nhân sự & Phân quyền";
+    
+    var roles = ViewBag.RolesList as List<DATN64.Models.Role> ?? new List<DATN64.Models.Role>();
+    var empRolesDict = ViewBag.EmployeeRolesDict as Dictionary<int, List<DATN64.Models.Role>> ?? new Dictionary<int, List<DATN64.Models.Role>>();
+    var permCategories = ViewBag.PermissionCategories as Dictionary<string, List<string>> ?? new Dictionary<string, List<string>>();
+}
+
+@section Styles {
+    <style>
+        /* ── Light-theme overrides cho trang Nhân sự ── */
+
+        /* Card giữ nguyên style của admin_custom.css (trắng/viền nhạt) */
+        .card-glass {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        /* Bảng nhân viên */
+        .table-dark-custom { background: transparent !important; }
+        .table-dark-custom th {
+            background: #f8fafc !important;
+            color: #475569 !important;
+            border-bottom: 2px solid #e2e8f0 !important;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 700;
+        }
+        .table-dark-custom td {
+            background: #ffffff !important;
+            border-bottom: 1px solid #f1f5f9 !important;
+            color: #1e293b !important;
+            vertical-align: middle;
+            font-size: 0.875rem;
+        }
+        .table-dark-custom tbody tr:hover td {
+            background: #f8fafc !important;
+        }
+
+        /* Tabs Navigation */
+        .nav-tabs-custom {
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .nav-tabs-custom .nav-link {
+            color: #64748b;
+            border: none;
+            background: transparent;
+            padding: 12px 24px;
+            font-weight: 500;
+            transition: all 0.25s;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+        .nav-tabs-custom .nav-link:hover {
+            color: #0284c7;
+            border-bottom: 2px solid #93c5fd;
+        }
+        .nav-tabs-custom .nav-link.active {
+            color: #0284c7;
+            border: none;
+            border-bottom: 2px solid #0284c7;
+            background: transparent;
+            font-weight: 600;
+        }
+
+        /* Danh sách vai trò bên trái */
+        .list-group-item-custom {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+            transition: all 0.2s;
+            cursor: pointer;
+            border-radius: 8px !important;
+            margin-bottom: 6px;
+            padding: 10px 14px;
+            font-size: 0.875rem;
+        }
+        .list-group-item-custom:hover {
+            background: #f0f9ff;
+            color: #0284c7;
+            border-color: #bae6fd;
+        }
+        .list-group-item-custom.active {
+            background: linear-gradient(135deg, #0284c7, #0369a1) !important;
+            border-color: #0284c7 !important;
+            color: #ffffff !important;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(2,132,199,0.25);
+        }
+        .list-group-item-custom.active small {
+            color: rgba(255,255,255,0.8) !important;
+        }
+
+        /* Permission category cards */
+        .perm-category-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 16px;
+            height: 100%;
+        }
+        .perm-category-title {
+            color: #0284c7;
+            font-size: 0.78rem;
+            font-weight: 700;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .form-check-label-custom {
+            color: #334155;
+            font-size: 0.84rem;
+            cursor: pointer;
+        }
+        .form-check-input-custom {
+            cursor: pointer;
+        }
+        .form-check-input-custom:checked {
+            background-color: #0284c7;
+            border-color: #0284c7;
+        }
+
+        /* Modal - sử dụng light theme, text tối */
+        .modal-glass {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: #1e293b;
+            position: relative;
+            z-index: 1060;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.12);
+        }
+        .modal-glass .modal-header {
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .modal-glass .modal-title { color: #1e293b !important; }
+        .modal-glass .btn-close-white { filter: invert(1); }
+        .modal-glass .modal-footer { border-top: 1px solid #e2e8f0; background: #f8fafc; }
+        .modal-glass .form-label { color: #475569 !important; }
+        .modal-glass .form-control, .modal-glass .form-select {
+            background-color: #ffffff !important;
+            border: 1px solid #cbd5e1 !important;
+            color: #1e293b !important;
+        }
+        .modal-glass .form-control:focus, .modal-glass .form-select:focus {
+            border-color: #0284c7 !important;
+            box-shadow: 0 0 0 0.2rem rgba(2,132,199,0.2) !important;
+        }
+        .modal-glass .form-check-label { color: #334155 !important; }
+
+        /* Search box */
+        #employeeSearch {
+            background: #f8fafc !important;
+            border: 1px solid #e2e8f0 !important;
+            color: #1e293b !important;
+        }
+        #employeeSearch::placeholder { color: #94a3b8; }
+        #employeeSearch:focus {
+            border-color: #0284c7 !important;
+            box-shadow: 0 0 0 0.2rem rgba(2,132,199,0.15) !important;
+        }
+
+        /* Role badges trong bảng */
+        .role-badge-admin { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        .role-badge-kho { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+        .role-badge-sales { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+        .role-badge-cskh { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+        .role-badge-default { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+
+        /* Status badges */
+        .status-active { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+        .status-locked { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+
+        /* Button icon nhỏ */
+        .btn-xs { padding: 0.3rem 0.5rem; font-size: 0.75rem; line-height: 1; }
+    </style>
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h3 class="fw-bold mb-1" style="color:#1e293b"><i class="fa-solid fa-user-gear text-primary me-2"></i>Quản lý Nhân Sự &amp; Phân Quyền</h3>
+        <p class="text-muted text-xs mb-0">Cấu hình thông tin nhân viên, vai trò bảo mật và phân chia quyền hạn truy cập hệ thống.</p>
+    </div>
 </div>
+
+<!-- Tabs Navigation -->
+<ul class="nav nav-tabs nav-tabs-custom mb-4" id="rbacTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="staff-tab" data-bs-toggle="tab" data-bs-target="#staff-pane" type="button" role="tab" aria-controls="staff-pane" aria-selected="true">
+            <i class="fa-solid fa-users-viewfinder me-2"></i>Danh sách Nhân viên
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="role-tab" data-bs-toggle="tab" data-bs-target="#role-pane" type="button" role="tab" aria-controls="role-pane" aria-selected="false">
+            <i class="fa-solid fa-shield-halved me-2"></i>Vai trò & Phân quyền
+        </button>
+    </li>
+</ul>
+
+<!-- Tabs Content -->
+<div class="tab-content" id="rbacTabsContent">
+    
+    <!-- Tab 1: Staff List -->
+    <div class="tab-pane fade show active" id="staff-pane" role="tabpanel" aria-labelledby="staff-tab" tabindex="0">
+        <div class="card card-glass p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="search-box position-relative" style="width: 280px;">
+                    <i class="fa-solid fa-magnifying-glass position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+                    <input type="text" id="employeeSearch" class="form-control form-control-sm ps-5" placeholder="Tìm kiếm nhân viên..." onkeyup="filterEmployees()">
+                </div>
+                <div>
+                    <button class="btn btn-primary fw-bold btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
+                        <i class="fa-solid fa-user-plus me-1"></i>Thêm Nhân Viên
+                    </button>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-hover table-dark-custom mb-0 align-middle" id="employeesTable">
+                    <thead>
+                        <tr>
+                            <th width="80">Mã NV</th>
+                            <th>Họ Tên</th>
+                            <th>Email</th>
+                            <th>Số Điện Thoại</th>
+                            <th>Vai Trò (Hệ thống)</th>
+                            <th width="120">Trạng Thái</th>
+                            <th width="120" class="text-end">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var emp in Model)
+                        {
+                            var empRoles = empRolesDict.ContainsKey(emp.MaNhanVien) ? empRolesDict[emp.MaNhanVien] : new List<DATN64.Models.Role>();
+                            var roleIdsStr = string.Join(",", empRoles.Select(r => r.Id));
+                            
+                            <tr>
+                                <td class="fw-bold text-muted">#@emp.MaNhanVien</td>
+                                <td class="fw-bold">@emp.HoTen</td>
+                                <td>@emp.Email</td>
+                                <td>@(string.IsNullOrEmpty(emp.SoDienThoai) ? "-" : emp.SoDienThoai)</td>
+                                <td>
+                                    @if (empRoles.Any())
+                                    {
+                                        @foreach (var r in empRoles)
+                                        {
+                                            var badgeClass = r.Name == "Admin" ? "role-badge-admin" : (r.Name == "Quản lý kho" ? "role-badge-kho" : (r.Name == "Nhân viên bán hàng" ? "role-badge-sales" : (r.Name == "CSKH" ? "role-badge-cskh" : "role-badge-default")));
+                                            <span class="badge rounded-pill @badgeClass fw-semibold me-1" style="font-size:0.78rem">@r.Name</span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="badge rounded-pill role-badge-default">Không có vai trò</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (emp.TrangThai == "Hoạt động")
+                                    {
+                                        <span class="badge rounded-pill status-active fw-semibold px-3 py-1" style="font-size:0.78rem">
+                                            <i class="fa-solid fa-circle-check me-1"></i>Hoạt động
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge rounded-pill status-locked fw-semibold px-3 py-1" style="font-size:0.78rem">
+                                            <i class="fa-solid fa-circle-xmark me-1"></i>Bị khóa
+                                        </span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-outline-info btn-xs rounded-circle p-2 me-1" 
+                                            onclick="openEditModal(@emp.MaNhanVien, '@Html.Raw(emp.HoTen)', '@Html.Raw(emp.Email)', '@Html.Raw(emp.SoDienThoai)', '@Html.Raw(emp.TrangThai)', [@roleIdsStr])" 
+                                            title="Sửa nhân viên">
+                                        <i class="fa-solid fa-pen fa-xs"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-xs rounded-circle p-2" 
+                                            onclick="confirmDelete(@emp.MaNhanVien, '@Html.Raw(emp.HoTen)')" 
+                                            title="Xóa nhân viên">
+                                        <i class="fa-solid fa-trash fa-xs"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tab 2: Roles & Permissions Matrix -->
+    <div class="tab-pane fade" id="role-pane" role="tabpanel" aria-labelledby="role-tab" tabindex="0">
+        <div class="row g-4">
+            <!-- Roles Selector List -->
+            <div class="col-md-3">
+                <div class="card card-glass p-3 h-100">
+                    <h6 class="fw-bold text-white mb-3"><i class="fa-solid fa-user-shield me-2 text-cyan"></i>Danh sách Vai trò</h6>
+                    <div class="list-group" id="rolesListGroup" role="tablist">
+                        @for (int i = 0; i < roles.Count; i++)
+                        {
+                            var role = roles[i];
+                            <button class="list-group-item list-group-item-action list-group-item-custom @(i == 0 ? "active" : "")" 
+                                    id="role-btn-@role.Id" 
+                                    data-bs-toggle="list" 
+                                    type="button" 
+                                    onclick="selectRole('@Html.Raw(role.Name)')">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span>@role.Name</span>
+                                    <i class="fa-solid fa-chevron-right text-xs opacity-50"></i>
+                                </div>
+                                @if (!string.IsNullOrEmpty(role.Description))
+                                {
+                                    <small class="d-block text-muted text-xxs mt-1 fw-normal">@role.Description</small>
+                                }
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Permissions Form -->
+            <div class="col-md-9">
+                <div class="card card-glass p-4 h-100 position-relative">
+                    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom border-secondary border-opacity-10">
+                        <div>
+                            <h5 class="fw-bold text-white mb-1">
+                                <i class="fa-solid fa-key me-2 text-cyan"></i>Bảng phân quyền: <span id="selectedRoleTitle" class="text-info">@Html.Raw(roles.FirstOrDefault()?.Name ?? "")</span>
+                            </h5>
+                            <p class="text-muted-custom text-xs mb-0">Tích chọn các chức năng vai trò này được phép truy cập.</p>
+                        </div>
+                        <button type="button" class="btn btn-info btn-sm text-dark fw-bold px-3 rounded-pill" onclick="savePermissions()">
+                            <i class="fa-solid fa-floppy-disk me-1"></i>Lưu phân quyền
+                        </button>
+                    </div>
+                    
+                    <!-- Loading Mask -->
+                    <div id="permissionsLoading" class="position-absolute top-50 start-50 translate-middle d-none text-center">
+                        <div class="spinner-border text-info mb-2" role="status"></div>
+                        <p class="text-muted text-xs">Đang cập nhật phân quyền...</p>
+                    </div>
+                    
+                    <div class="row g-3" id="permissionsGrid">
+                        @foreach (var cat in permCategories)
+                        {
+                            <div class="col-md-6">
+                                <div class="perm-category-card">
+                                    <div class="perm-category-title">@cat.Key</div>
+                                    <div class="d-flex flex-column gap-2">
+                                        @foreach (var p in cat.Value)
+                                        {
+                                            <div class="form-check">
+                                                <input class="form-check-input form-check-input-custom permission-checkbox" 
+                                                       type="checkbox" 
+                                                       value="@p" 
+                                                       id="perm-@p">
+                                                <label class="form-check-label form-check-label-custom" for="perm-@p">
+                                                    <code>@p</code> - @GetFriendlyPermissionName(p)
+                                                </label>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Modals {
+
+<!-- Modal 1: Add Employee -->
+<div class="modal fade" id="addEmployeeModal" tabindex="-1" aria-labelledby="addEmployeeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-glass">
+            <form asp-action="Create" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold text-white" id="addEmployeeModalLabel"><i class="fa-solid fa-user-plus me-2 text-cyan"></i>Thêm Nhân Viên Mới</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-xs fw-bold text-muted">HỌ VÀ TÊN <span class="text-danger">*</span></label>
+                        <input type="text" name="HoTen" class="form-control form-control-sm" required placeholder="Ví dụ: Nguyễn Văn A">
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-xs fw-bold text-muted">EMAIL</label>
+                            <input type="email" name="Email" class="form-control form-control-sm" placeholder="nva@gmail.com">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-xs fw-bold text-muted">SỐ ĐIỆN THOẠI</label>
+                            <input type="text" name="SoDienThoai" class="form-control form-control-sm" placeholder="0901234567">
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-xs fw-bold text-muted">MẬT KHẨU <span class="text-danger">*</span></label>
+                            <input type="password" name="MatKhau" class="form-control form-control-sm" required placeholder="Nhập mật khẩu">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-xs fw-bold text-muted">TRẠNG THÁI</label>
+                            <select name="TrangThai" class="form-select form-select-sm">
+                                <option value="Hoạt động">Hoạt động</option>
+                                <option value="Bị khóa">Bị khóa</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label text-xs fw-bold text-muted d-block">VAI TRÒ (CHỌN NHIỀU)</label>
+                        <div class="d-flex flex-wrap gap-2.5">
+                            @foreach (var r in roles)
+                            {
+                                <div class="form-check form-check-inline m-0 p-2 border rounded" style="background:#f8fafc; border-color:#e2e8f0 !important">
+                                    <input class="form-check-input form-check-input-custom ms-1 me-2" type="checkbox" name="selectedRoleIds" value="@r.Id" id="addRole-@r.Id">
+                                    <label class="form-check-label form-check-label-custom me-2" for="addRole-@r.Id">@r.Name</label>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary btn-sm px-3 rounded-pill text-white" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="submit" class="btn btn-info btn-sm text-dark fw-bold px-4 rounded-pill">Lưu lại</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 2: Edit Employee -->
+<div class="modal fade" id="editEmployeeModal" tabindex="-1" aria-labelledby="editEmployeeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-glass">
+            <form asp-action="Edit" method="post">
+                <input type="hidden" name="maNhanVien" id="editMaNhanVien">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold text-white" id="editEmployeeModalLabel"><i class="fa-solid fa-user-pen me-2 text-cyan"></i>Cập nhật thông tin nhân viên</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-xs fw-bold text-muted">HỌ VÀ TÊN <span class="text-danger">*</span></label>
+                        <input type="text" name="hoTen" id="editHoTen" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-xs fw-bold text-muted">EMAIL</label>
+                            <input type="email" name="email" id="editEmail" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-xs fw-bold text-muted">SỐ ĐIỆN THOẠI</label>
+                            <input type="text" name="soDienThoai" id="editSoDienThoai" class="form-control form-control-sm">
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-xs fw-bold text-muted">MẬT KHẨU MỚI</label>
+                            <input type="password" name="matKhau" class="form-control form-control-sm" placeholder="Để trống nếu giữ nguyên">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-xs fw-bold text-muted">TRẠNG THÁI</label>
+                            <select name="trangThai" id="editTrangThai" class="form-select form-select-sm">
+                                <option value="Hoạt động">Hoạt động</option>
+                                <option value="Bị khóa">Bị khóa</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label text-xs fw-bold text-muted d-block">VAI TRÒ (CHỌN NHIỀU)</label>
+                        <div class="d-flex flex-wrap gap-2.5">
+                            @foreach (var r in roles)
+                            {
+                                <div class="form-check form-check-inline m-0 p-2 border rounded" style="background:#f8fafc; border-color:#e2e8f0 !important">
+                                    <input class="form-check-input form-check-input-custom edit-role-checkbox ms-1 me-2" type="checkbox" name="selectedRoleIds" value="@r.Id" id="editRole-@r.Id">
+                                    <label class="form-check-label form-check-label-custom me-2" for="editRole-@r.Id">@r.Name</label>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary btn-sm px-3 rounded-pill text-white" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="submit" class="btn btn-info btn-sm text-dark fw-bold px-4 rounded-pill">Cập nhật</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Form delete employee hidden -->
+<form id="deleteForm" asp-action="Delete" method="post" style="display:none;">
+    <input type="hidden" name="id" id="deleteId">
+</form>
+
+}
+
+@section Scripts {
+    <script>
+        // Load the roles mapping data dynamically
+        var rolePermissionsData = {
+            @foreach (var r in roles)
+            {
+                var perms = (ViewBag.RolePermissions as List<DATN64.Models.RolePermission>)
+                    ?.Where(rp => rp.RoleName == r.Name)
+                    .Select(rp => rp.PermissionName)
+                    .ToList() ?? new List<string>();
+                @: "@Html.Raw(r.Name)": [@Html.Raw(string.Join(",", perms.Select(p => $"\"{p}\"")))],
+            }
+        };
+
+        var currentRoleName = "@Html.Raw(roles.FirstOrDefault()?.Name ?? "")";
+
+        // Filter employees list by name
+        function filterEmployees() {
+            var input = document.getElementById("employeeSearch");
+            var filter = input.value.toUpperCase();
+            var table = document.getElementById("employeesTable");
+            var tr = table.getElementsByTagName("tr");
+            
+            for (var i = 1; i < tr.length; i++) {
+                var td = tr[i].getElementsByTagName("td")[1]; // name column
+                if (td) {
+                    var txtValue = td.textContent || td.innerText;
+                    if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                        tr[i].style.display = "";
+                    } else {
+                        tr[i].style.display = "none";
+                    }
+                }
+            }
+        }
+
+        // Open edit modal and populate data
+        function openEditModal(id, hoTen, email, sdt, trangThai, roleIds) {
+            document.getElementById('editMaNhanVien').value = id;
+            document.getElementById('editHoTen').value = hoTen;
+            document.getElementById('editEmail').value = email;
+            document.getElementById('editSoDienThoai').value = sdt;
+            document.getElementById('editTrangThai').value = trangThai;
+            
+            // Check roles
+            var checkBoxes = document.getElementsByClassName('edit-role-checkbox');
+            for(var i = 0; i < checkBoxes.length; i++) {
+                checkBoxes[i].checked = roleIds.includes(parseInt(checkBoxes[i].value));
+            }
+            
+            var editModal = new bootstrap.Modal(document.getElementById('editEmployeeModal'));
+            editModal.show();
+        }
+
+        // Delete action trigger
+        function confirmDelete(id, name) {
+            if (confirm("Bạn có chắc chắn muốn xóa nhân viên '" + name + "' khỏi hệ thống?")) {
+                document.getElementById('deleteId').value = id;
+                document.getElementById('deleteForm').submit();
+            }
+        }
+
+        // Select role dynamically in permissions matrix
+        function selectRole(roleName) {
+            currentRoleName = roleName;
+            document.getElementById('selectedRoleTitle').innerText = roleName;
+            
+            // Clear checked
+            var checkBoxes = document.getElementsByClassName('permission-checkbox');
+            for (var i = 0; i < checkBoxes.length; i++) {
+                checkBoxes[i].checked = false;
+            }
+            
+            // Load checked permissions from local object
+            var perms = rolePermissionsData[roleName] || [];
+            perms.forEach(function(perm) {
+                var cb = document.getElementById('perm-' + perm);
+                if (cb) {
+                    cb.checked = true;
+                }
+            });
+        }
+
+        // Save selected permissions for current role via AJAX
+        function savePermissions() {
+            var selectedPerms = [];
+            var checkBoxes = document.getElementsByClassName('permission-checkbox');
+            for (var i = 0; i < checkBoxes.length; i++) {
+                if (checkBoxes[i].checked) {
+                    selectedPerms.push(checkBoxes[i].value);
+                }
+            }
+            
+            var loading = document.getElementById('permissionsLoading');
+            var grid = document.getElementById('permissionsGrid');
+            
+            loading.classList.remove('d-none');
+            grid.style.opacity = '0.3';
+            
+            var formData = new URLSearchParams();
+            formData.append('roleName', currentRoleName);
+            selectedPerms.forEach(function(p) {
+                formData.append('selectedPermissions', p);
+            });
+            
+            fetch('@Url.Action("SaveRolePermissions", "Employee")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: formData.toString()
+            })
+            .then(response => response.json())
+            .then(data => {
+                loading.classList.add('d-none');
+                grid.style.opacity = '1';
+                
+                if (data.success) {
+                    // Update local permissions cache
+                    rolePermissionsData[currentRoleName] = selectedPerms;
+                    showToast(data.message, "success");
+                } else {
+                    showToast(data.message || "Đã xảy ra lỗi!", "danger");
+                }
+            })
+            .catch(error => {
+                loading.classList.add('d-none');
+                grid.style.opacity = '1';
+                console.error('Error saving role permissions:', error);
+                showToast("Lỗi kết nối máy chủ!", "danger");
+            });
+        }
+
+        // Show toast notification
+        function showToast(message, type) {
+            const toastContainer = document.querySelector('.toast-container');
+            if (!toastContainer) {
+                alert(message);
+                return;
+            }
+            
+            const toastId = 'toast_' + Date.now();
+            const typeClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            const iconClass = type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation';
+            
+            const toastHtml = `
+                <div id="${toastId}" class="toast align-items-center text-white ${typeClass} border-0 show" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000">
+                    <div class="d-flex">
+                        <div class="toast-body d-flex align-items-center">
+                            <i class="fa-solid ${iconClass} me-2 fs-5"></i>
+                            <div>${message}</div>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `;
+            
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            const toastEl = document.getElementById(toastId);
+            
+            // Auto remove after delay
+            setTimeout(() => {
+                if (toastEl) {
+                    toastEl.classList.remove('show');
+                    setTimeout(() => toastEl.remove(), 500);
+                }
+            }, 4000);
+        }
+
+        // Initialize state on load
+        document.addEventListener("DOMContentLoaded", function() {
+            // Check permissions for first role initially
+            if (currentRoleName) {
+                selectRole(currentRoleName);
+            }
+        });
+    </script>
+}
+
+@functions {
+    public string GetFriendlyPermissionName(string perm)
+    {
+        return perm switch
+        {
+            "View_Product" => "Xem sản phẩm",
+            "Create_Product" => "Thêm sản phẩm",
+            "Edit_Product" => "Sửa sản phẩm",
+            "Delete_Product" => "Xóa sản phẩm",
+            "View_Inventory" => "Xem tồn kho",
+            "Import_Inventory" => "Nhập kho",
+            "Export_Inventory" => "Xuất kho",
+            "View_Order" => "Xem đơn hàng",
+            "Approve_Order" => "Duyệt đơn hàng",
+            "View_Customer" => "Xem khách hàng",
+            "Create_Customer" => "Thêm khách hàng",
+            "View_Promotion" => "Quản lý khuyến mãi",
+            "View_Employee" => "Xem nhân sự",
+            "Create_Employee" => "Thêm nhân sự",
+            "Assign_Role" => "Phân quyền & Vai trò",
+            "Delete_Employee" => "Xóa nhân sự",
+            "View_Report" => "Xem báo cáo",
+            "View_Setting" => "Xem cấu hình hệ thống",
+            "Edit_Setting" => "Cập nhật cấu hình",
+            "View_TikTok" => "Xem đồng bộ TikTok",
+            "Sync_TikTok" => "Thực hiện đồng bộ TikTok",
+            _ => perm
+        };
+    }
+}
