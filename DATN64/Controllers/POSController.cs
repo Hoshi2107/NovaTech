@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using DATN64.Models;
 using System.Linq;
 using System.Collections.Generic;
@@ -29,7 +30,21 @@ namespace DATN64.Controllers
                 return RedirectToAction("Selection", "Portal");
             }
 
-            var products = _context.SanPhams.Where(p => p.TrangThai == "Đang bán").ToList();
+            // Seed default vouchers for testing if none exist
+            if (!_context.Vouchers.Any())
+            {
+                _context.Vouchers.AddRange(new List<Voucher>
+                {
+                    new Voucher { MaCode = "NOVATECH100K", GiaTri = 100000, SoLuong = 99, NgayBatDau = DateTime.Now.AddDays(-1), NgayKetThuc = DateTime.Now.AddDays(30) },
+                    new Voucher { MaCode = "KM50K", GiaTri = 50000, SoLuong = 50, NgayBatDau = DateTime.Now.AddDays(-1), NgayKetThuc = DateTime.Now.AddDays(30) }
+                });
+                _context.SaveChanges();
+            }
+
+            var products = _context.SanPhams
+                .Include(p => p.DanhMuc)
+                .Include(p => p.ThuongHieu)
+                .Where(p => p.TrangThai == "Đang bán").ToList();
             var customers = _context.KhachHangs.ToList();
             
             ViewBag.Customers = customers;
@@ -38,11 +53,82 @@ namespace DATN64.Controllers
             return View(products);
         }
 
+        [HttpGet]
+        public IActionResult GetProducts()
+        {
+            var products = _context.SanPhams
+                .Include(p => p.DanhMuc)
+                .Include(p => p.ThuongHieu)
+                .Where(p => p.TrangThai == "Đang bán")
+                .Select(p => new {
+                    id = p.MaSanPham,
+                    name = p.TenSanPham,
+                    price = p.GiaBan,
+                    stock = p.SoLuongTon,
+                    image = p.HinhAnh ?? "https://images.unsplash.com/photo-1531297484001-80022131f5a1?q=80&w=300",
+                    category = p.DanhMuc != null ? p.DanhMuc.TenDanhMuc : "Khác",
+                    brand = p.ThuongHieu != null ? p.ThuongHieu.TenThuongHieu : "Khác",
+                    sku = "SP-" + p.MaSanPham.ToString("D4")
+                }).ToList();
+            return Json(products);
+        }
+
+        [HttpGet]
+        public IActionResult GetCustomers()
+        {
+            var customers = _context.KhachHangs.Select(c => new {
+                id = c.MaKhachHang,
+                name = c.HoTen,
+                phone = c.SoDienThoai ?? ""
+            }).ToList();
+            return Json(customers);
+        }
+
         [HttpPost]
-        public IActionResult CreateOrderPOS(string customerName, string customerPhone, string paymentMethod, List<int> productIds, List<int> quantities)
+        public IActionResult ApplyVoucher(string code)
+        {
+            if (string.IsNullOrEmpty(code))
+            {
+                return Json(new { success = false, message = "Vui lòng nhập mã voucher!" });
+            }
+
+            var voucher = _context.Vouchers.FirstOrDefault(v => v.MaCode == code);
+            if (voucher == null)
+            {
+                return Json(new { success = false, message = "Mã voucher không tồn tại!" });
+            }
+
+            if (voucher.SoLuong.HasValue && voucher.SoLuong <= 0)
+            {
+                return Json(new { success = false, message = "Voucher này đã hết lượt sử dụng!" });
+            }
+
+            if (voucher.NgayBatDau.HasValue && voucher.NgayBatDau > DateTime.Now)
+            {
+                return Json(new { success = false, message = "Voucher chưa đến thời gian áp dụng!" });
+            }
+
+            if (voucher.NgayKetThuc.HasValue && voucher.NgayKetThuc < DateTime.Now)
+            {
+                return Json(new { success = false, message = "Voucher đã hết hạn!" });
+            }
+
+            return Json(new { 
+                success = true, 
+                discount = voucher.GiaTri ?? 0, 
+                message = $"Áp dụng mã {code} thành công!" 
+            });
+        }
+
+        [HttpPost]
+        public IActionResult CreateOrderPOS(string customerName, string customerPhone, string paymentMethod, List<int> productIds, List<int> quantities, string? voucherCode)
         {
             if (productIds == null || productIds.Count == 0)
             {
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return BadRequest(new { message = "Vui lòng chọn ít nhất 1 sản phẩm!" });
+                }
                 TempData["ToastMessage"] = "Vui lòng chọn ít nhất 1 sản phẩm!";
                 TempData["ToastType"] = "error";
                 return RedirectToAction("Index");
@@ -95,6 +181,26 @@ namespace DATN64.Controllers
                 }
             }
 
+            // Apply Voucher
+            Voucher? appliedVoucher = null;
+            if (!string.IsNullOrEmpty(voucherCode))
+            {
+                appliedVoucher = _context.Vouchers.FirstOrDefault(v => v.MaCode == voucherCode);
+                if (appliedVoucher != null && 
+                    (!appliedVoucher.SoLuong.HasValue || appliedVoucher.SoLuong > 0) &&
+                    (!appliedVoucher.NgayBatDau.HasValue || appliedVoucher.NgayBatDau <= DateTime.Now) &&
+                    (!appliedVoucher.NgayKetThuc.HasValue || appliedVoucher.NgayKetThuc >= DateTime.Now))
+                {
+                    decimal discount = appliedVoucher.GiaTri ?? 0;
+                    total = Math.Max(0, total - discount);
+
+                    if (appliedVoucher.SoLuong.HasValue && appliedVoucher.SoLuong > 0)
+                    {
+                        appliedVoucher.SoLuong--;
+                    }
+                }
+            }
+
             newOrder.TongTien = total;
             _context.DonHangs.Add(newOrder);
 
@@ -107,7 +213,27 @@ namespace DATN64.Controllers
                 Timestamp = DateTime.Now
             });
 
-            _context.SaveChanges();
+            _context.SaveChanges(); // Save to generate newOrder.MaDonHang
+
+            if (appliedVoucher != null)
+            {
+                var dhVoucher = new DonHang_Voucher
+                {
+                    MaDonHang = newOrder.MaDonHang,
+                    MaVoucher = appliedVoucher.MaVoucher
+                };
+                _context.DonHang_Vouchers.Add(dhVoucher);
+                _context.SaveChanges();
+            }
+
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                return Json(new { 
+                    success = true, 
+                    message = "Đã thanh toán đơn hàng thành công!", 
+                    orderCode = "POS-" + newOrder.MaDonHang 
+                });
+            }
 
             TempData["ToastMessage"] = $"Đã thanh toán đơn hàng thành công!";
             TempData["ToastType"] = "success";

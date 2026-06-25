@@ -1,39 +1,395 @@
+@using System.Text.Json
 @model List<DATN64.Models.SanPham>
-@{ Layout = "~/Views/Shared/_Layout.cshtml"; ViewData["Title"] = "B�n h�ng t?i qu?y (POS)"; }
-<div class="container my-5">
-    <h2>B�n h�ng t?i qu?y (POS)</h2>
-    <form asp-action="CreateOrderPOS" method="post">
-        <div class="row">
-            <div class="col-md-8">
-                <h4>Danh s�ch s?n ph?m</h4>
-                <table class="table">
-                    <thead><tr><th>M� SP</th><th>T�n SP</th><th>Gi� B�n</th><th>T?n</th><th>Ch?n mua</th></tr></thead>
-                    <tbody>
-                        @foreach(var item in Model) {
-                            <tr>
-                                <td>@item.MaSanPham</td>
-                                <td>@item.TenSanPham</td>
-                                <td>@item.GiaBan.ToString("N0") d</td>
-                                <td>@item.SoLuongTon</td>
-                                <td>
-                                    <input type="checkbox" name="productIds" value="@item.MaSanPham" />
-                                    <input type="number" name="quantities" value="1" min="1" max="@item.SoLuongTon" style="width:60px"/>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-            <div class="col-md-4">
-                <h4>Th�ng tin kh�ch h�ng</h4>
-                <input type="text" name="customerPhone" class="form-control mb-2" placeholder="S�T Kh�ch h�ng" />
-                <input type="text" name="customerName" class="form-control mb-2" placeholder="T�n Kh�ch h�ng" />
-                <select name="paymentMethod" class="form-control mb-2">
-                    <option value="Ti?n m?t">Ti?n m?t</option>
-                    <option value="Chuy?n kho?n">Chuy?n kho?n</option>
-                </select>
-                <button type="submit" class="btn btn-success w-100">Thanh To�n</button>
-            </div>
+
+@{
+    Layout = "~/Views/Shared/_POSLayout.cshtml";
+    ViewData["Title"] = "Bán hàng tại quầy (POS)";
+}
+
+<div id="app" class="pos-wrapper min-vh-100 w-100 d-flex flex-column" :class="{ 'light-mode': !isDarkMode }" v-cloak>
+    <!-- POS Header -->
+    <header class="pos-header d-flex justify-content-between align-items-center px-4 py-3">
+      <!-- Left side logo -->
+      <div class="d-flex align-items-center gap-2 flex-shrink-0 header-left-brand">
+        <h4 class="fw-bold m-0 text-cyan d-flex align-items-center gap-2">
+          <i class="fa-solid fa-cash-register animate-pulse text-cyan"></i>
+          <span class="d-none d-sm-inline">NovaTech POS</span>
+          <span class="d-inline d-sm-none">POS</span>
+        </h4>
+      </div>
+      
+      <!-- Center running Announcement Marquee (Hidden on mobile) -->
+      <div class="welcome-ticker-wrap flex-grow-1 mx-3 d-none d-lg-block" style="max-width: calc(100% - 520px);">
+        <div class="welcome-ticker-inner">
+          <span class="welcome-ticker-text">🎉 Chào mừng Quý khách đến với NovaTech! &nbsp;&nbsp;✨ Chúc Quý khách mua sắm vui vẻ! &nbsp;&nbsp;🛒 Hàng ngàn sản phẩm chính hãng đang chờ bạn! &nbsp;&nbsp;💎 Ưu đãi hấp dẫn mỗi ngày tại NovaTech! &nbsp;&nbsp;🚀 Dịch vụ tận tâm – Chất lượng hàng đầu! &nbsp;&nbsp;</span>
+          <span class="welcome-ticker-text" aria-hidden="true">🎉 Chào mừng Quý khách đến với NovaTech! &nbsp;&nbsp;✨ Chúc Quý khách mua sắm vui vẻ! &nbsp;&nbsp;🛒 Hàng ngàn sản phẩm chính hãng đang chờ bạn! &nbsp;&nbsp;💎 Ưu đãi hấp dẫn mỗi ngày tại NovaTech! &nbsp;&nbsp;🚀 Dịch vụ tận tâm – Chất lượng hàng đầu! &nbsp;&nbsp;</span>
         </div>
-    </form>
+      </div>
+
+      <!-- Mobile Tabs Navigation (Visible under 992px) -->
+      <div class="pos-mobile-tabs d-lg-none d-flex rounded-pill p-1 mx-auto">
+        <button type="button" class="btn btn-sm rounded-pill px-4 text-xs fw-semibold" :class="activeTab === 'products' ? 'btn-info text-white' : 'text-slate-400'" @@click="activeTab = 'products'">
+          Sản phẩm
+        </button>
+        <button type="button" class="btn btn-sm rounded-pill px-4 text-xs fw-semibold position-relative" :class="activeTab === 'cart' ? 'btn-info text-white' : 'text-slate-400'" @@click="activeTab = 'cart'">
+          Giỏ hàng
+          <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;" v-if="cart.length > 0">
+            ${ cart.reduce((sum, item) => sum + item.quantity, 0) }
+          </span>
+        </button>
+      </div>
+
+      <!-- Right side Cashier and Toggle switch -->
+      <div class="d-flex align-items-center gap-3 flex-shrink-0 header-right-actions" style="justify-content: flex-end;">
+        <div class="d-none d-lg-flex align-items-center gap-2 text-xs header-cashier-info">
+          <i class="fa-solid fa-circle-user text-cyan"></i>
+          <span>Thu ngân: <strong class="cashier-name" v-if="user">${ user.fullName }</strong></span>
+        </div>
+        
+        <!-- Theme Toggle Switch -->
+        <div class="theme-switch-wrapper">
+          <label class="theme-switch" for="themeCheckbox">
+            <input type="checkbox" id="themeCheckbox" v-model="isDarkMode" />
+            <div class="slider round">
+              <i class="fa-solid fa-sun"></i>
+              <i class="fa-solid fa-moon"></i>
+            </div>
+          </label>
+        </div>
+
+        <a href="/Portal/Selection" class="btn btn-back rounded-pill px-2.5 px-sm-3.5 text-xs d-flex align-items-center gap-1.5">
+          <i class="fa-solid fa-arrow-left"></i> <span class="d-none d-sm-inline">Trở lại Cổng</span>
+        </a>
+      </div>
+    </header>
+
+    <!-- Main Dashboard -->
+    <div class="pos-main-container flex-grow-1 row g-0 overflow-hidden">
+      
+      <!-- Left Panel: Product Catalog -->
+      <div class="col-lg-8 d-flex flex-column h-100 p-4 border-end border-slate-800 overflow-hidden" :class="{ 'd-none d-lg-flex': activeTab !== 'products' }">
+        
+        <!-- Search and Catalog Filter -->
+        <div class="d-flex flex-row flex-wrap gap-2 mb-4 flex-shrink-0 align-items-center">
+          <!-- Compact Dropdown Filter -->
+          <div class="dropdown flex-shrink-0">
+            <button class="btn btn-outline-slate rounded-pill px-3 py-1.5 text-xs fw-bold dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="fa-solid fa-filter text-cyan"></i> Lọc: ${ activeCategory }
+            </button>
+            <ul class="dropdown-menu shadow">
+              <li><a class="dropdown-item text-xs" href="#" @@click.prevent="activeCategory = 'Tất cả'">Tất cả</a></li>
+              <li v-for="cat in categories" :key="cat">
+                <a class="dropdown-item text-xs" href="#" @@click.prevent="activeCategory = cat">${ cat }</a>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Brand Dropdown Filter -->
+          <div class="dropdown flex-shrink-0">
+            <button class="btn btn-outline-slate rounded-pill px-3 py-1.5 text-xs fw-bold dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="fa-solid fa-tag text-cyan"></i> Thương hiệu: ${ activeBrand }
+            </button>
+            <ul class="dropdown-menu shadow">
+              <li><a class="dropdown-item text-xs" href="#" @@click.prevent="activeBrand = 'Tất cả'">Tất cả</a></li>
+              <li v-for="brand in brands" :key="brand">
+                <a class="dropdown-item text-xs" href="#" @@click.prevent="activeBrand = brand">${ brand }</a>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Sort Dropdown Filter -->
+          <div class="dropdown flex-shrink-0">
+            <button class="btn btn-outline-slate rounded-pill px-3 py-1.5 text-xs fw-bold dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="fa-solid fa-arrow-down-wide-narrow text-cyan"></i> Sắp xếp: ${ getSortLabel() }
+            </button>
+            <ul class="dropdown-menu shadow">
+              <li><a class="dropdown-item text-xs" href="#" @@click.prevent="sortBy = 'default'">Mặc định</a></li>
+              <li><a class="dropdown-item text-xs" href="#" @@click.prevent="sortBy = 'priceAsc'">Giá: Thấp -> Cao</a></li>
+              <li><a class="dropdown-item text-xs" href="#" @@click.prevent="sortBy = 'priceDesc'">Giá: Cao -> Thấp</a></li>
+              <li><a class="dropdown-item text-xs" href="#" @@click.prevent="sortBy = 'nameAsc'">Tên: A -> Z</a></li>
+            </ul>
+          </div>
+
+          <!-- Spacious Search Bar -->
+          <div class="search-box-pos position-relative flex-grow-1" style="min-width: 200px;">
+            <input type="text" v-model="searchQuery" class="form-control text-xs rounded-pill" placeholder="Tìm tên sản phẩm hoặc mã SKU...">
+            <i class="fa-solid fa-magnifying-glass position-absolute top-50 translate-middle-y end-0 me-3 text-muted"></i>
+          </div>
+        </div>
+
+        <div v-if="loading" class="d-flex align-items-center justify-content-center flex-grow-1">
+          <div class="spinner-border text-info" role="status"></div>
+        </div>
+
+        <!-- Scrollable Products Grid -->
+        <div class="flex-grow-1 overflow-y-auto pe-2 products-grid-container" v-else>
+          <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 g-3" v-if="filteredProducts.length > 0">
+            <div class="col" v-for="p in filteredProducts" :key="p.id">
+              <div class="card product-card h-100 cursor-pointer" @@click="addToCart(p)">
+                <div class="position-relative overflow-hidden rounded-top-3">
+                  <img :src="p.image" class="card-img-top" :alt="p.name">
+                  <span class="position-absolute top-0 start-0 m-2 badge" :class="p.stock > 5 ? 'bg-success' : p.stock > 0 ? 'bg-warning text-dark' : 'bg-danger'">
+                    Tồn: ${ p.stock }
+                  </span>
+                </div>
+                <div class="card-body p-2.5 d-flex flex-column justify-content-between">
+                  <h6 class="text-xs text-truncate mb-1 fw-bold product-name-highlight" :title="p.name">${ p.name }</h6>
+                  <div class="text-xxs mb-2 sku-highlight">${ p.sku }</div>
+                  <div class="text-xs text-emerald fw-extrabold">${ formatMoney(p.price) } đ</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="d-flex flex-column align-items-center justify-content-center text-muted-custom py-5 flex-grow-1" v-else>
+            <i class="fa-solid fa-box-open fs-1 mb-3 text-slate-600"></i>
+            <p class="text-xs text-slate-400">Không tìm thấy sản phẩm nào phù hợp</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Panel: Cart & Checkout Form -->
+      <div class="col-lg-4 d-flex flex-column h-100 p-4 pos-checkout-panel overflow-hidden" :class="{ 'd-none d-lg-flex': activeTab !== 'cart' }">
+        <h5 class="fw-bold mb-3 d-flex align-items-center gap-2 text-cyan flex-shrink-0">
+          <i class="fa-solid fa-basket-shopping text-cyan"></i> Giỏ hàng thanh toán
+        </h5>
+
+        <!-- Cart items list (Scrollable) -->
+        <div class="cart-items-wrapper flex-grow-1 overflow-y-auto mb-3 pe-1">
+          <div class="d-flex flex-column align-items-center justify-content-center text-muted-custom py-5 h-100" v-if="cart.length === 0">
+            <i class="fa-solid fa-cart-flatbed fs-2 mb-2 text-slate-500 animate-bounce"></i>
+            <p class="text-xs text-slate-400">Chưa có sản phẩm nào được chọn</p>
+          </div>
+
+          <div class="d-flex flex-column gap-2" v-else>
+            <div v-for="item in cart" :key="item.id" class="cart-item d-flex align-items-center justify-content-between p-2.5 rounded-3">
+              <div class="flex-grow-1 min-w-0 me-2">
+                <div class="text-xs fw-bold cart-item-name text-truncate" :title="item.name">${ item.name }</div>
+                <div class="text-xxs cart-item-info mt-0.5">${ item.sku } | ${ formatMoney(item.price) } đ</div>
+              </div>
+              
+              <!-- Quantity Controls -->
+              <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                <button type="button" class="qty-btn" @@click="updateQty(item.id, -1)">
+                  <i class="fa-solid fa-minus"></i>
+                </button>
+                <span class="text-xs fw-bold cart-item-qty px-1" style="min-width: 15px; text-align: center;">${ item.quantity }</span>
+                <button type="button" class="qty-btn" @@click="updateQty(item.id, 1)">
+                  <i class="fa-solid fa-plus"></i>
+                </button>
+                <button type="button" class="trash-btn ms-1" @@click="removeFromCart(item.id)">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Checkout Form & Pay Info -->
+        <form @@submit.prevent="handleCheckout" class="checkout-form border-top border-slate-800 pt-3 flex-shrink-0">
+          <div v-if="successMsg" class="alert alert-success text-xs py-2 px-3 mb-3 d-flex align-items-center gap-2">
+            <i class="fa-solid fa-circle-check fs-6"></i>
+            <span>${ successMsg }</span>
+          </div>
+          <div v-if="errorMsg" class="alert alert-danger text-xs py-2 px-3 mb-3 d-flex align-items-center gap-2">
+            <i class="fa-solid fa-circle-exclamation fs-6"></i>
+            <span>${ errorMsg }</span>
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label text-xxs voucher-label fw-semibold mb-1.5">Khách hàng</label>
+              <select v-model="customerIndex" class="form-select text-xs input-pos" @@change="onCustomerChange">
+                <option value="-1">Khách Hàng Vãng Lai</option>
+                <option v-for="(c, idx) in customers" :key="c.id" :value="idx">${ c.name }</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label text-xxs voucher-label fw-semibold mb-1.5">Số điện thoại</label>
+              <input type="text" v-model="customerPhone" class="form-control text-xs input-pos" placeholder="Nhập SĐT...">
+            </div>
+          </div>
+
+          <!-- Walk-in Customer Name Input -->
+          <div class="mb-3" v-if="customerIndex === '-1'">
+            <label class="form-label text-xxs voucher-label fw-semibold mb-1.5">Tên khách vãng lai</label>
+            <input type="text" v-model="customerName" class="form-control text-xs input-pos" placeholder="Nhập tên khách vãng lai...">
+          </div>
+
+          <!-- Voucher Section (NEW) -->
+          <div class="voucher-section mb-3">
+            <label class="form-label text-xxs voucher-label fw-semibold mb-1.5">Voucher / Mã giảm giá</label>
+            <div class="input-group input-group-sm">
+              <input type="text" class="form-control text-xs input-pos" placeholder="Thêm Voucher / Mã giảm giá" v-model="voucherCode">
+              <button class="btn btn-apply-voucher text-xs px-3" type="button" @@click="applyVoucher" v-if="!voucherAppliedCode">Áp dụng</button>
+              <button class="btn btn-danger text-xs px-3" type="button" @@click="clearVoucher" v-else>Hủy bỏ</button>
+            </div>
+            <div class="text-xxs text-emerald mt-1.5 fw-semibold" v-if="voucherSuccessMsg">
+              ${ voucherSuccessMsg }
+            </div>
+            <div class="text-xxs text-danger mt-1.5 fw-semibold" v-if="voucherErrorMsg">
+              ${ voucherErrorMsg }
+            </div>
+            <div class="d-flex justify-content-between align-items-center mt-2 pt-1.5 border-top border-secondary border-opacity-10" v-if="voucherDiscountValue > 0">
+              <span class="text-xxs voucher-sublabel">Voucher giảm giá:</span>
+              <span class="text-xs fw-extrabold text-danger">- ${ formatMoney(voucherDiscountValue) } đ</span>
+            </div>
+          </div>
+
+          <!-- Pay Option Cards -->
+          <div class="mb-3">
+            <label class="form-label text-xxs voucher-label fw-semibold mb-1.5">Phương thức thanh toán</label>
+            <div class="d-flex gap-2">
+              <div class="payment-card flex-grow-1 text-center" :class="{ active: paymentMethod === 'Tiền mặt' }" @@click="paymentMethod = 'Tiền mặt'">
+                <i class="fa-solid fa-money-bill-1-wave fs-6 mb-1"></i>
+                <span class="text-xxs fw-bold d-block">Tiền mặt</span>
+              </div>
+              <div class="payment-card flex-grow-1 text-center" :class="{ active: paymentMethod === 'Chuyển khoản' }" @@click="paymentMethod = 'Chuyển khoản'">
+                <i class="fa-solid fa-credit-card fs-6 mb-1"></i>
+                <span class="text-xxs fw-bold d-block">Chuyển khoản</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Total Bill -->
+          <div class="billing-summary d-flex justify-content-between align-items-center p-3 rounded-3 mb-3">
+            <div class="d-flex flex-column">
+              <span class="text-xs fw-bold billing-label">Tổng tiền thanh toán</span>
+              <span class="text-xxs billing-sublabel" v-if="voucherDiscountValue > 0" style="text-decoration: line-through;">Tạm tính: ${ formatMoney(subtotalAmount) } đ</span>
+            </div>
+            <span class="fs-4 text-emerald fw-extrabold">${ formatMoney(totalAmount) } đ</span>
+          </div>
+
+          <button type="submit" class="btn btn-checkout w-100 py-2.5 fw-bold text-sm" :disabled="cart.length === 0 || checkingOut">
+            <span v-if="checkingOut" class="spinner-border spinner-border-sm me-2"></span>
+            <i class="fa-solid fa-circle-check me-2" v-if="!checkingOut"></i> Xác nhận & In hóa đơn
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Printable Receipt Modal -->
+    <div class="modal fade" id="receiptModal" tabindex="-1" aria-hidden="true" :class="{ show: showReceiptModal, 'd-block': showReceiptModal }" style="background: rgba(0,0,0,0.75);" v-if="showReceiptModal">
+      <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
+        <div class="modal-content border-0 text-dark bg-white shadow-lg" style="border-radius: 16px;">
+          <div class="modal-body p-4" id="printable-receipt">
+            <div class="text-center mb-3">
+              <h5 class="fw-bold m-0 text-dark">HÓA ĐƠN BÁN LẺ</h5>
+              <div class="text-xs text-muted mt-1">NovaTech Store - Hệ thống POS thông minh</div>
+              <div class="text-xxs text-muted">Đ/c: 123 Đường Ba Tháng Hai, Quận 10, TP.HCM</div>
+            </div>
+            
+            <hr class="border-secondary border-dashed my-2">
+            
+            <div class="text-xs mb-3 d-grid gap-1">
+              <div class="d-flex justify-content-between">
+                <span class="text-muted">Mã hóa đơn:</span>
+                <span class="fw-bold text-dark">${ lastOrder.orderCode }</span>
+              </div>
+              <div class="d-flex justify-content-between">
+                <span class="text-muted">Thời gian:</span>
+                <span class="text-dark">${ lastOrder.date }</span>
+              </div>
+              <div class="d-flex justify-content-between">
+                <span class="text-muted">Thu ngân:</span>
+                <span class="text-dark">${ lastOrder.cashier }</span>
+              </div>
+              <div class="d-flex justify-content-between">
+                <span class="text-muted">Khách hàng:</span>
+                <span class="text-dark">${ lastOrder.customerName }</span>
+              </div>
+              <div class="d-flex justify-content-between" v-if="lastOrder.customerPhone">
+                <span class="text-muted">SĐT:</span>
+                <span class="text-dark">${ lastOrder.customerPhone }</span>
+              </div>
+            </div>
+
+            <hr class="border-secondary border-dashed my-2">
+
+            <!-- Items table -->
+            <div class="mb-3">
+              <table class="w-100 text-xs">
+                <thead>
+                  <tr class="border-bottom text-muted">
+                    <th class="py-1 text-start">Sản phẩm</th>
+                    <th class="py-1 text-center" style="width: 50px;">SL</th>
+                    <th class="py-1 text-end" style="width: 100px;">Thành tiền</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="item in lastOrder.items" :key="item.id" class="border-bottom">
+                    <td class="py-2">
+                      <div class="fw-semibold text-dark">${ item.name }</div>
+                      <div class="text-xxs text-muted">${ formatMoney(item.price) } đ</div>
+                    </td>
+                    <td class="py-2 text-center text-dark">${ item.quantity }</td>
+                    <td class="py-2 text-end text-dark fw-bold">${ formatMoney(item.price * item.quantity) } đ</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="d-grid gap-1 pt-2">
+              <div class="d-flex justify-content-between text-xs" v-if="lastOrder.discount > 0">
+                <span class="text-muted">Tạm tính:</span>
+                <span class="text-dark fw-bold">${ formatMoney(lastOrder.subtotal) } đ</span>
+              </div>
+              <div class="d-flex justify-content-between text-xs text-danger fw-semibold" v-if="lastOrder.discount > 0">
+                <span>Voucher giảm giá (${ lastOrder.voucherCode }):</span>
+                <span>- ${ formatMoney(lastOrder.discount) } đ</span>
+              </div>
+              <div class="d-flex justify-content-between text-xs">
+                <span class="text-muted">Hình thức:</span>
+                <span class="text-dark fw-bold">${ lastOrder.paymentMethod }</span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center text-sm border-top border-secondary border-dashed pt-2 mt-1">
+                <span class="fw-bold text-dark">TỔNG CỘNG:</span>
+                <span class="fs-5 fw-extrabold text-danger">${ formatMoney(lastOrder.totalAmount) } đ</span>
+              </div>
+            </div>
+            
+            <div class="text-center text-muted text-xxs mt-4">
+              Cảm ơn Quý khách. Hẹn gặp lại!
+            </div>
+          </div>
+          <div class="modal-footer border-0 p-3 bg-light d-flex justify-content-end gap-2" style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+            <button type="button" class="btn btn-outline-secondary btn-sm px-3" @@click="showReceiptModal = false">Đóng</button>
+            <button type="button" class="btn btn-info text-white btn-sm px-4 fw-semibold" @@click="printReceipt">In hóa đơn</button>
+          </div>
+        </div>
+      </div>
+    </div>
 </div>
+
+<script>
+    window.posProducts = @Html.Raw(JsonSerializer.Serialize(Model.Select(p => new {
+        id = p.MaSanPham,
+        name = p.TenSanPham,
+        price = p.GiaBan,
+        stock = p.SoLuongTon,
+        image = p.HinhAnh ?? "https://images.unsplash.com/photo-1531297484001-80022131f5a1?q=80&w=300",
+        category = p.DanhMuc != null ? p.DanhMuc.TenDanhMuc : "Khác",
+        brand = p.ThuongHieu != null ? p.ThuongHieu.TenThuongHieu : "Khác",
+        sku = "SP-" + p.MaSanPham.ToString("D4")
+    })));
+
+    window.posCustomers = @Html.Raw(JsonSerializer.Serialize(((List<DATN64.Models.KhachHang>)ViewBag.Customers).Select(c => new {
+        id = c.MaKhachHang,
+        name = c.HoTen,
+        phone = c.SoDienThoai ?? ""
+    })));
+
+    window.sellerName = @Html.Raw(JsonSerializer.Serialize(ViewBag.SellerName ?? "Nhân viên"));
+</script>
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pos.css" asp-append-version="true" />
+}
+
+@section Scripts {
+    <!-- Vue 2 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <!-- Axios CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- POS JS -->
+    <script src="~/js/pos.js" asp-append-version="true"></script>
+}
