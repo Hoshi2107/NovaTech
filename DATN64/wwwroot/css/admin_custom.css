@@ -222,6 +222,49 @@ body {
 }
 
 /* Category icons in Online shop (inspired by Chotot) */
+.category-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 24px;
+    padding: 28px 24px;
+    min-height: 170px;
+    max-width: 240px;
+    margin: 0 auto;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+}
+
+.category-card:hover {
+    transform: translateY(-8px);
+    border-color: rgba(2, 132, 199, 0.25);
+    box-shadow: 0 24px 40px rgba(15, 23, 42, 0.12);
+}
+
+.category-card-icon {
+    width: 65px;
+    height: 65px;
+    border-radius: 18px;
+    background: rgba(14, 165, 233, 0.12);
+    color: #0284c7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.category-card-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
 .chotot-cat-card {
     display: flex;
     flex-direction: column;
@@ -256,6 +299,101 @@ body {
     margin-bottom: 8px;
     font-size: 20px;
     transition: all 0.3s ease;
+}
+
+.hover-bg-light:hover {
+    background-color: #f8fafc !important;
+}
+
+.brand-checkbox-list {
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.brand-item-row {
+    transition: background-color 0.2s ease;
+    padding: 4px 8px;
+    border-radius: 10px;
+}
+
+.brand-item-row:hover {
+    background-color: rgba(2, 132, 199, 0.04);
+}
+
+.product-card-col {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.product-card-col:hover .card-product {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 35px rgba(2, 132, 199, 0.1);
+}
+
+.card-product .btn {
+    transition: transform 0.2s ease;
+}
+
+.card-product img,
+.card-product .card-img-top,
+.card .card-img-top {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 18px;
+}
+
+.card-product .card-body {
+    min-height: 260px;
+}
+
+.list-group-item.active {
+    background-color: #0284c7;
+    border-color: #0284c7;
+    color: #ffffff;
+}
+
+.list-group-item {
+    border: none;
+    border-bottom: 1px solid #e2e8f0;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.list-group-item:hover {
+    background-color: rgba(2, 132, 199, 0.06);
+    color: #0f172a;
+}
+
+.btn-group.category-filter-nav {
+    min-width: 100%;
+}
+
+.category-filter-btn {
+    white-space: nowrap;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.category-filter-btn.active,
+.category-filter-btn:hover {
+    background-color: #0284c7;
+    border-color: #0284c7;
+    color: #ffffff;
+}
+
+.card-product .btn:hover {
+    transform: translateY(-1px);
+}
+
+.price-filter-checkbox {
+    accent-color: #0284c7;
+}
+
+@media (max-width: 991px) {
+    .sidebar {
+        width: 100%;
+    }
+    .main-content {
+        margin-left: 0;
+    }
 }
 
 .chotot-cat-card:hover .chotot-cat-icon {

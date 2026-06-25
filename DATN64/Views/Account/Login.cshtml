@@ -94,7 +94,7 @@
                 <label class="form-label text-sm text-secondary">Email đăng nhập</label>
                 <div class="input-group">
                     <span class="input-group-text border-end-0"><i class="fa-solid fa-envelope"></i></span>
-                    <input type="email" name="email" class="form-control border-start-0" required placeholder="nhanvien@novatech.vn" value="nva@gmail.com">
+                    <input type="email" name="email" class="form-control border-start-0" required placeholder="nhanvien@novatech.vn">
                 </div>
             </div>
 
@@ -102,7 +102,7 @@
                 <label class="form-label text-sm text-secondary">Mật khẩu</label>
                 <div class="input-group">
                     <span class="input-group-text border-end-0"><i class="fa-solid fa-lock"></i></span>
-                    <input type="password" name="password" id="passwordInput" class="form-control border-start-0 border-end-0" required placeholder="••••••••" value="123456">
+                    <input type="password" name="password" id="passwordInput" class="form-control border-start-0 border-end-0" required placeholder="••••••••">
                     <button class="btn btn-outline-secondary" type="button" id="togglePasswordBtn">
                         <i class="fa-solid fa-eye"></i>
                     </button>
@@ -139,6 +139,7 @@
 
     <script>
         function fillDemo(email) {
+<<<<<<< Updated upstream
             document.getElementsByName('email')[0].value = email;
             
             const pwdInput = document.getElementById('passwordInput');
@@ -159,9 +160,14 @@
                 infoEmail.textContent = email;
                 infoDiv.style.display = 'block';
             }
+=======
+            var emailInput = document.getElementsByName('email')[0];
+            if (emailInput) emailInput.value = email;
+            var passwordInput = document.getElementById('passwordInput');
+            if (passwordInput) passwordInput.value = '123';
+>>>>>>> Stashed changes
         }
 
-        // Toggle password visibility
         document.getElementById('togglePasswordBtn').addEventListener('click', function() {
             const pwdInput = document.getElementById('passwordInput');
             const icon = this.querySelector('i');

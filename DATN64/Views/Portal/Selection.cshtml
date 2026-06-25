@@ -166,7 +166,14 @@
                         <h4 class="portal-title">Bán Hàng POS</h4>
                         <p class="portal-desc">Giao diện bán hàng nhanh tại quầy dành cho Nhân viên Thu ngân / Bán hàng trực tiếp.</p>
                     </div>
-                    <a href="@Url.Action("Index", "POS")" class="btn btn-portal btn-warning w-100 py-2.5 text-white">Mở POS Quầy <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                    @if (canAccessPOS)
+                    {
+                        <a href="@Url.Action("Index", "POS")" class="btn btn-portal btn-warning w-100 py-2.5 text-white">Mở POS Quầy <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                    }
+                    else
+                    {
+                        <button class="btn btn-portal btn-secondary w-100 py-2.5" disabled>Khóa truy cập <i class="fa-solid fa-lock ms-1"></i></button>
+                    }
                 </div>
             </div>
 
@@ -180,7 +187,14 @@
                         <h4 class="portal-title">Quản Trị ERP</h4>
                         <p class="portal-desc">Bảng điều khiển ERP, quản lý kho bãi, nhân viên, phân quyền RBAC và đồng bộ TikTok Shop.</p>
                     </div>
-                    <a href="@Url.Action("Index", "Dashboard")" class="btn btn-portal btn-cyan w-100 py-2.5">Vào Quản Trị <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                    @if (canAccessERP)
+                    {
+                        <a href="@Url.Action("Index", "Dashboard")" class="btn btn-portal btn-cyan w-100 py-2.5">Vào Quản Trị <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                    }
+                    else
+                    {
+                        <button class="btn btn-portal btn-secondary w-100 py-2.5" disabled>Khóa truy cập <i class="fa-solid fa-lock ms-1"></i></button>
+                    }
                 </div>
             </div>
         </div>

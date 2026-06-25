@@ -4,7 +4,9 @@
 @{
     var session = HttpContextAccessor.HttpContext?.Session;
     var userEmail = session?.GetString("UserEmail") ?? "";
+    var userRoles = session?.GetString("UserRoles") ?? "";
     var isLogged = !string.IsNullOrEmpty(userEmail);
+    var isCustomerRole = userRoles.Contains("Khách hàng");
     
     // Fetch cart count from session
     var cartJson = session?.GetString("Cart");
@@ -69,8 +71,27 @@
         }
         .card-product:hover {
             transform: translateY(-8px);
-            box-shadow: 0 20px 25px -5px rgba(2, 132, 199, 0.1);
+            box-shadow: 0 20px 25px -5px rgba(2, 132, 199, 0.15);
             border-color: rgba(2, 132, 199, 0.3);
+        }
+        .card-glass {
+            background: rgba(255, 255, 255, 0.84);
+            backdrop-filter: blur(18px);
+            border: 1px solid rgba(226, 232, 240, 0.7);
+        }
+        .animate-fade-in {
+            animation: @@keyframes fadeInUp 0.5s ease forwards;
+            opacity: 0;
+        }
+        @@keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(18px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .hover-bg-light:hover {
+            background-color: rgba(2, 132, 199, 0.08) !important;
+        }
+        .btn-icon {
+            position: relative;
         }
         .text-muted-custom {
             color: var(--nt-muted) !important;
@@ -262,10 +283,16 @@
                         <a class="nav-link" href="@Url.Action("ProductsList", "Online")">Sản phẩm</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">Chính sách</a>
+                        <a class="nav-link" href="@Url.Action("Favorites", "Online")">Yêu thích</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">Hỗ trợ kỹ thuật</a>
+                        <a class="nav-link" href="@Url.Action("OrderHistory", "Online")">Lịch sử</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="@Url.Action("Privacy", "Home")">Chính sách</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="@Url.Action("Support", "Online")">Hỗ trợ kỹ thuật</a>
                     </li>
                 </ul>
                 <div class="d-flex align-items-center gap-3">
@@ -282,12 +309,15 @@
                                 <i class="fa-solid fa-circle-user me-2 text-cyan"></i>@userName
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end dropdown-menu-light bg-white border border-light">
-                                <li>
-                                    <a class="dropdown-item py-2" href="@Url.Action("Selection", "Portal")">
-                                        <i class="fa-solid fa-network-wired me-2 text-cyan"></i>Cổng Portal / ERP
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider border-secondary"></li>
+                                @if (!isCustomerRole)
+                                {
+                                    <li>
+                                        <a class="dropdown-item py-2" href="@Url.Action("Selection", "Portal")">
+                                            <i class="fa-solid fa-network-wired me-2 text-cyan"></i>Cổng Portal / ERP
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider border-secondary"></li>
+                                }
                                 <li>
                                     <a class="dropdown-item py-2 text-danger" href="@Url.Action("Logout", "Account")">
                                         <i class="fa-solid fa-right-from-bracket me-2"></i>Đăng xuất

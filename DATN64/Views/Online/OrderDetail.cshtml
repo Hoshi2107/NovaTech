@@ -1,0 +1,108 @@
+@model DATN64.Models.DonHang
+@{
+    Layout = "~/Views/Shared/_OnlineLayout.cshtml";
+    ViewData["Title"] = "Chi tiết đơn hàng";
+}
+
+<div class="container my-5 animate-fade-in">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark">Chi tiết đơn hàng #@Model.MaDonHang</h3>
+            <p class="text-muted-custom text-sm mb-0">Thông tin đơn hàng và danh sách sản phẩm.</p>
+        </div>
+        <a href="@Url.Action("OrderHistory", "Online")" class="btn btn-outline-primary rounded-pill px-4">Quay lại lịch sử</a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card card-glass p-4 shadow-sm border-light mb-4">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                    <div>
+                        <p class="text-xxs text-muted mb-1">Mã đơn hàng</p>
+                        <h5 class="fw-bold">#@Model.MaDonHang</h5>
+                    </div>
+                    <div>
+                        <p class="text-xxs text-muted mb-1">Ngày đặt</p>
+                        <div>@Model.NgayDat?.ToString("dd/MM/yyyy HH:mm")</div>
+                    </div>
+                    <div>
+                        <p class="text-xxs text-muted mb-1">Trạng thái</p>
+                        <span class="badge bg-gradient-cyan text-white py-2 px-3">@Model.TrangThai</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-glass p-4 shadow-sm border-light mb-4">
+                <h5 class="fw-bold mb-3">Danh sách sản phẩm</h5>
+                <div class="list-group">
+                    @if (Model.ChiTietDonHangs != null && Model.ChiTietDonHangs.Any())
+                    {
+                        foreach (var item in Model.ChiTietDonHangs)
+                        {
+                            <div class="list-group-item list-group-item-action rounded-4 mb-3 border border-light">
+                                <div class="row align-items-center gx-3">
+                                    <div class="col-auto">
+                                        <img src="@item.SanPham?.HinhAnh" alt="@item.SanPham?.TenSanPham" class="rounded-4" style="width: 90px; height: 90px; object-fit: cover;" onerror="this.src='https://images.unsplash.com/photo-1531297484001-80022131f5a1?q=80&w=150'">
+                                    </div>
+                                    <div class="col">
+                                        <h6 class="fw-bold mb-1">@item.SanPham?.TenSanPham</h6>
+                                        <p class="text-xxs text-muted mb-2">Số lượng: @item.SoLuong - Giá: @item.DonGia.ToString("N0") đ</p>
+                                        <p class="text-sm mb-0">Tổng: @(item.DonGia * item.SoLuong).ToString("N0") đ</p>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-muted-custom">Không có sản phẩm trong đơn hàng này.</div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card card-glass p-4 shadow-sm border-light mb-4">
+                <h5 class="fw-bold mb-3">Tóm tắt đơn hàng</h5>
+                <div class="d-flex justify-content-between mb-2 text-xxs text-muted">
+                    <span>Trạng thái</span>
+                    <span class="fw-semibold">@Model.TrangThai</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2 text-xxs text-muted">
+                    <span>Thanh toán</span>
+                    <span class="fw-semibold">@Model.PhuongThucThanhToan</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2 text-xxs text-muted">
+                    <span>Ngày đặt</span>
+                    <span class="fw-semibold">@Model.NgayDat?.ToString("dd/MM/yyyy")</span>
+                </div>
+                <hr class="my-3" />
+                <p class="text-xxs text-muted mb-1">Ghi chú</p>
+                <p class="text-sm mb-0">@Model.GhiChu ?? "Không có ghi chú."</p>
+            </div>
+            <div class="card card-glass p-4 shadow-sm border-light">
+                <h5 class="fw-bold mb-3">Tiến trình đơn hàng</h5>
+                <div class="stepper">
+                    @{
+                        var status = Model.TrangThai?.Trim() ?? "Chờ duyệt";
+                        var steps = new[] { "Chờ duyệt", "Đã duyệt", "Đang vận chuyển", "Hoàn tất" };
+                    }
+                    @for (var i = 0; i < steps.Length; i++)
+                    {
+                        var step = steps[i];
+                        var completed = steps.Take(i + 1).Contains(status);
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 38px; height: 38px; background: @(completed ? "#0284c7" : "#e2e8f0"); color: @(completed ? "#fff" : "#64748b");">
+                                <i class="fa-solid fa-check"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold text-dark">@step</div>
+                                <div class="text-xxs text-muted">@((completed) ? "Hoàn thành" : "Chưa hoàn thành")</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

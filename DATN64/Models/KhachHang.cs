@@ -22,6 +22,9 @@ namespace DATN64.Models
         [StringLength(255)]
         public string? DiaChi { get; set; }
 
+        [StringLength(255)]
+        public string? MatKhau { get; set; }
+
         public int DiemTichLuy { get; set; } = 0;
     }
 }

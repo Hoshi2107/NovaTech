@@ -93,7 +93,12 @@
                         <div class="fw-normal" style="font-size: 0.85rem;">Giao tận nơi hoặc nhận tại cửa hàng</div>
                     </button>
                 </div>
-                <div class="col-4">
+                <div class="col-4 d-flex flex-column gap-2">
+                    @{ var isFavorite = ViewBag.IsFavorite as bool? ?? false; }
+                    <button id="favoriteBtn" class="btn @(isFavorite ? "btn-danger" : "btn-outline-danger") w-100 py-3 fw-bold fs-5 rounded-3 shadow-sm text-white" type="button" onclick="toggleFavorite(@Model.MaSanPham)">
+                        <i class="fa-solid fa-heart me-2"></i>
+                        <span id="favoriteText">@(isFavorite ? "Bỏ yêu thích" : "Yêu thích")</span>
+                    </button>
                     <button class="btn btn-primary w-100 py-3 fw-bold fs-5 text-white rounded-3 shadow-sm" style="background: #277da1;">
                         TRẢ GÓP
                         <div class="fw-normal" style="font-size: 0.85rem;">Duyệt hồ sơ 5 phút</div>
@@ -127,6 +132,22 @@
                 if (data.success) {
                     alert('Đã thêm sản phẩm vào giỏ hàng!');
                     window.location.href = '@Url.Action("Cart", "Online")';
+                }
+            });
+        }
+
+        function toggleFavorite(productId) {
+            var isFav = document.getElementById('favoriteText').innerText.trim() !== 'Yêu thích';
+            var action = isFav ? 'RemoveFromFavorites' : 'AddToFavorites';
+            fetch('@Url.Action("AddToFavorites", "Online")'.replace('AddToFavorites', action), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'id=' + productId
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
                 }
             });
         }

@@ -148,9 +148,15 @@ namespace DATN64.Controllers
                 _context.SaveChanges();
             }
 
+            var userEmail = HttpContext.Session.GetString("UserEmail");
+            var seller = !string.IsNullOrEmpty(userEmail)
+                ? _context.NhanViens.FirstOrDefault(e => e.Email == userEmail)
+                : null;
+
             var newOrder = new DonHang
             {
                 MaKhachHang = customer?.MaKhachHang,
+                MaNhanVien = seller?.MaNhanVien,
                 NgayDat = DateTime.Now,
                 TrangThai = "Hoàn thành",
                 TongTien = 0, // Will calculate below

@@ -3,6 +3,7 @@
     Layout = "~/Views/Shared/_OnlineLayout.cshtml";
     ViewData["Title"] = "Tất cả sản phẩm";
     var currentCat = Context.Request.Query["category"].ToString();
+    var currentBrand = Context.Request.Query["brand"].ToString();
     var brands = Model.Select(p => p.ThuongHieu?.TenThuongHieu).Where(b => b != null).Distinct().ToList();
 }
 
@@ -27,16 +28,28 @@
 
                 <!-- 2. Nhóm danh mục -->
                 <div class="mb-4">
-                    <label class="form-label fw-bold text-secondary text-xs text-uppercase mb-2">Thiết bị điện tử</label>
-                    <div class="d-flex flex-column gap-1.5" id="categoryFilterContainer">
-                        <button type="button" class="btn btn-sm text-start py-1.5 px-2.5 rounded border-0 fw-medium text-xs w-100 cat-btn @(string.IsNullOrEmpty(currentCat) ? "btn-primary text-white" : "btn-light text-dark bg-transparent hover-bg-light")" onclick="filterCategory('', this)">
-                            Tất cả thiết bị
+                    <label class="form-label fw-bold text-secondary text-xs text-uppercase mb-2">Danh mục sản phẩm</label>
+                    <div class="list-group shadow-sm rounded-4 overflow-hidden">
+                        <button type="button" class="list-group-item list-group-item-action px-3 py-3 text-start text-xs fw-semibold @(string.IsNullOrEmpty(currentCat) ? "active" : "")" onclick="filterCategory('', this)">
+                            <i class="fa-solid fa-layer-group me-2"></i> Tất cả sản phẩm
                         </button>
-                        <button type="button" class="btn btn-sm text-start py-1.5 px-2.5 rounded border-0 fw-medium text-xs w-100 cat-btn @(currentCat == "Điện thoại" ? "btn-primary text-white" : "btn-light text-dark bg-transparent hover-bg-light")" onclick="filterCategory('Điện thoại', this)">
-                            Điện thoại
+                        <button type="button" class="list-group-item list-group-item-action px-3 py-3 text-start text-xs fw-semibold @(currentCat == "Điện thoại" ? "active" : "")" onclick="filterCategory('Điện thoại', this)">
+                            <i class="fa-solid fa-mobile-screen-button me-2"></i> Điện thoại
                         </button>
-                        <button type="button" class="btn btn-sm text-start py-1.5 px-2.5 rounded border-0 fw-medium text-xs w-100 cat-btn @(currentCat == "Laptop" ? "btn-primary text-white" : "btn-light text-dark bg-transparent hover-bg-light")" onclick="filterCategory('Laptop', this)">
-                            Laptop
+                        <button type="button" class="list-group-item list-group-item-action px-3 py-3 text-start text-xs fw-semibold @(currentCat == "Laptop" ? "active" : "")" onclick="filterCategory('Laptop', this)">
+                            <i class="fa-solid fa-laptop me-2"></i> Laptop
+                        </button>
+                        <button type="button" class="list-group-item list-group-item-action px-3 py-3 text-start text-xs fw-semibold @(currentCat == "Máy tính bảng" ? "active" : "")" onclick="filterCategory('Máy tính bảng', this)">
+                            <i class="fa-solid fa-tablet-screen-button me-2"></i> Máy tính bảng
+                        </button>
+                        <button type="button" class="list-group-item list-group-item-action px-3 py-3 text-start text-xs fw-semibold @(currentCat == "Tai nghe" ? "active" : "")" onclick="filterCategory('Tai nghe', this)">
+                            <i class="fa-solid fa-headphones me-2"></i> Tai nghe
+                        </button>
+                        <button type="button" class="list-group-item list-group-item-action px-3 py-3 text-start text-xs fw-semibold @(currentCat == "Phụ kiện" ? "active" : "")" onclick="filterCategory('Phụ kiện', this)">
+                            <i class="fa-solid fa-keyboard me-2"></i> Phụ kiện
+                        </button>
+                        <button type="button" class="list-group-item list-group-item-action px-3 py-3 text-start text-xs fw-semibold @(currentCat == "Loa" ? "active" : "")" onclick="filterCategory('Loa', this)">
+                            <i class="fa-solid fa-volume-high me-2"></i> Loa & Âm thanh
                         </button>
                     </div>
                 </div>
@@ -49,11 +62,33 @@
                     <div class="brand-checkbox-list" id="brandChecklist">
                         @foreach (var b in brands)
                         {
+                            var isChecked = !string.IsNullOrEmpty(currentBrand) && currentBrand.Equals(b, StringComparison.OrdinalIgnoreCase);
                             <div class="form-check mb-1.5 brand-item-row" data-brand-name="@b?.ToLower()">
-                                <input class="form-check-input brand-filter-checkbox" type="checkbox" value="@b" id="brand-@b" onchange="filterProducts()">
+                                <input class="form-check-input brand-filter-checkbox" type="checkbox" value="@b" id="brand-@b" onchange="filterProducts()" @(isChecked ? "checked" : "")>
                                 <label class="form-check-label text-xs cursor-pointer" for="brand-@b">@b</label>
                             </div>
                         }
+                    </div>
+                </div>
+
+                <!-- 4. Nhóm giá -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-secondary text-xs text-uppercase mb-2">Khoảng giá</label>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input price-filter-checkbox" type="checkbox" value="under-5" id="price-under-5" onchange="filterProducts()">
+                        <label class="form-check-label text-xs" for="price-under-5">Dưới 5 triệu</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input price-filter-checkbox" type="checkbox" value="5-15" id="price-5-15" onchange="filterProducts()">
+                        <label class="form-check-label text-xs" for="price-5-15">5 - 15 triệu</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input price-filter-checkbox" type="checkbox" value="15-30" id="price-15-30" onchange="filterProducts()">
+                        <label class="form-check-label text-xs" for="price-15-30">15 - 30 triệu</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input price-filter-checkbox" type="checkbox" value="over-30" id="price-over-30" onchange="filterProducts()">
+                        <label class="form-check-label text-xs" for="price-over-30">Trên 30 triệu</label>
                     </div>
                 </div>
             </div>
@@ -64,7 +99,7 @@
             <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
                 <div>
                     <h4 class="fw-bold text-dark m-0" id="currentCatTitle">
-                        @(string.IsNullOrEmpty(currentCat) ? "Tất cả sản phẩm NovaTech" : "Thiết bị: " + currentCat)
+                        @(string.IsNullOrEmpty(currentCat) ? "Tất cả sản phẩm NovaTech" : "Thiết bị: " + currentCat + (string.IsNullOrEmpty(currentBrand) ? "" : " - " + currentBrand))
                     </h4>
                     <span class="text-xs text-muted">Tìm thấy <strong id="filterCount">@Model.Count</strong> sản phẩm</span>
                 </div>
@@ -77,6 +112,18 @@
                         <option value="price-desc">Giá giảm dần</option>
                         <option value="name-asc">Tên A-Z</option>
                     </select>
+                </div>
+            </div>
+
+            <div class="mb-4 overflow-auto">
+                <div class="btn-group btn-group-sm flex-nowrap" role="group" aria-label="Danh mục sản phẩm">
+                    <button type="button" class="btn btn-outline-secondary category-filter-btn @(string.IsNullOrEmpty(currentCat) ? "active" : "")" onclick="filterCategory('', this)">Tất cả sản phẩm</button>
+                    <button type="button" class="btn btn-outline-secondary category-filter-btn @(currentCat == "Điện thoại" ? "active" : "")" onclick="filterCategory('Điện thoại', this)">Điện thoại</button>
+                    <button type="button" class="btn btn-outline-secondary category-filter-btn @(currentCat == "Laptop" ? "active" : "")" onclick="filterCategory('Laptop', this)">Laptop</button>
+                    <button type="button" class="btn btn-outline-secondary category-filter-btn @(currentCat == "Máy tính bảng" ? "active" : "")" onclick="filterCategory('Máy tính bảng', this)">Máy tính bảng</button>
+                    <button type="button" class="btn btn-outline-secondary category-filter-btn @(currentCat == "Tai nghe" ? "active" : "")" onclick="filterCategory('Tai nghe', this)">Tai nghe</button>
+                    <button type="button" class="btn btn-outline-secondary category-filter-btn @(currentCat == "Phụ kiện" ? "active" : "")" onclick="filterCategory('Phụ kiện', this)">Phụ kiện</button>
+                    <button type="button" class="btn btn-outline-secondary category-filter-btn @(currentCat == "Loa" ? "active" : "")" onclick="filterCategory('Loa', this)">Loa & Âm thanh</button>
                 </div>
             </div>
 
@@ -118,9 +165,14 @@
                                     <a href="@Url.Action("Detail", "Online", new { id = p.MaSanPham })" class="btn btn-outline-primary rounded-pill text-xs py-2 fw-semibold">
                                         Xem Chi Tiết
                                     </a>
-                                    <button class="btn btn-primary rounded-pill text-xs py-2 fw-semibold text-white shadow-sm" type="button" onclick="addToCart(@p.MaSanPham)">
-                                        <i class="fa-solid fa-cart-plus me-1"></i>Thêm Vào Giỏ
-                                    </button>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-primary rounded-pill text-xs py-2 fw-semibold text-white shadow-sm flex-grow-1" type="button" onclick="addToCart(@p.MaSanPham)">
+                                            <i class="fa-solid fa-cart-plus me-1"></i>Thêm
+                                        </button>
+                                        <button class="btn btn-outline-secondary rounded-pill text-xs py-2 fw-semibold flex-shrink-0" type="button" onclick="addToFavorites(@p.MaSanPham)">
+                                            <i class="fa-regular fa-heart text-danger"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -137,10 +189,12 @@
 
         function filterCategory(cat, btn) {
             selectedCategory = cat;
-            document.querySelectorAll('.cat-btn').forEach(b => {
-                b.className = "btn btn-sm text-start py-1.5 px-2.5 rounded border-0 fw-medium text-xs w-100 cat-btn btn-light text-dark bg-transparent hover-bg-light";
+            document.querySelectorAll('.category-filter-btn').forEach(b => {
+                b.classList.remove('active');
             });
-            btn.className = "btn btn-sm text-start py-1.5 px-2.5 rounded border-0 fw-medium text-xs w-100 cat-btn btn-primary text-white";
+            if (btn) {
+                btn.classList.add('active');
+            }
             document.getElementById('currentCatTitle').innerText = cat === '' ? "Tất cả sản phẩm NovaTech" : "Thiết bị: " + cat;
             filterProducts();
         }
@@ -232,7 +286,7 @@
             document.querySelectorAll('.price-filter-checkbox').forEach(cb => cb.checked = false);
             document.getElementById('sortSelect').value = 'default';
             filterBrandCheckboxes();
-            filterCategory('', document.querySelector('.cat-btn'));
+            filterCategory('', document.querySelector('.category-filter-btn'));
         }
 
         function addToCart(productId) {
@@ -249,6 +303,20 @@
                         badge.innerText = data.cartCount;
                     }
                     alert('Đã thêm sản phẩm vào giỏ hàng!');
+                }
+            });
+        }
+
+        function addToFavorites(productId) {
+            fetch('@Url.Action("AddToFavorites", "Online")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'id=' + productId
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Đã thêm vào danh sách yêu thích!');
                 }
             });
         }
