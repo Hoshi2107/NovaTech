@@ -1,0 +1,75 @@
+@model List<DATN64.Models.SanPham>
+@{
+    Layout = "~/Views/Shared/_OnlineLayout.cshtml";
+    ViewData["Title"] = "Yêu thích";
+}
+
+<div class="container my-5 animate-fade-in">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark">Danh sách yêu thích</h3>
+            <p class="text-muted-custom text-sm mb-0">Những sản phẩm bạn đã lưu lại để mua sau.</p>
+        </div>
+        <a href="@Url.Action("ProductsList", "Online")" class="btn btn-outline-primary rounded-pill px-4">Tiếp tục mua sắm</a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="card card-glass p-5 text-center">
+            <div class="fs-1 text-muted mb-3"><i class="fa-regular fa-heart"></i></div>
+            <h5 class="fw-bold text-dark">Chưa có sản phẩm yêu thích nào</h5>
+            <p class="text-muted-custom">Thêm sản phẩm vào danh sách yêu thích để xem nhanh khi cần.</p>
+        </div>
+    }
+    else
+    {
+        <div class="row row-cols-1 row-cols-md-3 g-4">
+            @foreach (var p in Model)
+            {
+                <div class="col">
+                    <div class="card card-product h-100 p-3 shadow-sm border border-light bg-white">
+                        <img src="@p.HinhAnh" class="card-img-top rounded-3 mb-3" alt="@p.TenSanPham" style="height: 180px; object-fit: cover;" onerror="this.src='https://images.unsplash.com/photo-1531297484001-80022131f5a1?q=80&w=300'">
+                        <div class="card-body p-0 d-flex flex-column justify-content-between">
+                            <div>
+                                <span class="badge bg-light text-primary border border-info border-opacity-25 mb-2 text-xxs">@(p.DanhMuc?.TenDanhMuc ?? "Khác")</span>
+                                <h5 class="card-title fw-bold text-dark fs-6 mb-1">
+                                    <a href="@Url.Action("Detail", "Online", new { id = p.MaSanPham })" class="text-decoration-none text-dark">@p.TenSanPham</a>
+                                </h5>
+                                <p class="text-xxs text-muted mb-2">Thương hiệu: @(p.ThuongHieu?.TenThuongHieu ?? "Khác")</p>
+                                <div class="mb-3">
+                                    <span class="card-text text-danger fw-bold fs-5">@p.GiaBan.ToString("N0") đ</span>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2"> 
+                                <button class="btn btn-danger rounded-pill w-100 py-2 text-xs fw-semibold text-white shadow-sm" type="button" onclick="location.href='@Url.Action("Detail", "Online", new { id = p.MaSanPham })'">
+                                    Xem chi tiết
+                                </button>
+                                <button class="btn btn-outline-secondary rounded-pill w-100 py-2 text-xs fw-semibold" type="button" onclick="removeFavorite(@p.MaSanPham)">
+                                    <i class="fa-solid fa-trash-can me-1"></i>Bỏ yêu thích
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        function removeFavorite(productId) {
+            fetch('@Url.Action("RemoveFromFavorites", "Online")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'id=' + productId
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                }
+            });
+        }
+    </script>
+}

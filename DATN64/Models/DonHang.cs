@@ -25,7 +25,6 @@ namespace DATN64.Models
         [StringLength(50)]
         public string? PhuongThucThanhToan { get; set; }
 
-        [NotMapped]
         public string? GhiChu { get; set; }
 
         [ForeignKey("MaKhachHang")]

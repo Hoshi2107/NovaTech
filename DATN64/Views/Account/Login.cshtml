@@ -139,6 +139,7 @@
 
     <script>
         function fillDemo(email) {
+<<<<<<< Updated upstream
             document.getElementsByName('email')[0].value = email;
             
             const pwdInput = document.getElementById('passwordInput');
@@ -159,9 +160,14 @@
                 infoEmail.textContent = email;
                 infoDiv.style.display = 'block';
             }
+=======
+            var emailInput = document.getElementsByName('email')[0];
+            if (emailInput) emailInput.value = email;
+            var passwordInput = document.getElementById('passwordInput');
+            if (passwordInput) passwordInput.value = '123';
+>>>>>>> Stashed changes
         }
 
-        // Toggle password visibility
         document.getElementById('togglePasswordBtn').addEventListener('click', function() {
             const pwdInput = document.getElementById('passwordInput');
             const icon = this.querySelector('i');

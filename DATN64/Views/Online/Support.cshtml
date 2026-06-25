@@ -1,0 +1,125 @@
+@model DATN64.Models.SupportViewModel
+@{
+    Layout = "~/Views/Shared/_OnlineLayout.cshtml";
+    ViewData["Title"] = "Hỗ trợ kỹ thuật";
+}
+
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card rounded-4 shadow-sm border-0 overflow-hidden">
+                <div class="card-body p-4 p-lg-5">
+                    <div class="d-flex align-items-center justify-content-between mb-4">
+                        <div>
+                            <h2 class="fw-bold mb-1">Hỗ trợ kỹ thuật NovaTech</h2>
+                            <p class="text-muted mb-0">Kiểm tra bảo hành hoặc gửi yêu cầu sửa máy của bạn.</p>
+                        </div>
+                        <span class="badge bg-info text-dark text-uppercase px-3 py-2">@Model.ActiveTab == "warranty" ? "Check bảo hành" : "Nhận sửa máy"</span>
+                    </div>
+
+                    <ul class="nav nav-pills mb-4" role="tablist">
+                        <li class="nav-item me-2" role="presentation">
+                            <button class="nav-link @(Model.ActiveTab == "warranty" ? "active" : "") rounded-pill" type="button" onclick="location.href='@Url.Action("Support", "Online", new { tab = "warranty" })'">Check máy / Bảo hành</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link @(Model.ActiveTab == "repair" ? "active" : "") rounded-pill" type="button" onclick="location.href='@Url.Action("Support", "Online", new { tab = "repair" })'">Nhận sửa máy</button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <div class="tab-pane fade @(Model.ActiveTab == "warranty" ? "show active" : "")">
+                            <h5 class="fw-semibold mb-3">Check máy / Bảo hành</h5>
+                            <p class="text-muted mb-4">Nhập mã đơn hàng hoặc số điện thoại đã đăng ký mua để kiểm tra trạng thái đơn và bảo hành.</p>
+
+                            <form method="get" action="@Url.Action("Support", "Online")">
+                                <input type="hidden" name="tab" value="warranty" />
+                                <div class="row g-3 align-items-end">
+                                    <div class="col-md-8">
+                                        <label class="form-label text-secondary text-xs mb-2">Mã đơn hàng hoặc số điện thoại</label>
+                                        <input type="text" class="form-control form-control-lg" name="query" value="@Model.WarrantyCheck.Query" placeholder="Nhập mã đơn / số điện thoại..." />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <button type="submit" class="btn btn-primary btn-lg w-100">Kiểm tra ngay</button>
+                                    </div>
+                                </div>
+                            </form>
+
+                            @if (Model.WarrantyCheck.HasResult)
+                            {
+                                if (Model.WarrantyCheck.Found)
+                                {
+                                    <div class="mt-4 p-4 rounded-4 border border-success bg-success bg-opacity-10">
+                                        <h6 class="fw-semibold mb-2">Kết quả tìm kiếm</h6>
+                                        <p class="mb-1"><strong>Khách hàng:</strong> @Model.WarrantyCheck.CustomerName</p>
+                                        <p class="mb-1"><strong>Số điện thoại:</strong> @Model.WarrantyCheck.CustomerPhone</p>
+                                        <p class="mb-1"><strong>Mã đơn hàng:</strong> @Model.WarrantyCheck.OrderId</p>
+                                        <p class="mb-1"><strong>Ngày đặt:</strong> @Model.WarrantyCheck.OrderDate?.ToString("dd/MM/yyyy")</p>
+                                        <p class="mb-1"><strong>Tổng tiền:</strong> @Model.WarrantyCheck.TotalAmount?.ToString("N0") đ</p>
+                                        <p class="mb-0"><strong>Trạng thái:</strong> @Model.WarrantyCheck.Status</p>
+                                        @if (Model.WarrantyCheck.OrderItems?.Any() == true)
+                                        {
+                                            <div class="mt-3">
+                                                <h6 class="fw-semibold">Sản phẩm trong đơn</h6>
+                                                <ul class="list-group list-group-flush rounded-3 overflow-hidden">
+                                                    @foreach (var item in Model.WarrantyCheck.OrderItems!)
+                                                    {
+                                                        <li class="list-group-item px-3 py-2">
+                                                            @item.SoLuong x @item.SanPham?.TenSanPham (@item.DonGia.ToString("N0") đ)
+                                                        </li>
+                                                    }
+                                                </ul>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="alert alert-warning mt-4">@Model.WarrantyCheck.Message</div>
+                                }
+                            }
+                        </div>
+
+                        <div class="tab-pane fade @(Model.ActiveTab == "repair" ? "show active" : "")">
+                            <h5 class="fw-semibold mb-3">Nhận sửa máy</h5>
+                            <p class="text-muted mb-4">Nếu bạn đã mua tại NovaTech, nhập mã đơn hoặc số điện thoại để gửi yêu cầu sửa chữa.</p>
+
+                            <form method="post" action="@Url.Action("Support", "Online")">
+                                <input type="hidden" name="tab" value="repair" />
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label text-secondary text-xs mb-2">Mã đơn hàng hoặc số điện thoại</label>
+                                        <input type="text" class="form-control form-control-lg" name="query" value="@Model.RepairRequest.Query" placeholder="Nhập mã đơn / số điện thoại..." />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label text-secondary text-xs mb-2">Mô tả lỗi / yêu cầu</label>
+                                        <textarea class="form-control form-control-lg" name="issue" rows="3" placeholder="Ví dụ: Máy không lên nguồn, màn hình sọc...">@Model.RepairRequest.Issue</textarea>
+                                    </div>
+                                    <div class="col-12">
+                                        <button type="submit" class="btn btn-info btn-lg w-100">Gửi yêu cầu sửa</button>
+                                    </div>
+                                </div>
+                            </form>
+
+                            @if (Model.RepairRequest.HasAttempted)
+                            {
+                                <div class="mt-4">
+                                    @if (Model.RepairRequest.Success)
+                                    {
+                                        <div class="alert alert-success">@Model.RepairRequest.Message</div>
+                                        <p><strong>Khách hàng:</strong> @Model.RepairRequest.CustomerName</p>
+                                        <p><strong>Số điện thoại:</strong> @Model.RepairRequest.CustomerPhone</p>
+                                        <p><strong>Mã đơn:</strong> @Model.RepairRequest.OrderId</p>
+                                    }
+                                    else
+                                    {
+                                        <div class="alert alert-danger">@Model.RepairRequest.Message</div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -135,36 +135,51 @@
                         }
                     </div>
 
-                    <!-- Checkout Form -->
-                    <form method="post" action="@Url.Action("Checkout", "Online")">
-                        <input type="hidden" name="voucherCode" id="formVoucherCode" value="">
-                        <input type="hidden" name="discountVal" id="formDiscountVal" value="0">
+                    @{
+                        var canCheckout = ViewBag.CanCheckout as bool? ?? false;
+                    }
+                    @if (canCheckout)
+                    {
+                        <form method="post" action="@Url.Action("Checkout", "Online")">
+                            <input type="hidden" name="voucherCode" id="formVoucherCode" value="">
+                            <input type="hidden" name="discountVal" id="formDiscountVal" value="0">
 
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-secondary text-xs">Họ và tên người nhận</label>
-                            <input type="text" name="customerName" class="form-control" required placeholder="Nguyễn Văn A...">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-secondary text-xs">Số điện thoại liên hệ</label>
-                            <input type="tel" name="customerPhone" class="form-control" required placeholder="0901234567...">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-secondary text-xs">Địa chỉ giao hàng</label>
-                            <textarea name="customerAddress" class="form-control" rows="2" required placeholder="Số nhà, tên đường, phường/xã, quận/huyện..."></textarea>
-                        </div>
-                        <div class="mb-4">
-                            <label class="form-label fw-bold text-secondary text-xs">Phương thức thanh toán</label>
-                            <select name="paymentMethod" class="form-select">
-                                <option value="COD">Thanh toán khi nhận hàng (COD)</option>
-                                <option value="Chuyển khoản">Chuyển khoản Ngân hàng</option>
-                                <option value="Tiền mặt">Đến nhận tại cửa hàng (Tiền mặt)</option>
-                            </select>
-                        </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-secondary text-xs">Họ và tên người nhận</label>
+                                <input type="text" name="customerName" class="form-control" required placeholder="Nguyễn Văn A..." minlength="3" maxlength="100">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-secondary text-xs">Số điện thoại liên hệ</label>
+                                <input type="tel" name="customerPhone" class="form-control" required placeholder="0901234567..." pattern="^(0|\+84)\d{9,10}$" title="Nhập số điện thoại bắt đầu 0 hoặc +84, đủ 10-12 chữ số.">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-secondary text-xs">Địa chỉ giao hàng</label>
+                                <textarea name="customerAddress" class="form-control" rows="2" required placeholder="Số nhà, tên đường, phường/xã, quận/huyện..." minlength="10" maxlength="250"></textarea>
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-secondary text-xs">Phương thức thanh toán</label>
+                                <select name="paymentMethod" class="form-select">
+                                    <option value="COD">Thanh toán khi nhận hàng (COD)</option>
+                                    <option value="Chuyển khoản">Chuyển khoản Ngân hàng</option>
+                                    <option value="Tiền mặt">Đến nhận tại cửa hàng (Tiền mặt)</option>
+                                </select>
+                            </div>
 
-                        <button type="submit" class="btn btn-primary rounded-pill w-100 py-3 text-xs fw-bold shadow-sm">
-                            <i class="fa-solid fa-credit-card me-2"></i>ĐẶT HÀNG NGAY
-                        </button>
-                    </form>
+                            <button type="submit" class="btn btn-primary rounded-pill w-100 py-3 text-xs fw-bold shadow-sm">
+                                <i class="fa-solid fa-credit-card me-2"></i>ĐẶT HÀNG NGAY
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info rounded-4 p-4 mb-0">
+                            <h6 class="fw-bold mb-2">Bạn cần đăng nhập để đặt hàng</h6>
+                            <p class="mb-3 text-sm text-muted">Hiện tại bạn đang xem web dưới tư cách khách. Đăng nhập bằng tài khoản khách hàng để lưu giỏ hàng và xem lịch sử đơn hàng.</p>
+                            <a href="@Url.Action("Login", "Account")" class="btn btn-info rounded-pill px-4 py-3 text-xs fw-bold">
+                                <i class="fa-solid fa-right-to-bracket me-2"></i>Đăng nhập ngay
+                            </a>
+                        </div>
+                    }
                 </div>
             </div>
         </div>

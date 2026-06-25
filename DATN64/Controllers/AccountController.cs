@@ -196,6 +196,23 @@ namespace DATN64.Controllers
                 HttpContext.Session.SetString("UserRoles", "Khách hàng");
                 HttpContext.Session.SetString("UserPermissions", "");
 
+                var demoCustomer = _context.KhachHangs.FirstOrDefault(k => k.Email != null && k.Email.ToLower() == "customer@gmail.com");
+                if (demoCustomer == null)
+                {
+                    demoCustomer = new KhachHang
+                    {
+                        HoTen = "Khách Hàng Demo",
+                        Email = "customer@gmail.com",
+                        SoDienThoai = "0900000000",
+                        DiaChi = "123 Đường Demo, Quận 1, TP.HCM",
+                        DiemTichLuy = 0
+                    };
+                    _context.KhachHangs.Add(demoCustomer);
+                    _context.SaveChanges();
+                }
+
+                HttpContext.Session.SetString("CustomerId", demoCustomer.MaKhachHang.ToString());
+
                 TempData["ToastMessage"] = "Chào mừng bạn đến với NovaTech Store!";
                 return RedirectToAction("Index", "Online");
             }
