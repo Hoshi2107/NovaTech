@@ -17,6 +17,24 @@ namespace DATN64.Models
         public string Creator { get; set; } = "";
         public DateTime Date { get; set; } = DateTime.Now;
         public string Note { get; set; } = "";
+
+        // New properties for warehouse transactions
+        public int? MaKho { get; set; }
+        public int? MaKhoNguon { get; set; }
+        public int? MaKhoDich { get; set; }
+        public int? SoLuongTruoc { get; set; }
+        public int? SoLuongSau { get; set; }
+    }
+
+    [Table("KhoHang")]
+    public class KhoHang
+    {
+        [Key]
+        public int MaKho { get; set; }
+        public string TenKho { get; set; } = "";
+        public string? MoTa { get; set; }
+        public bool TrangThai { get; set; } = true;
+        public DateTime NgayTao { get; set; } = DateTime.Now;
     }
 
     [Table("SystemNotification")]

@@ -10,6 +10,29 @@ namespace DATN64.Models
         {
             var db = context.Database;
             
+            // Create KhoHang
+            ExecuteSql(db, @"
+                IF OBJECT_ID('dbo.KhoHang', 'U') IS NULL
+                CREATE TABLE dbo.KhoHang (
+                    MaKho INT IDENTITY(1,1) PRIMARY KEY,
+                    TenKho NVARCHAR(255) NOT NULL DEFAULT '',
+                    MoTa NVARCHAR(500) NULL,
+                    TrangThai BIT NOT NULL DEFAULT 1,
+                    NgayTao DATETIME NOT NULL DEFAULT GETDATE()
+                );
+            ");
+
+            // Seed KhoHang
+            ExecuteSql(db, @"
+                IF NOT EXISTS (SELECT 1 FROM dbo.KhoHang)
+                BEGIN
+                    INSERT INTO dbo.KhoHang (TenKho, MoTa, TrangThai, NgayTao) 
+                    VALUES (N'Kho chính', N'Kho lưu trữ hàng hóa chính của công ty', 1, GETDATE());
+                    INSERT INTO dbo.KhoHang (TenKho, MoTa, TrangThai, NgayTao) 
+                    VALUES (N'Kho cửa hàng', N'Kho hàng trực tiếp phục vụ bán lẻ tại cửa hàng', 1, GETDATE());
+                END
+            ");
+
             // Create InventoryTransaction
             ExecuteSql(db, @"
                 IF OBJECT_ID('dbo.InventoryTransaction', 'U') IS NULL
@@ -24,6 +47,20 @@ namespace DATN64.Models
                     Date DATETIME NOT NULL DEFAULT GETDATE(),
                     Note NVARCHAR(MAX) NOT NULL DEFAULT ''
                 );
+            ");
+
+            // Alter InventoryTransaction to add Vietnamese fields if not exists
+            ExecuteSql(db, @"
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.InventoryTransaction') AND name = 'MaKho')
+                    ALTER TABLE dbo.InventoryTransaction ADD MaKho INT NULL;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.InventoryTransaction') AND name = 'MaKhoNguon')
+                    ALTER TABLE dbo.InventoryTransaction ADD MaKhoNguon INT NULL;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.InventoryTransaction') AND name = 'MaKhoDich')
+                    ALTER TABLE dbo.InventoryTransaction ADD MaKhoDich INT NULL;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.InventoryTransaction') AND name = 'SoLuongTruoc')
+                    ALTER TABLE dbo.InventoryTransaction ADD SoLuongTruoc INT NULL;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.InventoryTransaction') AND name = 'SoLuongSau')
+                    ALTER TABLE dbo.InventoryTransaction ADD SoLuongSau INT NULL;
             ");
 
             // Create SystemNotification

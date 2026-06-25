@@ -1,16 +1,1378 @@
-@model List<DATN64.Models.SanPham>
-@{ Layout = "~/Views/Shared/_Layout.cshtml"; ViewData["Title"] = "Qu?n l� Kho"; }
-<div class="container my-5">
-    <h2>Qu?n l� Kho H�ng</h2>
-    <table class="table">
-        <thead><tr><th>M� SP</th><th>T�n SP</th><th>T?n Kho</th><th>Thao t�c</th></tr></thead>
-        <tbody>
-            @foreach(var item in Model) {
-                <tr>
-                    <td>@item.MaSanPham</td><td>@item.TenSanPham</td><td>@item.SoLuongTon</td>
-                    <td><button class="btn btn-sm btn-info">Chi ti?t</button></td>
-                </tr>
-            }
-        </tbody>
-    </table>
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Quản lý Kho bãi";
+}
+
+<div id="app" class="container-fluid animate-fade-in" v-cloak>
+    <!-- Header Page -->
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-6">
+            <h2 class="fw-bold text-gradient mb-0"><i class="fa-solid fa-warehouse me-2"></i>Quản lý Kho bãi</h2>
+            <p class="text-muted-custom text-sm mb-0">Hệ thống quản lý tồn kho và giao dịch kho tổng hợp</p>
+        </div>
+        <div class="col-md-6 text-md-end mt-3 mt-md-0">
+            <span class="badge bg-info-subtle text-info p-2 rounded-pill px-3">
+                <i class="fa-solid fa-clock me-1"></i> Cập nhật: ${ lastUpdated }
+            </span>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 bg-glass">
+        <div class="card-body p-2">
+            <ul class="nav nav-pills nav-fill gap-1" id="inventoryTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link rounded-3 py-2.5" :class="{ active: activeTab === 'dashboard' }" @@click="setTab('dashboard')">
+                        <i class="fa-solid fa-chart-pie me-2"></i>Thống kê
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link rounded-3 py-2.5" :class="{ active: activeTab === 'stock' }" @@click="setTab('stock')">
+                        <i class="fa-solid fa-boxes-stacked me-2"></i>Tồn kho
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link rounded-3 py-2.5" :class="{ active: activeTab === 'import' }" @@click="setTab('import')">
+                        <i class="fa-solid fa-circle-down me-2 text-success"></i>Nhập kho
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link rounded-3 py-2.5" :class="{ active: activeTab === 'export' }" @@click="setTab('export')">
+                        <i class="fa-solid fa-circle-up me-2 text-danger"></i>Xuất kho
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link rounded-3 py-2.5" :class="{ active: activeTab === 'audit' }" @@click="setTab('audit')">
+                        <i class="fa-solid fa-clipboard-check me-2 text-warning"></i>Kiểm kê
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link rounded-3 py-2.5" :class="{ active: activeTab === 'adjust' }" @@click="setTab('adjust')">
+                        <i class="fa-solid fa-sliders me-2 text-primary"></i>Điều chỉnh
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link rounded-3 py-2.5" :class="{ active: activeTab === 'transfer' }" @@click="setTab('transfer')">
+                        <i class="fa-solid fa-right-left me-2 text-info"></i>Chuyển kho
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link rounded-3 py-2.5" :class="{ active: activeTab === 'history' }" @@click="setTab('history')">
+                        <i class="fa-solid fa-history me-2"></i>Lịch sử
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="tab-content" id="inventoryTabContent">
+        
+        <!-- 1. DASHBOARD TAB -->
+        <div class="tab-pane show active" v-if="activeTab === 'dashboard'">
+            <!-- Stats Grid -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-4 col-lg-2">
+                    <div class="card border-0 shadow-sm rounded-4 card-glass text-center p-3 h-100">
+                        <div class="d-inline-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-circle mb-3 mx-auto" style="width: 48px; height: 48px;">
+                            <i class="fa-solid fa-box fs-5"></i>
+                        </div>
+                        <h6 class="text-muted-custom text-xs fw-bold text-uppercase mb-1">Tổng sản phẩm</h6>
+                        <h3 class="fw-extrabold text-primary mb-0">${ stats.totalProducts }</h3>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="card border-0 shadow-sm rounded-4 card-glass text-center p-3 h-100">
+                        <div class="d-inline-flex align-items-center justify-content-center bg-success-subtle text-success rounded-circle mb-3 mx-auto" style="width: 48px; height: 48px;">
+                            <i class="fa-solid fa-boxes-stacked fs-5"></i>
+                        </div>
+                        <h6 class="text-muted-custom text-xs fw-bold text-uppercase mb-1">Tổng tồn kho</h6>
+                        <h3 class="fw-extrabold text-success mb-0">${ stats.totalStock }</h3>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="card border-0 shadow-sm rounded-4 card-glass text-center p-3 h-100">
+                        <div class="d-inline-flex align-items-center justify-content-center bg-info-subtle text-info rounded-circle mb-3 mx-auto" style="width: 48px; height: 48px;">
+                            <i class="fa-solid fa-circle-down fs-5"></i>
+                        </div>
+                        <h6 class="text-muted-custom text-xs fw-bold text-uppercase mb-1">Nhập hôm nay</h6>
+                        <h3 class="fw-extrabold text-info mb-0">${ stats.importsToday }</h3>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="card border-0 shadow-sm rounded-4 card-glass text-center p-3 h-100">
+                        <div class="d-inline-flex align-items-center justify-content-center bg-danger-subtle text-danger rounded-circle mb-3 mx-auto" style="width: 48px; height: 48px;">
+                            <i class="fa-solid fa-circle-up fs-5"></i>
+                        </div>
+                        <h6 class="text-muted-custom text-xs fw-bold text-uppercase mb-1">Xuất hôm nay</h6>
+                        <h3 class="fw-extrabold text-danger mb-0">${ stats.exportsToday }</h3>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="card border-0 shadow-sm rounded-4 card-glass text-center p-3 h-100">
+                        <div class="d-inline-flex align-items-center justify-content-center bg-warning-subtle text-warning rounded-circle mb-3 mx-auto" style="width: 48px; height: 48px;">
+                            <i class="fa-solid fa-triangle-exclamation fs-5"></i>
+                        </div>
+                        <h6 class="text-muted-custom text-xs fw-bold text-uppercase mb-1">Sắp hết hàng</h6>
+                        <h3 class="fw-extrabold text-warning mb-0">${ stats.lowStockProducts }</h3>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="card border-0 shadow-sm rounded-4 card-glass text-center p-3 h-100">
+                        <div class="d-inline-flex align-items-center justify-content-center bg-purple-subtle text-purple rounded-circle mb-3 mx-auto" style="width: 48px; height: 48px;">
+                            <i class="fa-solid fa-store fs-5"></i>
+                        </div>
+                        <h6 class="text-muted-custom text-xs fw-bold text-uppercase mb-1">Tổng số kho</h6>
+                        <h3 class="fw-extrabold text-purple mb-0">${ warehouses.length }</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Double Column: Recent activity and Low stock products -->
+            <div class="row g-4">
+                <!-- Low Stock Products List -->
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm rounded-4 card-glass h-100">
+                        <div class="card-header bg-transparent border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                            <h5 class="fw-bold mb-0 text-gradient"><i class="fa-solid fa-triangle-exclamation text-warning me-2"></i>Sản phẩm sắp hết hàng</h5>
+                            <button class="btn btn-sm btn-link text-decoration-none" @@click="setTab('stock')">Xem tất cả</button>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="table-responsive">
+                                <table class="table align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Sản phẩm</th>
+                                            <th>Tồn kho</th>
+                                            <th>Giá bán</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-if="lowStockItems.length === 0">
+                                            <td colspan="3" class="text-center py-4 text-muted">Không có sản phẩm nào sắp hết hàng!</td>
+                                        </tr>
+                                        <tr v-for="item in lowStockItems.slice(0, 5)" :key="item.maSanPham">
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <img :src="item.hinhAnh || 'https://via.placeholder.com/40'" class="rounded shadow-sm me-2" width="36" height="36">
+                                                    <div>
+                                                        <span class="fw-bold d-block text-xs text-truncate" style="max-width: 200px;">${ item.tenSanPham }</span>
+                                                        <small class="text-muted text-xxs">Mã SP: #${ item.maSanPham }</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-danger-subtle text-danger" v-if="item.soLuongTon === 0">Hết hàng</span>
+                                                <span class="badge bg-warning-subtle text-warning" v-else>${ item.soLuongTon } cái</span>
+                                            </td>
+                                            <td class="fw-bold text-success text-xs">${ formatCurrency(item.giaBan) }</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Transactions -->
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm rounded-4 card-glass h-100">
+                        <div class="card-header bg-transparent border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                            <h5 class="fw-bold mb-0 text-gradient"><i class="fa-solid fa-clock-rotate-left text-primary me-2"></i>Giao dịch kho gần đây</h5>
+                            <button class="btn btn-sm btn-link text-decoration-none" @@click="setTab('history')">Xem lịch sử</button>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="timeline" v-if="transactions.length > 0">
+                                <div class="d-flex mb-3 align-items-start pb-2 border-bottom border-secondary border-opacity-10" v-for="tx in transactions.slice(0, 5)" :key="tx.id">
+                                    <div class="me-3">
+                                        <span class="badge rounded-pill p-2" :class="{
+                                            'bg-success-subtle text-success': tx.type === 'Nhập kho',
+                                            'bg-danger-subtle text-danger': tx.type === 'Xuất kho',
+                                            'bg-warning-subtle text-warning': tx.type === 'Kiểm kê',
+                                            'bg-primary-subtle text-primary': tx.type === 'Điều chỉnh',
+                                            'bg-info-subtle text-info': tx.type === 'Chuyển kho',
+                                        }">
+                                            <i class="fa-solid" :class="{
+                                                'fa-circle-down': tx.type === 'Nhập kho',
+                                                'fa-circle-up': tx.type === 'Xuất kho',
+                                                'fa-clipboard-check': tx.type === 'Kiểm kê',
+                                                'fa-sliders': tx.type === 'Điều chỉnh',
+                                                'fa-right-left': tx.type === 'Chuyển kho',
+                                            }"></i>
+                                        </span>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="fw-bold text-xs">${ tx.productName }</span>
+                                            <small class="text-muted text-xxs">${ tx.date }</small>
+                                        </div>
+                                        <p class="mb-0 text-xs text-muted-custom">
+                                            <span class="fw-semibold text-dark">${ tx.type }</span>: 
+                                            <span :class="tx.quantityChange >= 0 ? 'text-success fw-bold' : 'text-danger fw-bold'">
+                                                ${ tx.quantityChange >= 0 ? '+' : '' }${ tx.quantityChange } cái
+                                            </span>
+                                            <span v-if="tx.type === 'Chuyển kho'">(${ tx.tenKhoNguon } &rarr; ${ tx.tenKhoDich })</span>
+                                            <span v-else-if="tx.tenKho">(${ tx.tenKho })</span>
+                                        </p>
+                                        <small class="text-muted text-xxs d-block mt-0.5"><i class="fa-solid fa-user me-1"></i>${ tx.creator } &bull; Lý do/Ghi chú: ${ tx.note }</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-else class="text-center py-5 text-muted">
+                                Chưa có giao dịch nào được ghi nhận.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. STOCK TAB -->
+        <div class="tab-pane show active" v-if="activeTab === 'stock'">
+            <div class="card border-0 shadow-sm rounded-4 bg-glass">
+                <div class="card-body p-4">
+                    <!-- Filters Grid -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label text-muted-custom text-xs fw-bold text-uppercase">Tìm kiếm sản phẩm</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-transparent border-end-0"><i class="fa-solid fa-search text-muted"></i></span>
+                                <input type="text" class="form-control border-start-0 ps-0" v-model="filters.search" placeholder="Nhập tên hoặc mã sản phẩm...">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-muted-custom text-xs fw-bold text-uppercase">Danh mục</label>
+                            <select class="form-select" v-model="filters.category">
+                                <option value="">Tất cả danh mục</option>
+                                <option v-for="cat in categories" :value="cat.maDanhMuc">${ cat.tenDanhMuc }</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-muted-custom text-xs fw-bold text-uppercase">Thương hiệu</label>
+                            <select class="form-select" v-model="filters.brand">
+                                <option value="">Tất cả thương hiệu</option>
+                                <option v-for="b in brands" :value="b.maThuongHieu">${ b.tenThuongHieu }</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button class="btn btn-outline-secondary w-100 rounded-3" @@click="resetFilters">
+                                <i class="fa-solid fa-rotate-left me-1"></i>Xóa lọc
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Products Table -->
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Mã SP</th>
+                                    <th>Sản phẩm</th>
+                                    <th>Danh mục</th>
+                                    <th>Thương hiệu</th>
+                                    <th class="text-end">Giá vốn (Giá nhập)</th>
+                                    <th class="text-end">Giá bán</th>
+                                    <th class="text-center">Kho hiện tại</th>
+                                    <th class="text-center">Số lượng tồn</th>
+                                    <th class="text-center">Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-if="filteredProducts.length === 0">
+                                    <td colspan="9" class="text-center py-5 text-muted">
+                                        <i class="fa-solid fa-box-open fs-2 mb-2 d-block"></i>
+                                        Không tìm thấy sản phẩm nào!
+                                    </td>
+                                </tr>
+                                <tr v-for="item in filteredProducts" :key="item.maSanPham" class="group-hover">
+                                    <td class="fw-medium text-secondary">#${ item.maSanPham }</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <img :src="item.hinhAnh || 'https://via.placeholder.com/40'" class="rounded shadow-sm me-3" width="40" height="40" alt="Ảnh SP">
+                                            <div>
+                                                <h6 class="mb-0 fw-bold">${ item.tenSanPham }</h6>
+                                                <small class="text-muted-custom text-xs">NCC: ${ item.nhaCungCapTen }</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>${ item.danhMucTen }</td>
+                                    <td>${ item.thuongHieuTen }</td>
+                                    <td class="text-end fw-bold text-secondary">${ formatCurrency(item.giaNhap) }</td>
+                                    <td class="text-end fw-bold text-success">${ formatCurrency(item.giaBan) }</td>
+                                    <td class="text-center text-xs text-muted-custom">${ item.khoMacDinh }</td>
+                                    <td class="text-center">
+                                        <span class="badge fs-7 px-3 py-1.5 rounded-pill" :class="{
+                                            'bg-danger-subtle text-danger': item.soLuongTon === 0,
+                                            'bg-warning-subtle text-warning': item.soLuongTon > 0 && item.soLuongTon <= 10,
+                                            'bg-success-subtle text-success': item.soLuongTon > 10
+                                        }">
+                                            ${ item.soLuongTon } cái
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge rounded-pill" :class="item.trangThai === 'Đang bán' ? 'bg-success' : 'bg-secondary'">
+                                            ${ item.trangThai }
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. IMPORT TAB -->
+        <div class="tab-pane show active" v-if="activeTab === 'import'">
+            <div class="row justify-content-center">
+                <div class="col-md-8 col-lg-6">
+                    <div class="card border-0 shadow-sm rounded-4 card-glass p-4">
+                        <div class="card-title mb-4 d-flex align-items-center">
+                            <h4 class="fw-bold mb-0 text-success"><i class="fa-solid fa-circle-down me-2"></i>Tạo Phiếu Nhập Kho</h4>
+                        </div>
+                        <form @@submit.prevent="submitImport">
+                            <!-- Product Select -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Chọn sản phẩm</label>
+                                <select class="form-select" v-model="forms.import.productId" required @@change="updateImportPreview">
+                                    <option value="" disabled>--- Chọn sản phẩm cần nhập ---</option>
+                                    <option v-for="p in activeProducts" :value="p.maSanPham">
+                                        ${ p.tenSanPham } (Mã: #${ p.maSanPham }) - Hiện có: ${ p.soLuongTon } cái
+                                    </option>
+                                </select>
+                            </div>
+
+                            <!-- Warehouse Select -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Kho nhận hàng</label>
+                                <select class="form-select" v-model="forms.import.warehouseId" required>
+                                    <option v-for="w in warehouses" :value="w.maKho">${ w.tenKho }</option>
+                                </select>
+                            </div>
+
+                            <!-- Source Select -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Nguồn nhập kho</label>
+                                <select class="form-select" v-model="forms.import.source" required>
+                                    <option value="Nhà cung cấp">Nhà cung cấp</option>
+                                    <option value="Nhập trả">Nhập trả (Khách trả hàng)</option>
+                                    <option value="Điều chỉnh tăng">Điều chỉnh tăng</option>
+                                </select>
+                            </div>
+
+                            <!-- Quantity -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Số lượng nhập</label>
+                                <input type="number" class="form-control" v-model.number="forms.import.quantity" min="1" required @@input="updateImportPreview">
+                            </div>
+
+                            <!-- Preview Diff Stock -->
+                            <div class="p-3 bg-light rounded-3 mb-4 d-flex align-items-center justify-content-between" v-if="forms.import.productId && forms.import.quantity > 0">
+                                <div>
+                                    <span class="text-xs text-muted d-block">Xem trước thay đổi tồn kho:</span>
+                                    <span class="fw-bold">${ selectedImportProduct.tenSanPham }</span>
+                                </div>
+                                <div class="text-end">
+                                    <span class="fs-5 text-secondary fw-semibold">${ selectedImportProduct.soLuongTon } cái</span>
+                                    <i class="fa-solid fa-arrow-right mx-2 text-muted"></i>
+                                    <span class="fs-5 text-success fw-bold">${ selectedImportProduct.soLuongTon + forms.import.quantity } cái (+${ forms.import.quantity })</span>
+                                </div>
+                            </div>
+
+                            <!-- Note -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Ghi chú nhập kho</label>
+                                <textarea class="form-control" v-model="forms.import.note" placeholder="Nhập ghi chú hoặc lý do nhập kho..." rows="3"></textarea>
+                            </div>
+
+                            <!-- Action -->
+                            <button type="submit" class="btn btn-success rounded-3 w-100 fw-bold py-2.5 shadow-sm" :disabled="submitting">
+                                <span v-if="submitting" class="spinner-border spinner-border-sm me-2"></span>
+                                <i class="fa-solid fa-circle-check me-2" v-else></i> Xác nhận nhập kho
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. EXPORT TAB -->
+        <div class="tab-pane show active" v-if="activeTab === 'export'">
+            <div class="row justify-content-center">
+                <div class="col-md-8 col-lg-6">
+                    <div class="card border-0 shadow-sm rounded-4 card-glass p-4">
+                        <div class="card-title mb-4 d-flex align-items-center">
+                            <h4 class="fw-bold mb-0 text-danger"><i class="fa-solid fa-circle-up me-2"></i>Tạo Phiếu Xuất Kho</h4>
+                        </div>
+                        <form @@submit.prevent="submitExport">
+                            <!-- Product Select -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Chọn sản phẩm</label>
+                                <select class="form-select" v-model="forms.export.productId" required @@change="updateExportPreview">
+                                    <option value="" disabled>--- Chọn sản phẩm cần xuất ---</option>
+                                    <option v-for="p in activeProducts" :value="p.maSanPham">
+                                        ${ p.tenSanPham } (Mã: #${ p.maSanPham }) - Hiện có: ${ p.soLuongTon } cái
+                                    </option>
+                                </select>
+                            </div>
+
+                            <!-- Warehouse Select -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Kho xuất hàng</label>
+                                <select class="form-select" v-model="forms.export.warehouseId" required>
+                                    <option v-for="w in warehouses" :value="w.maKho">${ w.tenKho }</option>
+                                </select>
+                            </div>
+
+                            <!-- Source Select -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Nguồn xuất kho</label>
+                                <select class="form-select" v-model="forms.export.source" required>
+                                    <option value="Xuất POS">Xuất cho POS (Bán hàng lẻ)</option>
+                                    <option value="Xuất Website Online">Xuất bán Online (Đơn hàng Website)</option>
+                                    <option value="Hàng hỏng">Hàng hỏng / Lỗi kỹ thuật</option>
+                                    <option value="Trả nhà cung cấp">Trả hàng nhà cung cấp (Trả NCC)</option>
+                                </select>
+                            </div>
+
+                            <!-- Quantity -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Số lượng xuất</label>
+                                <input type="number" class="form-control" v-model.number="forms.export.quantity" min="1" required @@input="updateExportPreview">
+                                <div class="form-text text-danger fw-bold text-xs" v-if="exportError">
+                                    <i class="fa-solid fa-triangle-exclamation"></i> ${ exportError }
+                                </div>
+                            </div>
+
+                            <!-- Preview Diff Stock -->
+                            <div class="p-3 bg-light rounded-3 mb-4 d-flex align-items-center justify-content-between" v-if="forms.export.productId && forms.export.quantity > 0 && !exportError">
+                                <div>
+                                    <span class="text-xs text-muted d-block">Xem trước thay đổi tồn kho:</span>
+                                    <span class="fw-bold">${ selectedExportProduct.tenSanPham }</span>
+                                </div>
+                                <div class="text-end">
+                                    <span class="fs-5 text-secondary fw-semibold">${ selectedExportProduct.soLuongTon } cái</span>
+                                    <i class="fa-solid fa-arrow-right mx-2 text-muted"></i>
+                                    <span class="fs-5 text-danger fw-bold">${ selectedExportProduct.soLuongTon - forms.export.quantity } cái (-${ forms.export.quantity })</span>
+                                </div>
+                            </div>
+
+                            <!-- Note -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Lý do / Ghi chú xuất kho</label>
+                                <textarea class="form-control" v-model="forms.export.note" placeholder="Nhập ghi chú hoặc lý do xuất kho..." rows="3"></textarea>
+                            </div>
+
+                            <!-- Action -->
+                            <button type="submit" class="btn btn-danger rounded-3 w-100 fw-bold py-2.5 shadow-sm" :disabled="submitting || !!exportError">
+                                <span v-if="submitting" class="spinner-border spinner-border-sm me-2"></span>
+                                <i class="fa-solid fa-circle-check me-2" v-else></i> Xác nhận xuất kho
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. AUDIT (KIỂM KÊ) TAB -->
+        <div class="tab-pane show active" v-if="activeTab === 'audit'">
+            <div class="card border-0 shadow-sm rounded-4 bg-glass">
+                <div class="card-body p-4">
+                    <div class="row align-items-center mb-4">
+                        <div class="col-md-6">
+                            <h4 class="fw-bold mb-0 text-warning"><i class="fa-solid fa-clipboard-check me-2"></i>Kiểm kê & Điều chỉnh thực tế</h4>
+                            <p class="text-muted-custom text-xs mb-0">Chọn sản phẩm cần kiểm kê, đối chiếu số lượng thực tế tại kho hàng</p>
+                        </div>
+                    </div>
+
+                    <div class="row g-4">
+                        <!-- Left column: Audit Form -->
+                        <div class="col-md-5">
+                            <div class="p-4 bg-light rounded-4 border border-secondary border-opacity-10">
+                                <h5 class="fw-bold text-secondary mb-3"><i class="fa-solid fa-file-signature me-2"></i>Phiếu kiểm kê</h5>
+                                <form @@submit.prevent="submitAudit">
+                                    <div class="mb-3">
+                                        <label class="form-label text-xs fw-bold text-muted-custom text-uppercase">Chọn sản phẩm</label>
+                                        <select class="form-select" v-model="forms.audit.productId" required @@change="updateAuditPreview">
+                                            <option value="" disabled>--- Chọn sản phẩm cần kiểm ---</option>
+                                            <option v-for="p in activeProducts" :value="p.maSanPham">
+                                                ${ p.tenSanPham } (Mã: #${ p.maSanPham })
+                                            </option>
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label text-xs fw-bold text-muted-custom text-uppercase">Kho kiểm kê</label>
+                                        <select class="form-select" v-model="forms.audit.warehouseId" required>
+                                            <option v-for="w in warehouses" :value="w.maKho">${ w.tenKho }</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="row mb-3">
+                                        <div class="col-6">
+                                            <label class="form-label text-xs fw-bold text-muted-custom text-uppercase">Tồn hệ thống</label>
+                                            <input type="text" class="form-control bg-secondary bg-opacity-10 text-center fw-bold" :value="forms.audit.productId ? selectedAuditProduct.soLuongTon : '---'" readonly>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label text-xs fw-bold text-muted-custom text-uppercase">Tồn thực tế</label>
+                                            <input type="number" class="form-control text-center fw-bold border-warning" v-model.number="forms.audit.actualQuantity" min="0" required @@input="updateAuditPreview">
+                                        </div>
+                                    </div>
+
+                                    <!-- Audit calculation review -->
+                                    <div class="p-3 rounded-3 mb-3 d-flex align-items-center justify-content-between" :class="auditDiffClass" v-if="forms.audit.productId && forms.audit.actualQuantity !== ''">
+                                        <span class="text-xs fw-bold">Chênh lệch lệch kho:</span>
+                                        <span class="fw-extrabold fs-5">${ auditDiffText }</span>
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <label class="form-label text-xs fw-bold text-muted-custom text-uppercase">Ghi chú kiểm kê</label>
+                                        <textarea class="form-control" v-model="forms.audit.note" rows="3" placeholder="Ghi chú kết quả, lý do chênh lệch (nếu có)..."></textarea>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-warning rounded-3 w-100 fw-bold py-2.5 shadow-sm text-dark" :disabled="submitting || !forms.audit.productId">
+                                        <span v-if="submitting" class="spinner-border spinner-border-sm me-2 text-dark"></span>
+                                        <i class="fa-solid fa-save me-2 text-dark" v-else></i> Xác nhận & cập nhật kho
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Right column: Select product helper table -->
+                        <div class="col-md-7">
+                            <div class="table-responsive border border-secondary border-opacity-10 rounded-4 p-2 bg-white" style="max-height: 480px; overflow-y: auto;">
+                                <table class="table table-hover align-middle table-sm mb-0">
+                                    <thead class="sticky-top bg-light">
+                                        <tr>
+                                            <th>Mã</th>
+                                            <th>Tên sản phẩm</th>
+                                            <th class="text-center">Tồn</th>
+                                            <th class="text-end">Chọn</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="p in activeProducts" :key="p.maSanPham">
+                                            <td class="text-muted text-xxs">#${ p.maSanPham }</td>
+                                            <td class="fw-bold text-xs">${ p.tenSanPham }</td>
+                                            <td class="text-center">
+                                                <span class="badge rounded-pill bg-light text-dark">${ p.soLuongTon }</span>
+                                            </td>
+                                            <td class="text-end">
+                                                <button class="btn btn-xs btn-outline-warning text-dark py-0.5 px-2 rounded text-xxs" @@click="selectAuditProductQuick(p)">Chọn kiểm</button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. ADJUSTMENT (ĐIỀU CHỈNH KHO) TAB -->
+        <div class="tab-pane show active" v-if="activeTab === 'adjust'">
+            <div class="row justify-content-center">
+                <div class="col-md-8 col-lg-6">
+                    <div class="card border-0 shadow-sm rounded-4 card-glass p-4">
+                        <div class="card-title mb-4 d-flex align-items-center">
+                            <h4 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-sliders me-2"></i>Điều Chỉnh Tồn Kho Trực Tiếp</h4>
+                        </div>
+                        <form @@submit.prevent="submitAdjust">
+                            <!-- Product Select -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Chọn sản phẩm</label>
+                                <select class="form-select" v-model="forms.adjust.productId" required @@change="updateAdjustPreview">
+                                    <option value="" disabled>--- Chọn sản phẩm cần điều chỉnh ---</option>
+                                    <option v-for="p in activeProducts" :value="p.maSanPham">
+                                        ${ p.tenSanPham } (Mã: #${ p.maSanPham }) - Hiện có: ${ p.soLuongTon } cái
+                                    </option>
+                                </select>
+                            </div>
+
+                            <!-- Warehouse Select -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Kho điều chỉnh</label>
+                                <select class="form-select" v-model="forms.adjust.warehouseId" required>
+                                    <option v-for="w in warehouses" :value="w.maKho">${ w.tenKho }</option>
+                                </select>
+                            </div>
+
+                            <!-- Adjustment Direction & Quantity -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Loại điều chỉnh</label>
+                                    <select class="form-select border-primary" v-model="forms.adjust.direction" @@change="updateAdjustPreview">
+                                        <option value="increase">Tăng số lượng (+)</option>
+                                        <option value="decrease">Giảm số lượng (-)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Số lượng thay đổi</label>
+                                    <input type="number" class="form-control" v-model.number="forms.adjust.quantity" min="1" required @@input="updateAdjustPreview">
+                                </div>
+                            </div>
+
+                            <!-- Error indicator -->
+                            <div class="form-text text-danger fw-bold text-xs mb-3" v-if="adjustError">
+                                <i class="fa-solid fa-triangle-exclamation"></i> ${ adjustError }
+                            </div>
+
+                            <!-- Preview Diff Stock -->
+                            <div class="p-3 bg-light rounded-3 mb-3 d-flex align-items-center justify-content-between" v-if="forms.adjust.productId && forms.adjust.quantity > 0 && !adjustError">
+                                <div>
+                                    <span class="text-xs text-muted d-block">Xem trước thay đổi tồn kho:</span>
+                                    <span class="fw-bold">${ selectedAdjustProduct.tenSanPham }</span>
+                                </div>
+                                <div class="text-end">
+                                    <span class="fs-5 text-secondary fw-semibold">${ selectedAdjustProduct.soLuongTon } cái</span>
+                                    <i class="fa-solid fa-arrow-right mx-2 text-muted"></i>
+                                    <span class="fs-5 fw-bold" :class="forms.adjust.direction === 'increase' ? 'text-success' : 'text-danger'">
+                                        ${ getAdjustedPreviewQty() } cái (${ forms.adjust.direction === 'increase' ? '+' : '-' }${ forms.adjust.quantity })
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Reason (Mandatory) -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Lý do điều chỉnh (Bắt buộc)</label>
+                                <select class="form-select border-primary" v-model="forms.adjust.reason" required>
+                                    <option value="" disabled>--- Chọn lý do ---</option>
+                                    <option value="Sai lệch kiểm kho">Sai lệch kiểm kho</option>
+                                    <option value="Hàng lỗi / Hư hỏng">Hàng lỗi / Hư hỏng</option>
+                                    <option value="Hàng tặng kèm / Hàng mẫu">Hàng tặng kèm / Hàng mẫu</option>
+                                    <option value="Bù trừ nhập xuất nhầm">Bù trừ nhập xuất nhầm</option>
+                                    <option value="Khác">Khác (Nêu rõ ở ghi chú)</option>
+                                </select>
+                            </div>
+
+                            <!-- Note -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Ghi chú điều chỉnh</label>
+                                <textarea class="form-control" v-model="forms.adjust.note" placeholder="Nhập ghi chú chi tiết..." rows="2"></textarea>
+                            </div>
+
+                            <!-- Action -->
+                            <button type="submit" class="btn btn-primary rounded-3 w-100 fw-bold py-2.5 shadow-sm" :disabled="submitting || !!adjustError || !forms.adjust.reason">
+                                <span v-if="submitting" class="spinner-border spinner-border-sm me-2"></span>
+                                <i class="fa-solid fa-circle-check me-2" v-else></i> Xác nhận điều chỉnh
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7. TRANSFER (CHUYỂN KHO) TAB -->
+        <div class="tab-pane show active" v-if="activeTab === 'transfer'">
+            <div class="row justify-content-center">
+                <div class="col-md-8 col-lg-6">
+                    <div class="card border-0 shadow-sm rounded-4 card-glass p-4">
+                        <div class="card-title mb-4 d-flex align-items-center">
+                            <h4 class="fw-bold mb-0 text-info"><i class="fa-solid fa-right-left me-2"></i>Chuyển Kho Nội Bộ</h4>
+                        </div>
+                        <form @@submit.prevent="submitTransfer">
+                            <!-- Product Select -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Chọn sản phẩm chuyển</label>
+                                <select class="form-select border-info" v-model="forms.transfer.productId" required @@change="updateTransferPreview">
+                                    <option value="" disabled>--- Chọn sản phẩm cần chuyển ---</option>
+                                    <option v-for="p in activeProducts" :value="p.maSanPham">
+                                        ${ p.tenSanPham } (Mã: #${ p.maSanPham }) - Hiện có: ${ p.soLuongTon } cái
+                                    </option>
+                                </select>
+                            </div>
+
+                            <!-- From & To Warehouse -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Kho nguồn (Đi)</label>
+                                    <select class="form-select" v-model="forms.transfer.fromWarehouseId" required @@change="updateTransferPreview">
+                                        <option v-for="w in warehouses" :value="w.maKho">${ w.tenKho }</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Kho nhận (Đến)</label>
+                                    <select class="form-select" v-model="forms.transfer.toWarehouseId" required @@change="updateTransferPreview">
+                                        <option v-for="w in warehouses" :value="w.maKho">${ w.tenKho }</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Validation duplicate warning -->
+                            <div class="form-text text-danger fw-bold text-xs mb-3" v-if="transferError">
+                                <i class="fa-solid fa-triangle-exclamation"></i> ${ transferError }
+                            </div>
+
+                            <!-- Quantity -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Số lượng chuyển</label>
+                                <input type="number" class="form-control border-info" v-model.number="forms.transfer.quantity" min="1" required @@input="updateTransferPreview">
+                            </div>
+
+                            <!-- Visual Transfer Arrow -->
+                            <div class="p-3 bg-info-subtle bg-opacity-20 text-info border border-info border-opacity-10 rounded-3 mb-4 text-center d-flex align-items-center justify-content-center gap-3" v-if="forms.transfer.productId && forms.transfer.quantity > 0 && !transferError">
+                                <div class="fw-bold text-sm text-dark">${ getWarehouseName(forms.transfer.fromWarehouseId) }</div>
+                                <div>
+                                    <i class="fa-solid fa-arrow-right-long text-info fs-5"></i>
+                                    <span class="badge bg-info text-dark d-block text-xxs px-2 mt-0.5">Chuyển ${ forms.transfer.quantity } cái</span>
+                                </div>
+                                <div class="fw-bold text-sm text-dark">${ getWarehouseName(forms.transfer.toWarehouseId) }</div>
+                            </div>
+
+                            <!-- Note -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Ghi chú chuyển kho</label>
+                                <textarea class="form-control" v-model="forms.transfer.note" placeholder="Nhập ghi chú chi tiết hoặc thông tin vận chuyển..." rows="2"></textarea>
+                            </div>
+
+                            <!-- Action -->
+                            <button type="submit" class="btn btn-info rounded-3 w-100 fw-bold py-2.5 shadow-sm text-dark" :disabled="submitting || !!transferError">
+                                <span v-if="submitting" class="spinner-border spinner-border-sm me-2 text-dark"></span>
+                                <i class="fa-solid fa-truck-moving me-2 text-dark" v-else></i> Xác nhận vận chuyển
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 8. TRANSACTION HISTORY TAB -->
+        <div class="tab-pane show active" v-if="activeTab === 'history'">
+            <div class="card border-0 shadow-sm rounded-4 bg-glass">
+                <div class="card-body p-4">
+                    <!-- Filters Grid -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label text-muted-custom text-xs fw-bold text-uppercase">Tìm kiếm sản phẩm/Mã phiếu</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-transparent border-end-0"><i class="fa-solid fa-search text-muted"></i></span>
+                                <input type="text" class="form-control border-start-0 ps-0" v-model="filters.historySearch" placeholder="Mã phiếu, sản phẩm, người tạo...">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-muted-custom text-xs fw-bold text-uppercase">Loại giao dịch</label>
+                            <select class="form-select" v-model="filters.historyType">
+                                <option value="">Tất cả giao dịch</option>
+                                <option value="Nhập kho">Nhập kho</option>
+                                <option value="Xuất kho">Xuất kho</option>
+                                <option value="Kiểm kê">Kiểm kê</option>
+                                <option value="Điều chỉnh">Điều chỉnh</option>
+                                <option value="Chuyển kho">Chuyển kho</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-muted-custom text-xs fw-bold text-uppercase">Thời gian</label>
+                            <select class="form-select" v-model="filters.historyTime">
+                                <option value="all">Tất cả thời gian</option>
+                                <option value="today">Hôm nay</option>
+                                <option value="week">7 ngày qua</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button class="btn btn-outline-secondary w-100 rounded-3" @@click="resetHistoryFilters">
+                                <i class="fa-solid fa-rotate-left me-1"></i>Xóa lọc
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- History Table -->
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Mã phiếu</th>
+                                    <th>Thời gian</th>
+                                    <th>Loại giao dịch</th>
+                                    <th>Sản phẩm</th>
+                                    <th>Kho liên quan</th>
+                                    <th class="text-center">Trước giao dịch</th>
+                                    <th class="text-center">Thay đổi (+/-)</th>
+                                    <th class="text-center">Sau giao dịch</th>
+                                    <th>Người thực hiện</th>
+                                    <th>Ghi chú / Lý do</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-if="filteredTransactions.length === 0">
+                                    <td colspan="10" class="text-center py-5 text-muted">
+                                        <i class="fa-solid fa-clock-rotate-left fs-2 mb-2 d-block"></i>
+                                        Không tìm thấy giao dịch nào phù hợp!
+                                    </td>
+                                </tr>
+                                <tr v-for="tx in filteredTransactions" :key="tx.id" class="group-hover">
+                                    <td>
+                                        <span class="badge bg-dark fw-mono font-monospace text-xs">${ tx.code || 'GD-' + tx.id }</span>
+                                    </td>
+                                    <td class="text-xs text-muted-custom">${ tx.date }</td>
+                                    <td>
+                                        <span class="badge rounded-pill" :class="{
+                                            'bg-success': tx.type === 'Nhập kho',
+                                            'bg-danger': tx.type === 'Xuất kho',
+                                            'bg-warning text-dark': tx.type === 'Kiểm kê',
+                                            'bg-primary': tx.type === 'Điều chỉnh',
+                                            'bg-info text-dark': tx.type === 'Chuyển kho'
+                                        }">${ tx.type }</span>
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold text-xs d-block">${ tx.productName }</span>
+                                        <small class="text-muted text-xxs">Mã: #${ tx.productSKU }</small>
+                                    </td>
+                                    <td>
+                                        <span v-if="tx.type === 'Chuyển kho'">
+                                            <span class="text-xs fw-semibold text-secondary">${ tx.tenKhoNguon }</span>
+                                            <i class="fa-solid fa-arrow-right mx-1 text-muted text-xxs"></i>
+                                            <span class="text-xs fw-semibold text-secondary">${ tx.tenKhoDich }</span>
+                                        </span>
+                                        <span class="text-xs fw-semibold text-secondary" v-else>
+                                            ${ tx.tenKho || 'Kho chính' }
+                                        </span>
+                                    </td>
+                                    <td class="text-center text-xs text-muted-custom">
+                                        ${ tx.soLuongTruoc != null ? tx.soLuongTruoc + ' cái' : '---' }
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="fw-bold" :class="tx.quantityChange >= 0 ? 'text-success' : 'text-danger'">
+                                            ${ tx.quantityChange >= 0 ? '+' : '' }${ tx.quantityChange } cái
+                                        </span>
+                                    </td>
+                                    <td class="text-center text-xs text-dark fw-bold">
+                                        ${ tx.soLuongSau != null ? tx.soLuongSau + ' cái' : '---' }
+                                    </td>
+                                    <td class="text-xs text-secondary">${ tx.creator }</td>
+                                    <td class="text-xs text-muted-custom" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="tx.note">
+                                        ${ tx.note }
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
 </div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        [v-cloak] { display: none; }
+        .text-gradient {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .bg-glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        .group-hover:hover {
+            background-color: rgba(2, 132, 199, 0.03) !important;
+            transition: all 0.2s ease-in-out;
+        }
+        .badge.bg-success-subtle {
+            background-color: #dcfce7 !important;
+            color: #15803d !important;
+        }
+        .badge.bg-danger-subtle {
+            background-color: #fee2e2 !important;
+            color: #b91c1c !important;
+        }
+        .badge.bg-warning-subtle {
+            background-color: #fef9c3 !important;
+            color: #a16207 !important;
+        }
+        .badge.bg-info-subtle {
+            background-color: #e0f2fe !important;
+            color: #0369a1 !important;
+        }
+        .badge.bg-primary-subtle {
+            background-color: #dbeafe !important;
+            color: #1d4ed8 !important;
+        }
+        .badge.bg-purple-subtle {
+            background-color: #f3e8ff !important;
+            color: #6b21a8 !important;
+        }
+    </style>
+
+    <script>
+        var app = new Vue({
+            el: '#app',
+            delimiters: ['${', '}'],
+            data: {
+                activeTab: 'dashboard',
+                lastUpdated: '',
+                products: [],
+                warehouses: [],
+                transactions: [],
+                categories: [],
+                brands: [],
+                loading: false,
+                submitting: false,
+                exportError: '',
+                adjustError: '',
+                transferError: '',
+                filters: {
+                    search: '',
+                    category: '',
+                    brand: '',
+                    historySearch: '',
+                    historyType: '',
+                    historyTime: 'all'
+                },
+                forms: {
+                    import: {
+                        productId: '',
+                        quantity: 10,
+                        source: 'Nhà cung cấp',
+                        warehouseId: 1,
+                        note: ''
+                    },
+                    export: {
+                        productId: '',
+                        quantity: 1,
+                        source: 'Xuất POS',
+                        warehouseId: 1,
+                        note: ''
+                    },
+                    audit: {
+                        productId: '',
+                        actualQuantity: 0,
+                        warehouseId: 1,
+                        note: ''
+                    },
+                    adjust: {
+                        productId: '',
+                        direction: 'increase',
+                        quantity: 1,
+                        reason: '',
+                        warehouseId: 1,
+                        note: ''
+                    },
+                    transfer: {
+                        productId: '',
+                        quantity: 10,
+                        fromWarehouseId: 1,
+                        toWarehouseId: 2,
+                        note: ''
+                    }
+                }
+            },
+            computed: {
+                activeProducts() {
+                    return this.products.filter(p => p.trangThai === 'Đang bán');
+                },
+                filteredProducts() {
+                    let list = this.products;
+                    if (this.filters.search) {
+                        const s = this.filters.search.toLowerCase();
+                        list = list.filter(p => p.tenSanPham.toLowerCase().includes(s) || p.maSanPham.toString().includes(s));
+                    }
+                    if (this.filters.category) {
+                        list = list.filter(p => p.maDanhMuc === parseInt(this.filters.category));
+                    }
+                    if (this.filters.brand) {
+                        list = list.filter(p => p.maThuongHieu === parseInt(this.filters.brand));
+                    }
+                    return list;
+                },
+                filteredTransactions() {
+                    let list = this.transactions;
+                    if (this.filters.historySearch) {
+                        const s = this.filters.historySearch.toLowerCase();
+                        list = list.filter(t => 
+                            t.productName.toLowerCase().includes(s) || 
+                            t.code.toLowerCase().includes(s) ||
+                            t.creator.toLowerCase().includes(s)
+                        );
+                    }
+                    if (this.filters.historyType) {
+                        list = list.filter(t => t.type === this.filters.historyType);
+                    }
+                    if (this.filters.historyTime && this.filters.historyTime !== 'all') {
+                        const now = new Date();
+                        const todayStr = now.toISOString().slice(0, 10);
+                        if (this.filters.historyTime === 'today') {
+                            list = list.filter(t => t.date.startsWith(todayStr));
+                        } else if (this.filters.historyTime === 'week') {
+                            const limit = new Date();
+                            limit.setDate(limit.getDate() - 7);
+                            list = list.filter(t => new Date(t.date) >= limit);
+                        }
+                    }
+                    return list;
+                },
+                stats() {
+                    const totalProducts = this.products.length;
+                    const totalStock = this.products.reduce((acc, p) => acc + p.soLuongTon, 0);
+                    
+                    const nowStr = new Date().toISOString().slice(0, 10);
+                    const importsToday = this.transactions
+                        .filter(t => t.type === 'Nhập kho' && t.date.startsWith(nowStr))
+                        .reduce((acc, t) => acc + t.quantityChange, 0);
+                    
+                    const exportsToday = this.transactions
+                        .filter(t => t.type === 'Xuất kho' && t.date.startsWith(nowStr))
+                        .reduce((acc, t) => acc + Math.abs(t.quantityChange), 0);
+
+                    const lowStockProducts = this.products.filter(p => p.soLuongTon <= 10).length;
+
+                    return {
+                        totalProducts,
+                        totalStock,
+                        importsToday,
+                        exportsToday,
+                        lowStockProducts
+                    };
+                },
+                lowStockItems() {
+                    return this.products.filter(p => p.soLuongTon <= 10).sort((a, b) => a.soLuongTon - b.soLuongTon);
+                },
+                selectedImportProduct() {
+                    return this.products.find(p => p.maSanPham === this.forms.import.productId) || {};
+                },
+                selectedExportProduct() {
+                    return this.products.find(p => p.maSanPham === this.forms.export.productId) || {};
+                },
+                selectedAuditProduct() {
+                    return this.products.find(p => p.maSanPham === this.forms.audit.productId) || {};
+                },
+                selectedAdjustProduct() {
+                    return this.products.find(p => p.maSanPham === this.forms.adjust.productId) || {};
+                },
+                selectedTransferProduct() {
+                    return this.products.find(p => p.maSanPham === this.forms.transfer.productId) || {};
+                },
+                auditDiff() {
+                    if (!this.forms.audit.productId || this.forms.audit.actualQuantity === '') return 0;
+                    return this.forms.audit.actualQuantity - this.selectedAuditProduct.soLuongTon;
+                },
+                auditDiffText() {
+                    const diff = this.auditDiff;
+                    if (diff === 0) return 'Khớp tồn (0)';
+                    return `${diff >= 0 ? '+' : ''}${diff} cái`;
+                },
+                auditDiffClass() {
+                    const diff = this.auditDiff;
+                    if (diff === 0) return 'bg-secondary bg-opacity-10 text-secondary';
+                    return diff > 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger';
+                }
+            },
+            mounted() {
+                this.updateTime();
+                this.fetchData();
+                
+                // Parse initial tab
+                const params = new URLSearchParams(window.location.search);
+                const tab = params.get('tab');
+                if (tab) {
+                    this.activeTab = tab;
+                }
+            },
+            methods: {
+                updateTime() {
+                    const now = new Date();
+                    this.lastUpdated = now.toLocaleTimeString('vi-VN') + ' ' + now.toLocaleDateString('vi-VN');
+                },
+                formatCurrency(val) {
+                    if (!val && val !== 0) return '0 ₫';
+                    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
+                },
+                async fetchData() {
+                    this.loading = true;
+                    try {
+                        const [prodRes, whRes, txRes, optRes] = await Promise.all([
+                            axios.get('/api/inventory'),
+                            axios.get('/api/inventory/warehouses'),
+                            axios.get('/api/inventory/transactions'),
+                            axios.get('/api/product/options')
+                        ]);
+
+                        this.products = prodRes.data;
+                        this.warehouses = whRes.data;
+                        this.transactions = txRes.data;
+                        this.categories = optRes.data.categories;
+                        this.brands = optRes.data.brands;
+
+                        // Setup default form values
+                        if (this.warehouses.length > 0) {
+                            this.forms.import.warehouseId = this.warehouses[0].maKho;
+                            this.forms.export.warehouseId = this.warehouses[0].maKho;
+                            this.forms.audit.warehouseId = this.warehouses[0].maKho;
+                            this.forms.adjust.warehouseId = this.warehouses[0].maKho;
+                            if (this.warehouses.length > 1) {
+                                this.forms.transfer.fromWarehouseId = this.warehouses[0].maKho;
+                                this.forms.transfer.toWarehouseId = this.warehouses[1].maKho;
+                            } else {
+                                this.forms.transfer.fromWarehouseId = this.warehouses[0].maKho;
+                                this.forms.transfer.toWarehouseId = this.warehouses[0].maKho;
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Lỗi khi tải dữ liệu:', err);
+                        Swal.fire('Lỗi', 'Không thể tải dữ liệu kho hàng.', 'error');
+                    } finally {
+                        this.loading = false;
+                        this.updateTime();
+                    }
+                },
+                setTab(tab) {
+                    this.activeTab = tab;
+                    // Reset errors on tab change
+                    this.exportError = '';
+                    this.adjustError = '';
+                    this.transferError = '';
+                },
+                resetFilters() {
+                    this.filters.search = '';
+                    this.filters.category = '';
+                    this.filters.brand = '';
+                },
+                resetHistoryFilters() {
+                    this.filters.historySearch = '';
+                    this.filters.historyType = '';
+                    this.filters.historyTime = 'all';
+                },
+                getWarehouseName(id) {
+                    const wh = this.warehouses.find(w => w.maKho === id);
+                    return wh ? wh.tenKho : '---';
+                },
+                selectAuditProductQuick(p) {
+                    this.forms.audit.productId = p.maSanPham;
+                    this.forms.audit.actualQuantity = p.soLuongTon;
+                    this.forms.audit.note = '';
+                    this.setTab('audit');
+                },
+
+                // Validation previews
+                updateImportPreview() {
+                    // No validation logic needed
+                },
+                updateExportPreview() {
+                    this.exportError = '';
+                    if (this.forms.export.productId && this.forms.export.quantity) {
+                        if (this.forms.export.quantity > this.selectedExportProduct.soLuongTon) {
+                            this.exportError = `Số lượng xuất vượt quá tồn kho khả dụng (${this.selectedExportProduct.soLuongTon} cái)!`;
+                        }
+                    }
+                },
+                updateAuditPreview() {
+                    // Handled by computed properties
+                },
+                updateAdjustPreview() {
+                    this.adjustError = '';
+                    if (this.forms.adjust.productId && this.forms.adjust.quantity) {
+                        if (this.forms.adjust.direction === 'decrease' && this.forms.adjust.quantity > this.selectedAdjustProduct.soLuongTon) {
+                            this.adjustError = `Số lượng điều chỉnh giảm vượt quá tồn kho hiện tại (${this.selectedAdjustProduct.soLuongTon} cái)!`;
+                        }
+                    }
+                },
+                getAdjustedPreviewQty() {
+                    if (!this.forms.adjust.productId || !this.forms.adjust.quantity) return 0;
+                    if (this.forms.adjust.direction === 'increase') {
+                        return this.selectedAdjustProduct.soLuongTon + this.forms.adjust.quantity;
+                    } else {
+                        return this.selectedAdjustProduct.soLuongTon - this.forms.adjust.quantity;
+                    }
+                },
+                updateTransferPreview() {
+                    this.transferError = '';
+                    if (this.forms.transfer.fromWarehouseId === this.forms.transfer.toWarehouseId) {
+                        this.transferError = 'Kho nguồn và kho đích nhận không được giống nhau!';
+                        return;
+                    }
+                    if (this.forms.transfer.productId && this.forms.transfer.quantity) {
+                        if (this.forms.transfer.quantity > this.selectedTransferProduct.soLuongTon) {
+                            this.transferError = `Số lượng chuyển vượt quá tồn kho hiện tại (${this.selectedTransferProduct.soLuongTon} cái)!`;
+                        }
+                    }
+                },
+
+                // Forms submissions
+                async submitImport() {
+                    this.submitting = true;
+                    try {
+                        const payload = {
+                            productId: this.forms.import.productId,
+                            quantity: this.forms.import.quantity,
+                            source: this.forms.import.source,
+                            warehouseId: this.forms.import.warehouseId,
+                            note: this.forms.import.note
+                        };
+
+                        const res = await axios.post('/api/inventory/import', payload);
+                        
+                        await Swal.fire({
+                            title: 'Thành công!',
+                            text: res.data.message,
+                            icon: 'success',
+                            confirmButtonText: 'Đồng ý'
+                        });
+
+                        // Reset form
+                        this.forms.import.productId = '';
+                        this.forms.import.quantity = 10;
+                        this.forms.import.note = '';
+
+                        // Refresh and redirect to Stock
+                        await this.fetchData();
+                        this.setTab('stock');
+                    } catch (err) {
+                        const msg = err.response?.data?.message || 'Có lỗi xảy ra khi nhập kho.';
+                        Swal.fire('Lỗi', msg, 'error');
+                    } finally {
+                        this.submitting = false;
+                    }
+                },
+                async submitExport() {
+                    if (this.exportError) return;
+                    this.submitting = true;
+                    try {
+                        const payload = {
+                            productId: this.forms.export.productId,
+                            quantity: this.forms.export.quantity,
+                            source: this.forms.export.source,
+                            warehouseId: this.forms.export.warehouseId,
+                            note: this.forms.export.note
+                        };
+
+                        const res = await axios.post('/api/inventory/export', payload);
+
+                        await Swal.fire({
+                            title: 'Thành công!',
+                            text: res.data.message,
+                            icon: 'success',
+                            confirmButtonText: 'Đồng ý'
+                        });
+
+                        // Reset form
+                        this.forms.export.productId = '';
+                        this.forms.export.quantity = 1;
+                        this.forms.export.note = '';
+
+                        await this.fetchData();
+                        this.setTab('stock');
+                    } catch (err) {
+                        const msg = err.response?.data?.message || 'Có lỗi xảy ra khi xuất kho.';
+                        Swal.fire('Lỗi', msg, 'error');
+                    } finally {
+                        this.submitting = false;
+                    }
+                },
+                async submitAudit() {
+                    this.submitting = true;
+                    try {
+                        const payload = {
+                            productId: this.forms.audit.productId,
+                            actualQuantity: this.forms.audit.actualQuantity,
+                            warehouseId: this.forms.audit.warehouseId,
+                            note: this.forms.audit.note
+                        };
+
+                        const res = await axios.post('/api/inventory/audit', payload);
+
+                        await Swal.fire({
+                            title: 'Hoàn thành!',
+                            text: res.data.message,
+                            icon: 'success',
+                            confirmButtonText: 'Đồng ý'
+                        });
+
+                        // Reset form
+                        this.forms.audit.productId = '';
+                        this.forms.audit.actualQuantity = 0;
+                        this.forms.audit.note = '';
+
+                        await this.fetchData();
+                        this.setTab('stock');
+                    } catch (err) {
+                        const msg = err.response?.data?.message || 'Có lỗi xảy ra khi kiểm kê kho.';
+                        Swal.fire('Lỗi', msg, 'error');
+                    } finally {
+                        this.submitting = false;
+                    }
+                },
+                async submitAdjust() {
+                    if (this.adjustError) return;
+                    this.submitting = true;
+                    try {
+                        const qtyChange = this.forms.adjust.direction === 'increase' 
+                            ? this.forms.adjust.quantity 
+                            : -this.forms.adjust.quantity;
+
+                        const payload = {
+                            productId: this.forms.adjust.productId,
+                            quantityChange: qtyChange,
+                            reason: this.forms.adjust.reason,
+                            warehouseId: this.forms.adjust.warehouseId,
+                            note: this.forms.adjust.note
+                        };
+
+                        const res = await axios.post('/api/inventory/adjust', payload);
+
+                        await Swal.fire({
+                            title: 'Thành công!',
+                            text: res.data.message,
+                            icon: 'success',
+                            confirmButtonText: 'Đồng ý'
+                        });
+
+                        // Reset form
+                        this.forms.adjust.productId = '';
+                        this.forms.adjust.quantity = 1;
+                        this.forms.adjust.reason = '';
+                        this.forms.adjust.note = '';
+
+                        await this.fetchData();
+                        this.setTab('stock');
+                    } catch (err) {
+                        const msg = err.response?.data?.message || 'Có lỗi xảy ra khi điều chỉnh kho.';
+                        Swal.fire('Lỗi', msg, 'error');
+                    } finally {
+                        this.submitting = false;
+                    }
+                },
+                async submitTransfer() {
+                    if (this.transferError) return;
+                    this.submitting = true;
+                    try {
+                        const payload = {
+                            productId: this.forms.transfer.productId,
+                            quantity: this.forms.transfer.quantity,
+                            fromWarehouseId: this.forms.transfer.fromWarehouseId,
+                            toWarehouseId: this.forms.transfer.toWarehouseId,
+                            note: this.forms.transfer.note
+                        };
+
+                        const res = await axios.post('/api/inventory/transfer', payload);
+
+                        await Swal.fire({
+                            title: 'Thành công!',
+                            text: res.data.message,
+                            icon: 'success',
+                            confirmButtonText: 'Đồng ý'
+                        });
+
+                        // Reset form
+                        this.forms.transfer.productId = '';
+                        this.forms.transfer.quantity = 10;
+                        this.forms.transfer.note = '';
+
+                        await this.fetchData();
+                        this.setTab('stock');
+                    } catch (err) {
+                        const msg = err.response?.data?.message || 'Có lỗi xảy ra khi chuyển kho.';
+                        Swal.fire('Lỗi', msg, 'error');
+                    } finally {
+                        this.submitting = false;
+                    }
+                }
+            }
+        });
+    </script>
+}
