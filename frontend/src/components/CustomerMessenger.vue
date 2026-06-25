@@ -12,12 +12,12 @@
           <h3>NovaTech Support</h3>
           <p>Thường phản hồi trong vài phút</p>
         </div>
-        <button @click="isOpen = false">×</button>
+        <button type="button" @click="isOpen = false">×</button>
       </div>
 
       <div ref="messagePanel" class="chat-messages">
         <div v-if="!thread" class="chat-empty">
-          Chào bạn 👋 Hãy gửi câu hỏi, nhân viên NovaTech sẽ trả lời tại đây.
+          Chào bạn 👋 Hãy nhập tin nhắn để bắt đầu chat với NovaTech.
         </div>
 
         <template v-else>
@@ -38,41 +38,14 @@
         </template>
       </div>
 
-      <div v-if="!thread" class="chat-form">
-        <input
-          v-model="form.customerName"
-          placeholder="Tên của bạn"
-        />
-
-        <input
-          v-model="form.customerPhone"
-          placeholder="Số điện thoại"
-        />
-
-        <input
-          v-model="form.subject"
-          placeholder="Tiêu đề"
-        />
-
+      <div class="chat-reply">
         <textarea
-          v-model="form.message"
-          placeholder="Nhập câu hỏi của bạn..."
-          @keydown.enter.exact.prevent="sendMessage"
-        ></textarea>
-
-        <button :disabled="sending" @click="sendMessage">
-          {{ sending ? 'Đang gửi...' : 'Gửi câu hỏi' }}
-        </button>
-      </div>
-
-      <div v-else class="chat-reply">
-        <textarea
-          v-model="replyText"
+          v-model="messageText"
           placeholder="Nhập tin nhắn..."
           @keydown.enter.exact.prevent="sendMessage"
         ></textarea>
 
-        <button :disabled="sending" @click="sendMessage">
+        <button type="button" :disabled="sending" @click="sendMessage">
           {{ sending ? 'Đang gửi...' : 'Gửi' }}
         </button>
       </div>
@@ -88,27 +61,153 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import axios from 'axios'
 
-const STORAGE_KEY = 'novatech_customer_thread_id'
+const THREAD_KEY_PREFIX = 'novatech_customer_thread_id'
+const GUEST_ID_KEY = 'novatech_customer_guest_id'
+const LAST_THREAD_KEY = 'novatech_customer_last_thread_id'
+
+const OLD_SHARED_KEY = 'novatech_customer_thread_id'
+const OLD_GUEST_KEY = 'novatech_customer_thread_id_guest'
+const OLD_PROFILE_KEY = 'novatech_customer_profile'
 
 const isOpen = ref(false)
 const sending = ref(false)
 const statusMessage = ref('')
 const statusOk = ref(false)
 const thread = ref(null)
+const threadId = ref(null)
 const messagePanel = ref(null)
-const replyText = ref('')
+const messageText = ref('')
 const lastStaffMessageCount = ref(0)
-
-const threadId = ref(Number(localStorage.getItem(STORAGE_KEY)) || null)
-
-const form = ref({
-  customerName: '',
-  customerPhone: '',
-  subject: 'Hỏi về sản phẩm',
-  message: ''
-})
+const activeStorageKey = ref(null)
 
 let pollingTimer = null
+
+const getSession = () => {
+  try {
+    const raw = localStorage.getItem('novatech_session')
+    return raw ? JSON.parse(raw) : null
+  } catch (err) {
+    return null
+  }
+}
+
+const getGuestId = () => {
+  let guestId = localStorage.getItem(GUEST_ID_KEY)
+
+  if (!guestId) {
+    if (window.crypto && window.crypto.randomUUID) {
+      guestId = window.crypto.randomUUID()
+    } else {
+      guestId = `${Date.now()}_${Math.random().toString(16).slice(2)}`
+    }
+
+    localStorage.setItem(GUEST_ID_KEY, guestId)
+  }
+
+  return guestId
+}
+
+const getThreadStorageKey = () => {
+  const session = getSession()
+  const roles = Array.isArray(session?.roles) ? session.roles : []
+
+  if (session?.email && roles.includes('Khách hàng')) {
+    return `${THREAD_KEY_PREFIX}_email_${session.email}`
+  }
+
+  return `${THREAD_KEY_PREFIX}_guest_${getGuestId()}`
+}
+
+const getCustomerName = () => {
+  const session = getSession()
+
+  if (session?.fullName) return session.fullName
+  if (session?.name) return session.name
+  if (session?.email) return session.email
+
+  const guestId = getGuestId()
+  return `Khách vãng lai #${guestId.slice(-6)}`
+}
+
+const cleanupOldStorage = () => {
+  localStorage.removeItem(OLD_SHARED_KEY)
+  localStorage.removeItem(OLD_GUEST_KEY)
+  localStorage.removeItem(OLD_PROFILE_KEY)
+
+  const keysToRemove = []
+
+  for (let i = 0; i < localStorage.length; i += 1) {
+    const key = localStorage.key(i)
+
+    if (key && key.startsWith(`${THREAD_KEY_PREFIX}_anonymous_`)) {
+      keysToRemove.push(key)
+    }
+  }
+
+  keysToRemove.forEach(key => localStorage.removeItem(key))
+}
+
+const syncThreadIdFromStorage = () => {
+  const storageKey = getThreadStorageKey()
+
+  if (activeStorageKey.value !== storageKey) {
+    activeStorageKey.value = storageKey
+
+    const session = getSession()
+    const storedId = Number(localStorage.getItem(storageKey)) || null
+
+    if (storedId) {
+      threadId.value = storedId
+      thread.value = null
+      lastStaffMessageCount.value = 0
+      return
+    }
+
+    if (!session?.email) {
+      const lastThreadId = Number(localStorage.getItem(LAST_THREAD_KEY)) || null
+
+      if (lastThreadId) {
+        threadId.value = lastThreadId
+        thread.value = null
+        lastStaffMessageCount.value = 0
+        return
+      }
+    }
+
+    threadId.value = null
+    thread.value = null
+    lastStaffMessageCount.value = 0
+    return
+  }
+
+  const storedId = Number(localStorage.getItem(storageKey)) || null
+
+  if (storedId && storedId !== threadId.value) {
+    threadId.value = storedId
+    thread.value = null
+    lastStaffMessageCount.value = 0
+  }
+}
+
+const saveThreadIdToStorage = (id) => {
+  if (!id) return
+
+  const storageKey = getThreadStorageKey()
+
+  localStorage.setItem(storageKey, String(id))
+  localStorage.setItem(LAST_THREAD_KEY, String(id))
+  threadId.value = id
+}
+
+const removeThreadIdFromStorage = () => {
+  const storageKey = getThreadStorageKey()
+
+  localStorage.removeItem(storageKey)
+
+  if (String(localStorage.getItem(LAST_THREAD_KEY)) === String(threadId.value)) {
+    localStorage.removeItem(LAST_THREAD_KEY)
+  }
+}
 
 const unreadStaffCount = computed(() => {
   if (!thread.value?.messages) return 0
@@ -144,16 +243,9 @@ const markStaffMessagesSeen = () => {
   ).length
 }
 
-const toggleChat = () => {
-  isOpen.value = !isOpen.value
-
-  if (isOpen.value) {
-    markStaffMessagesSeen()
-    scrollToBottom()
-  }
-}
-
 const loadThread = async () => {
+  syncThreadIdFromStorage()
+
   if (!threadId.value) return
 
   try {
@@ -161,8 +253,10 @@ const loadThread = async () => {
     const oldMessageCount = thread.value?.messages?.length || 0
 
     thread.value = response.data
+    thread.value.messages = Array.isArray(thread.value.messages) ? thread.value.messages : []
 
-    const newMessageCount = thread.value?.messages?.length || 0
+    const newMessageCount = thread.value.messages.length
+
     if (newMessageCount !== oldMessageCount) {
       scrollToBottom()
     }
@@ -172,55 +266,76 @@ const loadThread = async () => {
     }
   } catch (err) {
     thread.value = null
+    removeThreadIdFromStorage()
     threadId.value = null
-    localStorage.removeItem(STORAGE_KEY)
   }
+}
+
+const toggleChat = async () => {
+  isOpen.value = !isOpen.value
+
+  if (isOpen.value) {
+    await loadThread()
+    markStaffMessagesSeen()
+    scrollToBottom()
+  }
+}
+
+const createNewThread = async () => {
+  const response = await axios.post('/api/CreateCustomerInquiry', {
+    customerName: getCustomerName(),
+    customerPhone: '',
+    subject: 'Chat hỗ trợ NovaTech',
+    message: messageText.value
+  })
+
+  const newThread = response.data?.thread
+
+  if (newThread?.id) {
+    thread.value = newThread
+    thread.value.messages = Array.isArray(thread.value.messages) ? thread.value.messages : []
+
+    saveThreadIdToStorage(newThread.id)
+
+    messageText.value = ''
+    statusOk.value = true
+    statusMessage.value = 'Đã gửi tin nhắn. NovaTech sẽ trả lời tại đây.'
+    scrollToBottom()
+  }
+}
+
+const sendMessageToExistingThread = async () => {
+  await axios.post('/api/AddCustomerInquiryMessage', {
+    threadId: threadId.value,
+    message: messageText.value
+  })
+
+  messageText.value = ''
+  statusOk.value = true
+  statusMessage.value = 'Đã gửi tin nhắn.'
+
+  await loadThread()
+  scrollToBottom()
 }
 
 const sendMessage = async () => {
   statusMessage.value = ''
 
+  if (!messageText.value.trim()) {
+    statusOk.value = false
+    statusMessage.value = 'Vui lòng nhập nội dung tin nhắn.'
+    return
+  }
+
   try {
     sending.value = true
 
-    if (!threadId.value) {
-      if (!form.value.customerName.trim() || !form.value.message.trim()) {
-        statusOk.value = false
-        statusMessage.value = 'Vui lòng nhập tên và nội dung câu hỏi.'
-        return
-      }
+    await loadThread()
 
-      const response = await axios.post('/api/CreateCustomerInquiry', form.value)
-      const newThread = response.data?.thread
-
-      if (newThread?.id) {
-        threadId.value = newThread.id
-        thread.value = newThread
-        localStorage.setItem(STORAGE_KEY, String(newThread.id))
-
-        form.value.message = ''
-        statusOk.value = true
-        statusMessage.value = 'Đã gửi câu hỏi. NovaTech sẽ trả lời tại đây.'
-        scrollToBottom()
-      }
+    if (threadId.value) {
+      await sendMessageToExistingThread()
     } else {
-      if (!replyText.value.trim()) {
-        statusOk.value = false
-        statusMessage.value = 'Vui lòng nhập nội dung tin nhắn.'
-        return
-      }
-
-      await axios.post('/api/AddCustomerInquiryMessage', {
-        threadId: threadId.value,
-        message: replyText.value
-      })
-
-      replyText.value = ''
-      statusOk.value = true
-      statusMessage.value = 'Đã gửi tin nhắn.'
-
-      await loadThread()
-      scrollToBottom()
+      await createNewThread()
     }
   } catch (err) {
     statusOk.value = false
@@ -231,6 +346,7 @@ const sendMessage = async () => {
 }
 
 onMounted(() => {
+  cleanupOldStorage()
   loadThread()
 
   pollingTimer = setInterval(() => {
@@ -281,7 +397,7 @@ onBeforeUnmount(() => {
 
 .chat-box {
   width: 360px;
-  height: 540px;
+  height: 440px;
   background: white;
   border-radius: 18px;
   box-shadow: 0 20px 60px rgba(15, 23, 42, 0.25);
@@ -381,7 +497,6 @@ onBeforeUnmount(() => {
   opacity: 0.7;
 }
 
-.chat-form,
 .chat-reply {
   padding: 12px;
   display: flex;
@@ -390,8 +505,6 @@ onBeforeUnmount(() => {
   border-top: 1px solid #e5e7eb;
 }
 
-.chat-form input,
-.chat-form textarea,
 .chat-reply textarea {
   width: 100%;
   border: 1px solid #cbd5e1;
@@ -400,15 +513,10 @@ onBeforeUnmount(() => {
   outline: none;
   font-size: 14px;
   box-sizing: border-box;
-}
-
-.chat-form textarea,
-.chat-reply textarea {
   resize: none;
   height: 70px;
 }
 
-.chat-form button,
 .chat-reply button {
   border: none;
   border-radius: 10px;
@@ -419,7 +527,6 @@ onBeforeUnmount(() => {
   font-weight: 600;
 }
 
-.chat-form button:disabled,
 .chat-reply button:disabled {
   opacity: 0.6;
   cursor: not-allowed;

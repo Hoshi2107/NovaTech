@@ -995,27 +995,35 @@ const handleMockRequest = async (endpoint, method, body, config) => {
         const customer = db.customers.find(item => item.phone === customerPhone) || null;
 
         const thread = {
-          id: db.customerInboxThreads.length > 0
-            ? Math.max(...db.customerInboxThreads.map(item => Number(item.id) || 0)) + 1
-            : 1,
-          customerId: customer?.id || 0,
-          customerName: customerName,
-          customerPhone: customerPhone,
-          channel: 'Store',
-          subject: subjectText,
-          status: 'Unread',
-          priority: 'Medium',
-          updatedAt: new Date().toISOString(),
-          messages: [
-            {
-              id: 1,
-              sender: 'customer',
-              text: messageText,
-              timestamp: new Date().toISOString(),
-              isRead: false
-            }
-          ]
-        };
+  id: db.customerInboxThreads.length > 0
+    ? Math.max(...db.customerInboxThreads.map(item => Number(item.id) || 0)) + 1
+    : 1,
+  customerId: customer?.id || 0,
+  customerName: customerName,
+  customerPhone: customerPhone,
+  channel: 'Store',
+  subject: subjectText,
+  status: 'Unread',
+  priority: 'Medium',
+  updatedAt: new Date().toISOString(),
+  messages: [
+    {
+      id: 1,
+      sender: 'customer',
+      text: messageText,
+      timestamp: new Date().toISOString(),
+      isRead: false
+    },
+    {
+      id: 2,
+      sender: 'staff',
+      text: 'Anh/chị vui lòng chờ, admin sẽ phản hồi lại sau 10 phút.',
+      timestamp: new Date().toISOString(),
+      isRead: true,
+      isAutoReply: true
+    }
+  ]
+};
 
         db.customerInboxThreads.unshift(thread);
         saveDb(db);
