@@ -6,11 +6,13 @@
     var userRolesStr = session?.GetString("UserRoles") ?? "";
     var roles = userRolesStr.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
     var hasDash = roles.Contains("Super Admin") || roles.Contains("Admin") || roles.Contains("Quản lý cửa hàng") || roles.Contains("Nhân viên bán hàng") || roles.Contains("Nhân viên kho") || roles.Contains("Kế toán") || roles.Contains("Marketing");
+    var ctrl = ViewContext.RouteData.Values["controller"]?.ToString();
+    var act = ViewContext.RouteData.Values["action"]?.ToString();
 }
 <aside class="sidebar position-fixed top-0 bottom-0 start-0 z-3 p-3">
     <div class="sidebar-brand d-flex align-items-center gap-2 mb-4 pb-3 border-bottom border-secondary border-opacity-25">
         <div class="logo-icon bg-gradient-cyan text-white d-flex align-items-center justify-content-center rounded-3 shadow" style="width: 40px; height: 40px;">
-            <i class="fa-solid fa-bolt-lightning fs-5"></i>
+            <img src="/assets/images/NovaTech-Logo.png" alt="NovaTech Logo" class="img-fluid" style="width: 100%; height: 100%; border-radius: 10%;"/>
         </div>
         <div>
             <h5 class="m-0 fw-bold text-dark tracking-wider">NovaTech</h5>
@@ -21,7 +23,7 @@
     <div class="sidebar-menu overflow-y-auto" style="max-height: calc(100vh - 120px);">
         <ul class="nav flex-column gap-1">
             <li class="nav-item">
-                <a href="@Url.Action("Index", "Dashboard")" class="nav-link-custom active d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                <a href="@Url.Action("Index", "Dashboard")" class="nav-link-custom @(ctrl == "Dashboard" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
                     <i class="fa-solid fa-chart-line text-cyan fs-5"></i>
                     <span>Tổng quan</span>
                 </a>
@@ -31,25 +33,25 @@
             {
                 <li class="nav-item-header text-xs text-uppercase tracking-widest text-muted-custom mt-3 mb-2 px-3">Hàng hóa</li>
                 <li class="nav-item">
-                    <a href="@Url.Action("Index", "Product")" class="nav-link-custom d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                    <a href="@Url.Action("Index", "Product")" class="nav-link-custom @(ctrl == "Product" && act == "Index" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
                         <i class="fa-solid fa-box text-cyan fs-5"></i>
                         <span>Sản phẩm</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="@Url.Action("Categories", "Product")" class="nav-link-custom d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                    <a href="@Url.Action("Categories", "Product")" class="nav-link-custom @(ctrl == "Product" && act == "Categories" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
                         <i class="fa-solid fa-tags text-cyan fs-5"></i>
                         <span>Danh mục</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="@Url.Action("Brands", "Product")" class="nav-link-custom d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                    <a href="@Url.Action("Brands", "Product")" class="nav-link-custom @(ctrl == "Product" && act == "Brands" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
                         <i class="fa-solid fa-copyright text-cyan fs-5"></i>
                         <span>Thương hiệu</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="@Url.Action("Suppliers", "Product")" class="nav-link-custom d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                    <a href="@Url.Action("Suppliers", "Product")" class="nav-link-custom @(ctrl == "Product" && act == "Suppliers" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
                         <i class="fa-solid fa-truck-field text-cyan fs-5"></i>
                         <span>Nhà cung cấp</span>
                     </a>
@@ -60,19 +62,19 @@
             {
                 <li class="nav-item-header text-xs text-uppercase tracking-widest text-muted-custom mt-3 mb-2 px-3">Kho bãi</li>
                 <li class="nav-item">
-                    <a href="@Url.Action("Index", "Inventory")" class="nav-link-custom d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                    <a href="@Url.Action("Index", "Inventory")" class="nav-link-custom @(ctrl == "Inventory" && act == "Index" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
                         <i class="fa-solid fa-warehouse text-cyan fs-5"></i>
                         <span>Tồn kho</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="@Url.Action("Import", "Inventory")" class="nav-link-custom d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                    <a href="@Url.Action("Import", "Inventory")" class="nav-link-custom @(ctrl == "Inventory" && act == "Import" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
                         <i class="fa-solid fa-circle-down text-cyan fs-5"></i>
                         <span>Nhập kho</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="@Url.Action("Export", "Inventory")" class="nav-link-custom d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                    <a href="@Url.Action("Export", "Inventory")" class="nav-link-custom @(ctrl == "Inventory" && act == "Export" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
                         <i class="fa-solid fa-circle-up text-cyan fs-5"></i>
                         <span>Xuất kho</span>
                     </a>
@@ -83,7 +85,7 @@
             {
                 <li class="nav-item-header text-xs text-uppercase tracking-widest text-muted-custom mt-3 mb-2 px-3">Bán hàng & CSKH</li>
                 <li class="nav-item">
-                    <a href="@Url.Action("Index", "Order")" class="nav-link-custom d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                    <a href="@Url.Action("Index", "Order")" class="nav-link-custom @(ctrl == "Order" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
                         <i class="fa-solid fa-file-invoice-dollar text-cyan fs-5"></i>
                         <span>Đơn hàng</span>
                     </a>
@@ -93,7 +95,7 @@
             @if (AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Customer"))
             {
                 <li class="nav-item">
-                    <a href="@Url.Action("Index", "Customer")" class="nav-link-custom d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                    <a href="@Url.Action("Index", "Customer")" class="nav-link-custom @(ctrl == "Customer" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
                         <i class="fa-solid fa-user-group text-cyan fs-5"></i>
                         <span>Khách hàng</span>
                     </a>
@@ -103,7 +105,7 @@
             @if (AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Promotion"))
             {
                 <li class="nav-item">
-                    <a href="@Url.Action("Index", "Promotion")" class="nav-link-custom d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                    <a href="@Url.Action("Index", "Promotion")" class="nav-link-custom @(ctrl == "Promotion" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
                         <i class="fa-solid fa-gift text-cyan fs-5"></i>
                         <span>Khuyến mãi</span>
                     </a>
@@ -114,7 +116,7 @@
             {
                 <li class="nav-item-header text-xs text-uppercase tracking-widest text-muted-custom mt-3 mb-2 px-3">Tích hợp</li>
                 <li class="nav-item">
-                    <a href="@Url.Action("Index", "TikTok")" class="nav-link-custom d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                    <a href="@Url.Action("Index", "TikTok")" class="nav-link-custom @(ctrl == "TikTok" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
                         <i class="fa-brands fa-tiktok text-cyan fs-5"></i>
                         <span>TikTok Shop</span>
                     </a>
@@ -123,7 +125,7 @@
 
             <li class="nav-item-header text-xs text-uppercase tracking-widest text-muted-custom mt-3 mb-2 px-3">Hệ thống</li>
             <li class="nav-item">
-                <a href="@Url.Action("Index", "Ai")" class="nav-link-custom d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                <a href="@Url.Action("Index", "Ai")" class="nav-link-custom @(ctrl == "Ai" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
                     <i class="fa-solid fa-robot text-cyan fs-5"></i>
                     <span>AI Assistant</span>
                 </a>
@@ -132,7 +134,7 @@
             @if (AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Employee"))
             {
                 <li class="nav-item">
-                    <a href="@Url.Action("Index", "Employee")" class="nav-link-custom d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                    <a href="@Url.Action("Index", "Employee")" class="nav-link-custom @(ctrl == "Employee" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
                         <i class="fa-solid fa-users-gear text-cyan fs-5"></i>
                         <span>Nhân sự & RBAC</span>
                     </a>
@@ -142,7 +144,7 @@
             @if (AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Report"))
             {
                 <li class="nav-item">
-                    <a href="@Url.Action("Index", "Report")" class="nav-link-custom d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                    <a href="@Url.Action("Index", "Report")" class="nav-link-custom @(ctrl == "Report" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
                         <i class="fa-solid fa-chart-pie text-cyan fs-5"></i>
                         <span>Báo cáo</span>
                     </a>
@@ -152,7 +154,7 @@
             @if (AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Setting"))
             {
                 <li class="nav-item">
-                    <a href="@Url.Action("Index", "Setting")" class="nav-link-custom d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                    <a href="@Url.Action("Index", "Setting")" class="nav-link-custom @(ctrl == "Setting" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
                         <i class="fa-solid fa-gears text-cyan fs-5"></i>
                         <span>Cấu hình</span>
                     </a>
