@@ -23,7 +23,7 @@ namespace DATN64.Controllers
             ViewBag.RolesString = rolesString;
             
             // Allow access based on role
-            ViewBag.CanAccessERP = roles.Any(r => r == "Super Admin" || r == "Admin" || r == "Quản lý cửa hàng" || r == "Nhân viên bán hàng" || r == "Nhân viên kho" || r == "Kế toán" || r == "Marketing");
+            ViewBag.CanAccessERP = roles.Any(r => r == "Super Admin" || r == "Admin" || r == "Quản lý cửa hàng" || r == "Nhân viên bán hàng" || r == "Nhân viên kho" || r == "Quản lý kho" || r == "Kế toán" || r == "Marketing");
             ViewBag.CanAccessPOS = roles.Any(r => r == "Super Admin" || r == "Admin" || r == "Quản lý cửa hàng" || r == "Nhân viên bán hàng");
             ViewBag.CanAccessOnline = true; // Everyone can view the retail shop
 

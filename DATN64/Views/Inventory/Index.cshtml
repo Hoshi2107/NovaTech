@@ -1,6 +1,11 @@
 @{
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
     ViewData["Title"] = "Quản lý Kho bãi";
+
+    var session = Context.Session;
+    var userRolesStr = session?.GetString("UserRoles") ?? "";
+    var roles = userRolesStr.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
+    var isManager = roles.Contains("Admin") || roles.Contains("Super Admin") || roles.Contains("Quản lý") || roles.Contains("Quản lý cửa hàng");
 }
 
 <div id="app" class="container-fluid animate-fade-in" v-cloak>
@@ -31,16 +36,7 @@
                         <i class="fa-solid fa-boxes-stacked me-2"></i>Tồn kho
                     </button>
                 </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link rounded-3 py-2.5" :class="{ active: activeTab === 'import' }" @@click="setTab('import')">
-                        <i class="fa-solid fa-circle-down me-2 text-success"></i>Nhập kho
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link rounded-3 py-2.5" :class="{ active: activeTab === 'export' }" @@click="setTab('export')">
-                        <i class="fa-solid fa-circle-up me-2 text-danger"></i>Xuất kho
-                    </button>
-                </li>
+
                 <li class="nav-item" role="presentation">
                     <button class="nav-link rounded-3 py-2.5" :class="{ active: activeTab === 'audit' }" @@click="setTab('audit')">
                         <i class="fa-solid fa-clipboard-check me-2 text-warning"></i>Kiểm kê
@@ -616,6 +612,58 @@
         <div class="tab-pane show active" v-if="activeTab === 'history'">
             <div class="card border-0 shadow-sm rounded-4 bg-glass">
                 <div class="card-body p-4">
+                    <!-- Pending Approvals Highlight Panel -->
+                    <div class="mb-4 p-4 rounded-4 bg-warning bg-opacity-10 border border-warning border-opacity-25 animate-fade-in" v-if="pendingTransactions.length > 0">
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="d-inline-flex align-items-center justify-content-center bg-warning text-dark rounded-circle me-2" style="width: 28px; height: 28px;">
+                                <i class="fa-solid fa-hourglass-half text-xs"></i>
+                            </span>
+                            <h5 class="fw-bold mb-0 text-warning-emphasis">Yêu cầu giao dịch kho chờ duyệt (${ pendingTransactions.length } phiếu)</h5>
+                        </div>
+                        <div class="table-responsive bg-white rounded-3 border border-secondary border-opacity-10 shadow-sm">
+                            <table class="table align-middle table-sm mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Mã phiếu</th>
+                                        <th>Loại</th>
+                                        <th>Sản phẩm</th>
+                                        <th class="text-center">Số lượng</th>
+                                        <th>Người đề xuất</th>
+                                        <th>Ghi chú / Lý do</th>
+                                        <th class="text-end px-3">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="tx in pendingTransactions" :key="tx.id">
+                                        <td><span class="badge bg-dark fw-mono font-monospace">${ tx.code }</span></td>
+                                        <td>
+                                            <span class="badge rounded-pill" :class="tx.type === 'Nhập kho' ? 'bg-success' : 'bg-danger'">${ tx.type }</span>
+                                        </td>
+                                        <td class="fw-bold text-xs">${ tx.productName }</td>
+                                        <td class="text-center fw-bold" :class="tx.type === 'Nhập kho' ? 'text-success' : 'text-danger'">
+                                            ${ tx.type === 'Nhập kho' ? '+' : '' }${ tx.quantityChange } cái
+                                        </td>
+                                        <td class="text-xs text-secondary">${ tx.creator }</td>
+                                        <td class="text-xs text-muted">${ tx.note }</td>
+                                        <td class="text-end px-3">
+                                            <div class="d-flex gap-1 justify-content-end" v-if="isManager">
+                                                <button class="btn btn-sm btn-success py-1 px-2.5 rounded fw-bold text-xs" @@click="approveTx(tx)" :disabled="submitting">
+                                                    <i class="fa-solid fa-check me-1"></i>Duyệt
+                                                </button>
+                                                <button class="btn btn-sm btn-danger py-1 px-2.5 rounded fw-bold text-xs" @@click="rejectTx(tx)" :disabled="submitting">
+                                                    <i class="fa-solid fa-xmark me-1"></i>Từ chối
+                                                </button>
+                                            </div>
+                                            <span class="text-warning text-xs fw-bold" v-else>
+                                                <i class="fa-solid fa-lock me-1"></i>Chờ quản lý duyệt
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                     <!-- Filters Grid -->
                     <div class="row g-3 mb-4">
                         <div class="col-md-4">
@@ -659,16 +707,18 @@
                                     <th>Thời gian</th>
                                     <th>Loại giao dịch</th>
                                     <th>Sản phẩm</th>
-                                    <th class="text-center">Trước giao dịch</th>
-                                    <th class="text-center">Thay đổi (+/-)</th>
-                                    <th class="text-center">Sau giao dịch</th>
-                                    <th>Người thực hiện</th>
+                                    <th class="text-center">Trước GD</th>
+                                    <th class="text-center">Thay đổi</th>
+                                    <th class="text-center">Sau GD</th>
+                                    <th class="text-center">Trạng thái</th>
+                                    <th>Người tạo</th>
                                     <th>Ghi chú / Lý do</th>
+                                    <th class="text-end" v-if="isManager">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-if="filteredTransactions.length === 0">
-                                    <td colspan="9" class="text-center py-5 text-muted">
+                                    <td :colspan="isManager ? 11 : 10" class="text-center py-5 text-muted">
                                         <i class="fa-solid fa-clock-rotate-left fs-2 mb-2 d-block"></i>
                                         Không tìm thấy giao dịch nào phù hợp!
                                     </td>
@@ -701,9 +751,27 @@
                                     <td class="text-center text-xs text-dark fw-bold">
                                         ${ tx.soLuongSau != null ? tx.soLuongSau + ' cái' : '---' }
                                     </td>
+                                    <td class="text-center">
+                                        <span class="badge rounded-pill" :class="{
+                                            'bg-warning text-dark': tx.trangThai === 'Chờ duyệt',
+                                            'bg-success': tx.trangThai === 'Đã duyệt',
+                                            'bg-danger': tx.trangThai === 'Đã từ chối'
+                                        }">${ tx.trangThai || 'Đã duyệt' }</span>
+                                    </td>
                                     <td class="text-xs text-secondary">${ tx.creator }</td>
                                     <td class="text-xs text-muted-custom" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="tx.note">
                                         ${ tx.note }
+                                    </td>
+                                    <td class="text-end" v-if="isManager">
+                                        <div class="d-flex gap-1 justify-content-end" v-if="tx.trangThai === 'Chờ duyệt'">
+                                            <button class="btn btn-xs btn-success py-1 px-2 rounded text-xxs fw-bold" @@click="approveTx(tx)" :disabled="submitting">
+                                                <i class="fa-solid fa-check"></i> Duyệt
+                                            </button>
+                                            <button class="btn btn-xs btn-danger py-1 px-2 rounded text-xxs fw-bold" @@click="rejectTx(tx)" :disabled="submitting">
+                                                <i class="fa-solid fa-xmark"></i> Từ chối
+                                            </button>
+                                        </div>
+                                        <span class="text-muted text-xxs" v-else>---</span>
                                     </td>
                                 </tr>
                             </tbody>
@@ -775,6 +843,7 @@
                 brands: [],
                 loading: false,
                 submitting: false,
+                isManager: @(isManager ? "true" : "false"),
                 exportError: '',
                 adjustError: '',
                 filters: {
@@ -907,6 +976,9 @@
                     const diff = this.auditDiff;
                     if (diff === 0) return 'bg-secondary bg-opacity-10 text-secondary';
                     return diff > 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger';
+                },
+                pendingTransactions() {
+                    return this.transactions.filter(t => t.trangThai === 'Chờ duyệt');
                 }
             },
             mounted() {
@@ -1021,9 +1093,9 @@
                         const res = await axios.post('/api/inventory/import', payload);
                         
                         await Swal.fire({
-                            title: 'Thành công!',
-                            text: res.data.message,
-                            icon: 'success',
+                            title: 'Đã gửi yêu cầu!',
+                            text: res.data.message || 'Phiếu nhập kho đã được tạo và đang chờ quản lý duyệt.',
+                            icon: 'info',
                             confirmButtonText: 'Đồng ý'
                         });
 
@@ -1056,9 +1128,9 @@
                         const res = await axios.post('/api/inventory/export', payload);
 
                         await Swal.fire({
-                            title: 'Thành công!',
-                            text: res.data.message,
-                            icon: 'success',
+                            title: 'Đã gửi yêu cầu!',
+                            text: res.data.message || 'Phiếu xuất kho đã được tạo và đang chờ quản lý duyệt.',
+                            icon: 'info',
                             confirmButtonText: 'Đồng ý'
                         });
 
@@ -1142,6 +1214,66 @@
                         this.setTab('stock');
                     } catch (err) {
                         const msg = err.response?.data?.message || 'Có lỗi xảy ra khi điều chỉnh kho.';
+                        Swal.fire('Lỗi', msg, 'error');
+                    } finally {
+                        this.submitting = false;
+                    }
+                },
+
+                // Approval workflow
+                async approveTx(tx) {
+                    const confirm = await Swal.fire({
+                        title: 'Xác nhận duyệt?',
+                        html: `Bạn có chắc muốn <b>duyệt</b> phiếu <b>${tx.code}</b>?<br>Sản phẩm: <b>${tx.productName}</b><br>Số lượng: <b>${tx.quantityChange > 0 ? '+' : ''}${tx.quantityChange} cái</b>`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Duyệt',
+                        cancelButtonText: 'Huỷ',
+                        confirmButtonColor: '#198754'
+                    });
+                    if (!confirm.isConfirmed) return;
+
+                    this.submitting = true;
+                    try {
+                        const res = await axios.post(`/api/inventory/approve/${tx.id}`);
+                        await Swal.fire({
+                            title: 'Đã duyệt!',
+                            text: res.data.message || 'Phiếu đã được duyệt và tồn kho đã được cập nhật.',
+                            icon: 'success',
+                            confirmButtonText: 'Đồng ý'
+                        });
+                        await this.fetchData();
+                    } catch (err) {
+                        const msg = err.response?.data?.message || 'Có lỗi xảy ra khi duyệt phiếu.';
+                        Swal.fire('Lỗi', msg, 'error');
+                    } finally {
+                        this.submitting = false;
+                    }
+                },
+                async rejectTx(tx) {
+                    const confirm = await Swal.fire({
+                        title: 'Xác nhận từ chối?',
+                        html: `Bạn có chắc muốn <b>từ chối</b> phiếu <b>${tx.code}</b>?<br>Sản phẩm: <b>${tx.productName}</b>`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Từ chối',
+                        cancelButtonText: 'Huỷ',
+                        confirmButtonColor: '#dc3545'
+                    });
+                    if (!confirm.isConfirmed) return;
+
+                    this.submitting = true;
+                    try {
+                        const res = await axios.post(`/api/inventory/reject/${tx.id}`);
+                        await Swal.fire({
+                            title: 'Đã từ chối!',
+                            text: res.data.message || 'Phiếu đã bị từ chối. Tồn kho không thay đổi.',
+                            icon: 'info',
+                            confirmButtonText: 'Đồng ý'
+                        });
+                        await this.fetchData();
+                    } catch (err) {
+                        const msg = err.response?.data?.message || 'Có lỗi xảy ra khi từ chối phiếu.';
                         Swal.fire('Lỗi', msg, 'error');
                     } finally {
                         this.submitting = false;

@@ -61,6 +61,8 @@ namespace DATN64.Models
                     ALTER TABLE dbo.InventoryTransaction ADD SoLuongTruoc INT NULL;
                 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.InventoryTransaction') AND name = 'SoLuongSau')
                     ALTER TABLE dbo.InventoryTransaction ADD SoLuongSau INT NULL;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.InventoryTransaction') AND name = 'TrangThai')
+                    ALTER TABLE dbo.InventoryTransaction ADD TrangThai NVARCHAR(50) NOT NULL DEFAULT N'Đã duyệt';
             ");
 
             // Create SystemNotification
@@ -229,6 +231,25 @@ namespace DATN64.Models
             try
             {
                 var passwordHasher = new Microsoft.AspNetCore.Identity.PasswordHasher<NhanVien>();
+                
+                // Seed demo accounts if they don't exist
+                var demoAccounts = new List<NhanVien>
+                {
+                    new NhanVien { HoTen = "Super Admin Demo", Email = "admin@novatech.vn", SoDienThoai = "0911111111", MatKhau = "123", VaiTro = "Admin", TrangThai = "Hoạt động" },
+                    new NhanVien { HoTen = "Bán Hàng Demo", Email = "sale@novatech.vn", SoDienThoai = "0922222222", MatKhau = "123", VaiTro = "Nhân viên bán hàng", TrangThai = "Hoạt động" },
+                    new NhanVien { HoTen = "Nhân Viên Kho Demo", Email = "kho@novatech.vn", SoDienThoai = "0933333333", MatKhau = "123", VaiTro = "Quản lý kho", TrangThai = "Hoạt động" }
+                };
+
+                foreach (var demo in demoAccounts)
+                {
+                    if (!context.NhanViens.Any(e => e.Email == demo.Email))
+                    {
+                        demo.MatKhau = passwordHasher.HashPassword(demo, demo.MatKhau);
+                        context.NhanViens.Add(demo);
+                    }
+                }
+                context.SaveChanges();
+
                 var staff = context.NhanViens.ToList();
                 foreach (var emp in staff)
                 {

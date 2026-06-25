@@ -130,26 +130,47 @@
                 <span class="badge bg-secondary text-xs cursor-pointer" onclick="fillDemo('kho@novatech.vn')">Nhân viên kho</span>
                 <span class="badge bg-secondary text-xs cursor-pointer" onclick="fillDemo('customer@gmail.com')">Khách hàng</span>
             </div>
+            <div id="demoCredentialsInfo" class="mt-2 p-2 rounded bg-info bg-opacity-10 border border-info border-opacity-20 text-xs text-info" style="display: none; transition: all 0.3s;">
+                <i class="fa-solid fa-circle-info me-1"></i>Đã chọn: <strong id="infoEmail"></strong> | Mật khẩu: <strong>123</strong>
+            </div>
             <p class="text-xxs text-muted mt-2">(Mật khẩu mặc định là: 123)</p>
         </div>
     </div>
 
     <script>
         function fillDemo(email) {
-            document.getElementsByName('email')[0].GiaTri = email;
-            document.getElementById('passwordInput').GiaTri = '123';
+            document.getElementsByName('email')[0].value = email;
+            
+            const pwdInput = document.getElementById('passwordInput');
+            pwdInput.value = '123';
+            pwdInput.type = 'text'; // Hiển thị mật khẩu rõ ràng để người dùng nhìn thấy
+            
+            // Cập nhật icon của nút ẩn/hiện mật khẩu thành "eye-slash" vì mật khẩu đang được hiện
+            const toggleIcon = document.querySelector('#togglePasswordBtn i');
+            if (toggleIcon) {
+                toggleIcon.classList.remove('fa-eye');
+                toggleIcon.classList.add('fa-eye-slash');
+            }
+
+            // Hiển thị thông báo thông tin tài khoản demo đã chọn
+            const infoDiv = document.getElementById('demoCredentialsInfo');
+            const infoEmail = document.getElementById('infoEmail');
+            if (infoDiv && infoEmail) {
+                infoEmail.textContent = email;
+                infoDiv.style.display = 'block';
+            }
         }
 
         // Toggle password visibility
         document.getElementById('togglePasswordBtn').addEventListener('click', function() {
             const pwdInput = document.getElementById('passwordInput');
             const icon = this.querySelector('i');
-            if (pwdInput.Loai === 'password') {
-                pwdInput.Loai = 'text';
+            if (pwdInput.type === 'password') {
+                pwdInput.type = 'text';
                 icon.classList.remove('fa-eye');
                 icon.classList.add('fa-eye-slash');
             } else {
-                pwdInput.Loai = 'password';
+                pwdInput.type = 'password';
                 icon.classList.remove('fa-eye-slash');
                 icon.classList.add('fa-eye');
             }

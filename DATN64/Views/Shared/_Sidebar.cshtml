@@ -5,7 +5,7 @@
     var session = HttpContextAccessor.HttpContext?.Session;
     var userRolesStr = session?.GetString("UserRoles") ?? "";
     var roles = userRolesStr.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
-    var hasDash = roles.Contains("Super Admin") || roles.Contains("Admin") || roles.Contains("Quản lý cửa hàng") || roles.Contains("Nhân viên bán hàng") || roles.Contains("Nhân viên kho") || roles.Contains("Kế toán") || roles.Contains("Marketing");
+    var hasDash = roles.Contains("Super Admin") || roles.Contains("Admin") || roles.Contains("Quản lý cửa hàng") || roles.Contains("Nhân viên bán hàng") || roles.Contains("Nhân viên kho") || roles.Contains("Quản lý kho") || roles.Contains("Kế toán") || roles.Contains("Marketing");
     var ctrl = ViewContext.RouteData.Values["controller"]?.ToString();
     var act = ViewContext.RouteData.Values["action"]?.ToString();
 }

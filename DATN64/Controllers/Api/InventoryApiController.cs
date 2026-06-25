@@ -89,7 +89,8 @@ namespace DATN64.Controllers.Api
                     Date = t.Date.ToString("yyyy-MM-dd HH:mm:ss"),
                     t.Note,
                     t.SoLuongTruoc,
-                    t.SoLuongSau
+                    t.SoLuongSau,
+                    t.TrangThai
                 }).ToList();
 
                 return Ok(result);
@@ -117,10 +118,6 @@ namespace DATN64.Controllers.Api
                     return NotFound(new { message = "Không tìm thấy sản phẩm!" });
                 }
 
-                int beforeQty = product.SoLuongTon;
-                product.SoLuongTon += request.Quantity;
-                int afterQty = product.SoLuongTon;
-
                 int count = await _context.InventoryTransactions.CountAsync(t => t.Type == "Nhập kho") + 1;
                 string code = "PN" + count.ToString("D6");
 
@@ -134,23 +131,22 @@ namespace DATN64.Controllers.Api
                     Creator = HttpContext.Session.GetString("UserName") ?? "Thủ kho",
                     Date = DateTime.Now,
                     Note = string.IsNullOrEmpty(request.Note) ? $"Nhập kho ({request.Source})" : $"{request.Note} (Nguồn: {request.Source})",
-                    SoLuongTruoc = beforeQty,
-                    SoLuongSau = afterQty
+                    TrangThai = "Chờ duyệt",
+                    SoLuongTruoc = null,
+                    SoLuongSau = null
                 };
 
                 _context.InventoryTransactions.Add(tx);
                 await _context.SaveChangesAsync();
 
                 return Ok(new { 
-                    message = $"Nhập kho thành công {request.Quantity} sản phẩm!", 
-                    before = beforeQty, 
-                    after = afterQty, 
+                    message = $"Đã tạo phiếu nhập kho chờ duyệt cho {request.Quantity} sản phẩm! Vui lòng đợi quản lý phê duyệt.", 
                     code = code 
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Lỗi hệ thống khi nhập kho", error = ex.Message });
+                return StatusCode(500, new { message = "Lỗi hệ thống khi tạo phiếu nhập kho", error = ex.Message });
             }
         }
 
@@ -176,10 +172,6 @@ namespace DATN64.Controllers.Api
                     return BadRequest(new { message = $"Số lượng tồn kho khả dụng ({product.SoLuongTon}) không đủ để xuất {request.Quantity}!" });
                 }
 
-                int beforeQty = product.SoLuongTon;
-                product.SoLuongTon -= request.Quantity;
-                int afterQty = product.SoLuongTon;
-
                 int count = await _context.InventoryTransactions.CountAsync(t => t.Type == "Xuất kho") + 1;
                 string code = "PX" + count.ToString("D6");
 
@@ -193,23 +185,128 @@ namespace DATN64.Controllers.Api
                     Creator = HttpContext.Session.GetString("UserName") ?? "Thủ kho",
                     Date = DateTime.Now,
                     Note = string.IsNullOrEmpty(request.Note) ? $"Xuất kho ({request.Source})" : $"{request.Note} (Lý do: {request.Source})",
-                    SoLuongTruoc = beforeQty,
-                    SoLuongSau = afterQty
+                    TrangThai = "Chờ duyệt",
+                    SoLuongTruoc = null,
+                    SoLuongSau = null
                 };
 
                 _context.InventoryTransactions.Add(tx);
                 await _context.SaveChangesAsync();
 
                 return Ok(new { 
-                    message = $"Xuất kho thành công {request.Quantity} sản phẩm!", 
-                    before = beforeQty, 
-                    after = afterQty, 
+                    message = $"Đã tạo phiếu xuất kho chờ duyệt cho {request.Quantity} sản phẩm! Vui lòng đợi quản lý phê duyệt.", 
                     code = code 
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Lỗi hệ thống khi xuất kho", error = ex.Message });
+                return StatusCode(500, new { message = "Lỗi hệ thống khi tạo phiếu xuất kho", error = ex.Message });
+            }
+        }
+
+        // POST: api/inventory/approve/{id}
+        [HttpPost("approve/{id}")]
+        public async Task<IActionResult> ApproveTransaction(int id)
+        {
+            var rolesString = HttpContext.Session.GetString("UserRoles") ?? "";
+            var roles = rolesString.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(r => r.Trim()).ToList();
+            bool isManager = roles.Contains("Super Admin") || roles.Contains("Admin") || roles.Contains("Quản lý") || roles.Contains("Quản lý cửa hàng");
+            if (!isManager)
+            {
+                return StatusCode(403, new { message = "Bạn không có quyền thực hiện thao tác này! Chỉ Quản lý trưởng/Admin mới có quyền duyệt đơn." });
+            }
+
+            try
+            {
+                var tx = await _context.InventoryTransactions.FirstOrDefaultAsync(t => t.Id == id);
+                if (tx == null)
+                {
+                    return NotFound(new { message = "Không tìm thấy giao dịch!" });
+                }
+
+                if (tx.TrangThai != "Chờ duyệt")
+                {
+                    return BadRequest(new { message = "Giao dịch này đã được xử lý từ trước!" });
+                }
+
+                int productId = int.Parse(tx.ProductSKU);
+                var product = await _context.SanPhams.FirstOrDefaultAsync(p => p.MaSanPham == productId);
+                if (product == null)
+                {
+                    return NotFound(new { message = "Không tìm thấy sản phẩm tương ứng!" });
+                }
+
+                int beforeQty = product.SoLuongTon;
+
+                if (tx.Type == "Nhập kho")
+                {
+                    product.SoLuongTon += tx.QuantityChange;
+                }
+                else if (tx.Type == "Xuất kho")
+                {
+                    if (product.SoLuongTon + tx.QuantityChange < 0)
+                    {
+                        return BadRequest(new { message = $"Số lượng tồn kho khả dụng ({product.SoLuongTon}) không đủ để thực hiện xuất {Math.Abs(tx.QuantityChange)}!" });
+                    }
+                    product.SoLuongTon += tx.QuantityChange;
+                }
+                else
+                {
+                    return BadRequest(new { message = "Loại giao dịch không hỗ trợ duyệt!" });
+                }
+
+                int afterQty = product.SoLuongTon;
+
+                tx.TrangThai = "Đã duyệt";
+                tx.SoLuongTruoc = beforeQty;
+                tx.SoLuongSau = afterQty;
+                tx.Date = DateTime.Now;
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Đã phê duyệt phiếu và cập nhật số lượng tồn kho thành công!" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi hệ thống khi duyệt phiếu", error = ex.Message });
+            }
+        }
+
+        // POST: api/inventory/reject/{id}
+        [HttpPost("reject/{id}")]
+        public async Task<IActionResult> RejectTransaction(int id)
+        {
+            var rolesString = HttpContext.Session.GetString("UserRoles") ?? "";
+            var roles = rolesString.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(r => r.Trim()).ToList();
+            bool isManager = roles.Contains("Super Admin") || roles.Contains("Admin") || roles.Contains("Quản lý") || roles.Contains("Quản lý cửa hàng");
+            if (!isManager)
+            {
+                return StatusCode(403, new { message = "Bạn không có quyền thực hiện thao tác này! Chỉ Quản lý trưởng/Admin mới có quyền từ chối đơn." });
+            }
+
+            try
+            {
+                var tx = await _context.InventoryTransactions.FirstOrDefaultAsync(t => t.Id == id);
+                if (tx == null)
+                {
+                    return NotFound(new { message = "Không tìm thấy giao dịch!" });
+                }
+
+                if (tx.TrangThai != "Chờ duyệt")
+                {
+                    return BadRequest(new { message = "Giao dịch này đã được xử lý từ trước!" });
+                }
+
+                tx.TrangThai = "Đã từ chối";
+                tx.Date = DateTime.Now;
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Đã từ chối phiếu giao dịch kho thành công!" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi hệ thống khi từ chối phiếu", error = ex.Message });
             }
         }
 
@@ -250,7 +347,8 @@ namespace DATN64.Controllers.Api
                         ? $"Kiểm kê kho. Thực tế: {request.ActualQuantity}, Lệch: {(diff >= 0 ? "+" : "")}{diff}"
                         : $"{request.Note} (Thực tế: {request.ActualQuantity}, Lệch: {(diff >= 0 ? "+" : "")}{diff})",
                     SoLuongTruoc = beforeQty,
-                    SoLuongSau = request.ActualQuantity
+                    SoLuongSau = request.ActualQuantity,
+                    TrangThai = "Đã duyệt" // Audit is approved immediately
                 };
 
                 _context.InventoryTransactions.Add(tx);
@@ -312,7 +410,8 @@ namespace DATN64.Controllers.Api
                         ? $"Điều chỉnh tồn kho. Lý do: {request.Reason}"
                         : $"Lý do: {request.Reason}. Ghi chú: {request.Note}",
                     SoLuongTruoc = beforeQty,
-                    SoLuongSau = afterQty
+                    SoLuongSau = afterQty,
+                    TrangThai = "Đã duyệt" // Adjust is approved immediately
                 };
 
                 _context.InventoryTransactions.Add(tx);

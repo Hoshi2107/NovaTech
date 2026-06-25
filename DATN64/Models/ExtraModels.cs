@@ -17,6 +17,7 @@ namespace DATN64.Models
         public string Creator { get; set; } = "";
         public DateTime Date { get; set; } = DateTime.Now;
         public string Note { get; set; } = "";
+        public string TrangThai { get; set; } = "Đã duyệt";
 
         // New properties for warehouse transactions
         public int? MaKho { get; set; }
