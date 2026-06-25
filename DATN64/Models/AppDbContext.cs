@@ -21,6 +21,7 @@ namespace DATN64.Models
         public DbSet<Voucher> Vouchers { get; set; }
         public DbSet<DonHang_Voucher> DonHang_Vouchers { get; set; }
         public DbSet<InventoryTransaction> InventoryTransactions { get; set; }
+        public DbSet<KhoHang> KhoHangs { get; set; }
         public DbSet<SystemNotification> SystemNotifications { get; set; }
         public DbSet<TikTokShopConfig> TikTokShopConfigs { get; set; }
         public DbSet<TikTokSyncLog> TikTokSyncLogs { get; set; }

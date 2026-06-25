@@ -79,6 +79,189 @@
                 <div class="chotot-cat-title">Loa & Âm<br />thanh</div>
             </div>
         </a>
+    <h5 class="fw-bold mb-4 text-dark"><i class="fa-solid fa-layer-group text-primary me-2"></i>Danh mục sản phẩm</h5>
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4 justify-content-center text-center">
+        <div class="col">
+            <a href="@Url.Action("ProductsList", "Online", new { category = "Điện thoại" })" class="text-decoration-none">
+                <div class="category-card mx-auto">
+                    <div class="category-card-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
+                    <div class="category-card-title">Điện thoại</div>
+                </div>
+            </a>
+        </div>
+        <div class="col">
+            <a href="@Url.Action("ProductsList", "Online", new { category = "Laptop" })" class="text-decoration-none">
+                <div class="category-card mx-auto">
+                    <div class="category-card-icon"><i class="fa-solid fa-laptop"></i></div>
+                    <div class="category-card-title">Laptop</div>
+                </div>
+            </a>
+        </div>
+        <div class="col">
+            <a href="@Url.Action("ProductsList", "Online", new { category = "Phụ kiện" })" class="text-decoration-none">
+                <div class="category-card mx-auto">
+                    <div class="category-card-icon"><i class="fa-solid fa-keyboard"></i></div>
+                    <div class="category-card-title">Phụ kiện</div>
+                </div>
+            </a>
+        </div>
+        <div class="col">
+            <a href="@Url.Action("ProductsList", "Online", new { category = "Máy tính bảng" })" class="text-decoration-none">
+                <div class="category-card mx-auto">
+                    <div class="category-card-icon"><i class="fa-solid fa-tablet-screen-button"></i></div>
+                    <div class="category-card-title">Máy tính bảng</div>
+                </div>
+            </a>
+        </div>
+        <div class="col">
+            <a href="@Url.Action("ProductsList", "Online", new { category = "Tai nghe" })" class="text-decoration-none">
+                <div class="category-card mx-auto">
+                    <div class="category-card-icon"><i class="fa-solid fa-headphones"></i></div>
+                    <div class="category-card-title">Tai nghe</div>
+                </div>
+            </a>
+        </div>
+        <div class="col">
+            <a href="@Url.Action("ProductsList", "Online", new { category = "Loa" })" class="text-decoration-none">
+                <div class="category-card mx-auto">
+                    <div class="category-card-icon"><i class="fa-solid fa-volume-high"></i></div>
+                    <div class="category-card-title">Loa & Âm thanh</div>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Advertising Carousel Panels -->
+<div class="container my-5">
+    <div class="row gy-4 align-items-start">
+        <div class="col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100">
+                <div class="card-body p-0">
+                    <div id="leftAdCarousel" class="carousel slide" data-bs-ride="carousel">
+                        <div class="carousel-inner">
+                            @if (ViewBag.LeftCarouselProducts is List<DATN64.Models.SanPham> leftAds && leftAds.Any())
+                            {
+                                var index = 0;
+                                foreach (var ad in leftAds)
+                                {
+                                    <div class="carousel-item @(index == 0 ? "active" : "")">
+                                        <img src="@(ad.HinhAnh ?? "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=400")" class="d-block w-100" style="height: 260px; object-fit: cover;" alt="@ad.TenSanPham">
+                                        <div class="carousel-caption d-none d-md-block text-start">
+                                            <span class="badge bg-info text-dark">Hot</span>
+                                            <h6 class="fw-bold text-white mt-2">@ad.TenSanPham</h6>
+                                            <p class="mb-0 text-white">@ad.GiaBan.ToString("N0") đ</p>
+                                        </div>
+                                    </div>
+                                    index++;
+                                }
+                            }
+                            else
+                            {
+                                <div class="carousel-item active">
+                                    <img src="https://images.unsplash.com/photo-1555617117-08b5e3acc50b?q=80&w=400" class="d-block w-100" style="height: 260px; object-fit: cover;" alt="Quảng cáo">
+                                    <div class="carousel-caption d-none d-md-block text-start">
+                                        <span class="badge bg-info text-dark">Khuyến mãi</span>
+                                        <h6 class="fw-bold text-white mt-2">Ưu đãi đặc biệt</h6>
+                                        <p class="mb-0 text-white">Giảm giá sốc dành cho khách mới</p>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <button class="carousel-control-prev" type="button" data-bs-target="#leftAdCarousel" data-bs-slide="prev">
+                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Previous</span>
+                        </button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#leftAdCarousel" data-bs-slide="next">
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Next</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+                <div class="d-flex flex-column justify-content-center h-100">
+                    <h5 class="text-info fw-bold">Ưu đãi hôm nay</h5>
+                    <p class="text-muted">Xem nhanh các sản phẩm bán chạy và chương trình khuyến mãi đang được ưa chuộng.</p>
+                    <div class="row gy-3">
+                        @if (ViewBag.HeroBannerProducts is List<DATN64.Models.SanPham> heroAds && heroAds.Any())
+                        {
+                            foreach (var hero in heroAds)
+                            {
+                                <div class="col-12">
+                                    <div class="d-flex align-items-center gap-3 border rounded-4 p-3 bg-light">
+                                        <img src="@(hero.HinhAnh ?? "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=150")" class="rounded-4" style="width: 90px; height: 90px; object-fit: cover;" alt="@hero.TenSanPham">
+                                        <div>
+                                            <h6 class="mb-1 fw-bold text-dark">@hero.TenSanPham</h6>
+                                            <p class="text-secondary mb-1 text-xxs">@hero.ThuongHieu?.TenThuongHieu ?? "NovaTech"</p>
+                                            <span class="text-primary fw-bold">@hero.GiaBan.ToString("N0") đ</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="col-12">
+                                <div class="border rounded-4 p-4 bg-light text-center">
+                                    <h6 class="fw-bold text-dark">Chưa có thông tin quảng cáo</h6>
+                                    <p class="text-muted text-xs">Hệ thống sẽ hiển thị ưu đãi khi có sản phẩm hợp lệ.</p>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100">
+                <div class="card-body p-0">
+                    <div id="rightAdCarousel" class="carousel slide" data-bs-ride="carousel">
+                        <div class="carousel-inner">
+                            @if (ViewBag.RightCarouselProducts is List<DATN64.Models.SanPham> rightAds && rightAds.Any())
+                            {
+                                var index = 0;
+                                foreach (var ad in rightAds)
+                                {
+                                    <div class="carousel-item @(index == 0 ? "active" : "")">
+                                        <img src="@(ad.HinhAnh ?? "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=400")" class="d-block w-100" style="height: 260px; object-fit: cover;" alt="@ad.TenSanPham">
+                                        <div class="carousel-caption d-none d-md-block text-start">
+                                            <span class="badge bg-warning text-dark">Hot</span>
+                                            <h6 class="fw-bold text-white mt-2">@ad.TenSanPham</h6>
+                                            <p class="mb-0 text-white">@ad.GiaBan.ToString("N0") đ</p>
+                                        </div>
+                                    </div>
+                                    index++;
+                                }
+                            }
+                            else
+                            {
+                                <div class="carousel-item active">
+                                    <img src="https://images.unsplash.com/photo-1519337265831-281ec6cc8514?q=80&w=400" class="d-block w-100" style="height: 260px; object-fit: cover;" alt="Quảng cáo">
+                                    <div class="carousel-caption d-none d-md-block text-start">
+                                        <span class="badge bg-warning text-dark">Khuyến mãi</span>
+                                        <h6 class="fw-bold text-white mt-2">Free Ship toàn quốc</h6>
+                                        <p class="mb-0 text-white">Áp dụng đơn hàng từ 1.000.000 đ</p>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <button class="carousel-control-prev" type="button" data-bs-target="#rightAdCarousel" data-bs-slide="prev">
+                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Previous</span>
+                        </button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#rightAdCarousel" data-bs-slide="next">
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Next</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -138,6 +321,20 @@
                         badge.innerText = data.cartCount;
                     }
                     alert('Đã thêm sản phẩm vào giỏ hàng!');
+                }
+            });
+        }
+
+        function addToFavorites(productId) {
+            fetch('@Url.Action("AddToFavorites", "Online")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'id=' + productId
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Đã thêm vào danh sách yêu thích!');
                 }
             });
         }
