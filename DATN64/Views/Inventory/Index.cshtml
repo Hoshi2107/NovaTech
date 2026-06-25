@@ -52,11 +52,6 @@
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link rounded-3 py-2.5" :class="{ active: activeTab === 'transfer' }" @@click="setTab('transfer')">
-                        <i class="fa-solid fa-right-left me-2 text-info"></i>Chuyển kho
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
                     <button class="nav-link rounded-3 py-2.5" :class="{ active: activeTab === 'history' }" @@click="setTab('history')">
                         <i class="fa-solid fa-history me-2"></i>Lịch sử
                     </button>
@@ -72,7 +67,7 @@
         <div class="tab-pane show active" v-if="activeTab === 'dashboard'">
             <!-- Stats Grid -->
             <div class="row g-4 mb-4">
-                <div class="col-md-4 col-lg-2">
+                <div class="col-md-4 col-lg">
                     <div class="card border-0 shadow-sm rounded-4 card-glass text-center p-3 h-100">
                         <div class="d-inline-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-circle mb-3 mx-auto" style="width: 48px; height: 48px;">
                             <i class="fa-solid fa-box fs-5"></i>
@@ -81,7 +76,7 @@
                         <h3 class="fw-extrabold text-primary mb-0">${ stats.totalProducts }</h3>
                     </div>
                 </div>
-                <div class="col-md-4 col-lg-2">
+                <div class="col-md-4 col-lg">
                     <div class="card border-0 shadow-sm rounded-4 card-glass text-center p-3 h-100">
                         <div class="d-inline-flex align-items-center justify-content-center bg-success-subtle text-success rounded-circle mb-3 mx-auto" style="width: 48px; height: 48px;">
                             <i class="fa-solid fa-boxes-stacked fs-5"></i>
@@ -90,7 +85,7 @@
                         <h3 class="fw-extrabold text-success mb-0">${ stats.totalStock }</h3>
                     </div>
                 </div>
-                <div class="col-md-4 col-lg-2">
+                <div class="col-md-4 col-lg">
                     <div class="card border-0 shadow-sm rounded-4 card-glass text-center p-3 h-100">
                         <div class="d-inline-flex align-items-center justify-content-center bg-info-subtle text-info rounded-circle mb-3 mx-auto" style="width: 48px; height: 48px;">
                             <i class="fa-solid fa-circle-down fs-5"></i>
@@ -99,7 +94,7 @@
                         <h3 class="fw-extrabold text-info mb-0">${ stats.importsToday }</h3>
                     </div>
                 </div>
-                <div class="col-md-4 col-lg-2">
+                <div class="col-md-4 col-lg">
                     <div class="card border-0 shadow-sm rounded-4 card-glass text-center p-3 h-100">
                         <div class="d-inline-flex align-items-center justify-content-center bg-danger-subtle text-danger rounded-circle mb-3 mx-auto" style="width: 48px; height: 48px;">
                             <i class="fa-solid fa-circle-up fs-5"></i>
@@ -108,22 +103,13 @@
                         <h3 class="fw-extrabold text-danger mb-0">${ stats.exportsToday }</h3>
                     </div>
                 </div>
-                <div class="col-md-4 col-lg-2">
+                <div class="col-md-4 col-lg">
                     <div class="card border-0 shadow-sm rounded-4 card-glass text-center p-3 h-100">
                         <div class="d-inline-flex align-items-center justify-content-center bg-warning-subtle text-warning rounded-circle mb-3 mx-auto" style="width: 48px; height: 48px;">
                             <i class="fa-solid fa-triangle-exclamation fs-5"></i>
                         </div>
                         <h6 class="text-muted-custom text-xs fw-bold text-uppercase mb-1">Sắp hết hàng</h6>
                         <h3 class="fw-extrabold text-warning mb-0">${ stats.lowStockProducts }</h3>
-                    </div>
-                </div>
-                <div class="col-md-4 col-lg-2">
-                    <div class="card border-0 shadow-sm rounded-4 card-glass text-center p-3 h-100">
-                        <div class="d-inline-flex align-items-center justify-content-center bg-purple-subtle text-purple rounded-circle mb-3 mx-auto" style="width: 48px; height: 48px;">
-                            <i class="fa-solid fa-store fs-5"></i>
-                        </div>
-                        <h6 class="text-muted-custom text-xs fw-bold text-uppercase mb-1">Tổng số kho</h6>
-                        <h3 class="fw-extrabold text-purple mb-0">${ warehouses.length }</h3>
                     </div>
                 </div>
             </div>
@@ -189,15 +175,13 @@
                                             'bg-success-subtle text-success': tx.type === 'Nhập kho',
                                             'bg-danger-subtle text-danger': tx.type === 'Xuất kho',
                                             'bg-warning-subtle text-warning': tx.type === 'Kiểm kê',
-                                            'bg-primary-subtle text-primary': tx.type === 'Điều chỉnh',
-                                            'bg-info-subtle text-info': tx.type === 'Chuyển kho',
+                                            'bg-primary-subtle text-primary': tx.type === 'Điều chỉnh'
                                         }">
                                             <i class="fa-solid" :class="{
                                                 'fa-circle-down': tx.type === 'Nhập kho',
                                                 'fa-circle-up': tx.type === 'Xuất kho',
                                                 'fa-clipboard-check': tx.type === 'Kiểm kê',
-                                                'fa-sliders': tx.type === 'Điều chỉnh',
-                                                'fa-right-left': tx.type === 'Chuyển kho',
+                                                'fa-sliders': tx.type === 'Điều chỉnh'
                                             }"></i>
                                         </span>
                                     </div>
@@ -211,8 +195,6 @@
                                             <span :class="tx.quantityChange >= 0 ? 'text-success fw-bold' : 'text-danger fw-bold'">
                                                 ${ tx.quantityChange >= 0 ? '+' : '' }${ tx.quantityChange } cái
                                             </span>
-                                            <span v-if="tx.type === 'Chuyển kho'">(${ tx.tenKhoNguon } &rarr; ${ tx.tenKhoDich })</span>
-                                            <span v-else-if="tx.tenKho">(${ tx.tenKho })</span>
                                         </p>
                                         <small class="text-muted text-xxs d-block mt-0.5"><i class="fa-solid fa-user me-1"></i>${ tx.creator } &bull; Lý do/Ghi chú: ${ tx.note }</small>
                                     </div>
@@ -272,14 +254,13 @@
                                     <th>Thương hiệu</th>
                                     <th class="text-end">Giá vốn (Giá nhập)</th>
                                     <th class="text-end">Giá bán</th>
-                                    <th class="text-center">Kho hiện tại</th>
                                     <th class="text-center">Số lượng tồn</th>
                                     <th class="text-center">Trạng thái</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-if="filteredProducts.length === 0">
-                                    <td colspan="9" class="text-center py-5 text-muted">
+                                    <td colspan="8" class="text-center py-5 text-muted">
                                         <i class="fa-solid fa-box-open fs-2 mb-2 d-block"></i>
                                         Không tìm thấy sản phẩm nào!
                                     </td>
@@ -299,7 +280,6 @@
                                     <td>${ item.thuongHieuTen }</td>
                                     <td class="text-end fw-bold text-secondary">${ formatCurrency(item.giaNhap) }</td>
                                     <td class="text-end fw-bold text-success">${ formatCurrency(item.giaBan) }</td>
-                                    <td class="text-center text-xs text-muted-custom">${ item.khoMacDinh }</td>
                                     <td class="text-center">
                                         <span class="badge fs-7 px-3 py-1.5 rounded-pill" :class="{
                                             'bg-danger-subtle text-danger': item.soLuongTon === 0,
@@ -339,14 +319,6 @@
                                     <option v-for="p in activeProducts" :value="p.maSanPham">
                                         ${ p.tenSanPham } (Mã: #${ p.maSanPham }) - Hiện có: ${ p.soLuongTon } cái
                                     </option>
-                                </select>
-                            </div>
-
-                            <!-- Warehouse Select -->
-                            <div class="mb-3">
-                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Kho nhận hàng</label>
-                                <select class="form-select" v-model="forms.import.warehouseId" required>
-                                    <option v-for="w in warehouses" :value="w.maKho">${ w.tenKho }</option>
                                 </select>
                             </div>
 
@@ -413,14 +385,6 @@
                                     <option v-for="p in activeProducts" :value="p.maSanPham">
                                         ${ p.tenSanPham } (Mã: #${ p.maSanPham }) - Hiện có: ${ p.soLuongTon } cái
                                     </option>
-                                </select>
-                            </div>
-
-                            <!-- Warehouse Select -->
-                            <div class="mb-3">
-                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Kho xuất hàng</label>
-                                <select class="form-select" v-model="forms.export.warehouseId" required>
-                                    <option v-for="w in warehouses" :value="w.maKho">${ w.tenKho }</option>
                                 </select>
                             </div>
 
@@ -501,13 +465,6 @@
                                         </select>
                                     </div>
 
-                                    <div class="mb-3">
-                                        <label class="form-label text-xs fw-bold text-muted-custom text-uppercase">Kho kiểm kê</label>
-                                        <select class="form-select" v-model="forms.audit.warehouseId" required>
-                                            <option v-for="w in warehouses" :value="w.maKho">${ w.tenKho }</option>
-                                        </select>
-                                    </div>
-
                                     <div class="row mb-3">
                                         <div class="col-6">
                                             <label class="form-label text-xs fw-bold text-muted-custom text-uppercase">Tồn hệ thống</label>
@@ -515,7 +472,7 @@
                                         </div>
                                         <div class="col-6">
                                             <label class="form-label text-xs fw-bold text-muted-custom text-uppercase">Tồn thực tế</label>
-                                            <input type="number" class="form-control text-center fw-bold border-warning" v-model.number="forms.audit.actualQuantity" min="0" required @@input="updateAuditPreview">
+                                            <input type="number" class="form-control text-center fw-bold border-warning" v-model.number="forms.audit.actualQuantity" min="0" required>
                                         </div>
                                     </div>
 
@@ -579,24 +536,16 @@
                             <h4 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-sliders me-2"></i>Điều Chỉnh Tồn Kho Trực Tiếp</h4>
                         </div>
                         <form @@submit.prevent="submitAdjust">
-                            <!-- Product Select -->
-                            <div class="mb-3">
-                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Chọn sản phẩm</label>
-                                <select class="form-select" v-model="forms.adjust.productId" required @@change="updateAdjustPreview">
-                                    <option value="" disabled>--- Chọn sản phẩm cần điều chỉnh ---</option>
-                                    <option v-for="p in activeProducts" :value="p.maSanPham">
-                                        ${ p.tenSanPham } (Mã: #${ p.maSanPham }) - Hiện có: ${ p.soLuongTon } cái
-                                    </option>
-                                </select>
-                            </div>
-
-                            <!-- Warehouse Select -->
-                            <div class="mb-3">
-                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Kho điều chỉnh</label>
-                                <select class="form-select" v-model="forms.adjust.warehouseId" required>
-                                    <option v-for="w in warehouses" :value="w.maKho">${ w.tenKho }</option>
-                                </select>
-                            </div>
+                                    <!-- Product Select -->
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Chọn sản phẩm</label>
+                                        <select class="form-select" v-model="forms.adjust.productId" required @@change="updateAdjustPreview">
+                                            <option value="" disabled>--- Chọn sản phẩm cần điều chỉnh ---</option>
+                                            <option v-for="p in activeProducts" :value="p.maSanPham">
+                                                ${ p.tenSanPham } (Mã: #${ p.maSanPham }) - Hiện có: ${ p.soLuongTon } cái
+                                            </option>
+                                        </select>
+                                    </div>
 
                             <!-- Adjustment Direction & Quantity -->
                             <div class="row mb-3">
@@ -663,81 +612,7 @@
             </div>
         </div>
 
-        <!-- 7. TRANSFER (CHUYỂN KHO) TAB -->
-        <div class="tab-pane show active" v-if="activeTab === 'transfer'">
-            <div class="row justify-content-center">
-                <div class="col-md-8 col-lg-6">
-                    <div class="card border-0 shadow-sm rounded-4 card-glass p-4">
-                        <div class="card-title mb-4 d-flex align-items-center">
-                            <h4 class="fw-bold mb-0 text-info"><i class="fa-solid fa-right-left me-2"></i>Chuyển Kho Nội Bộ</h4>
-                        </div>
-                        <form @@submit.prevent="submitTransfer">
-                            <!-- Product Select -->
-                            <div class="mb-3">
-                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Chọn sản phẩm chuyển</label>
-                                <select class="form-select border-info" v-model="forms.transfer.productId" required @@change="updateTransferPreview">
-                                    <option value="" disabled>--- Chọn sản phẩm cần chuyển ---</option>
-                                    <option v-for="p in activeProducts" :value="p.maSanPham">
-                                        ${ p.tenSanPham } (Mã: #${ p.maSanPham }) - Hiện có: ${ p.soLuongTon } cái
-                                    </option>
-                                </select>
-                            </div>
-
-                            <!-- From & To Warehouse -->
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Kho nguồn (Đi)</label>
-                                    <select class="form-select" v-model="forms.transfer.fromWarehouseId" required @@change="updateTransferPreview">
-                                        <option v-for="w in warehouses" :value="w.maKho">${ w.tenKho }</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Kho nhận (Đến)</label>
-                                    <select class="form-select" v-model="forms.transfer.toWarehouseId" required @@change="updateTransferPreview">
-                                        <option v-for="w in warehouses" :value="w.maKho">${ w.tenKho }</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <!-- Validation duplicate warning -->
-                            <div class="form-text text-danger fw-bold text-xs mb-3" v-if="transferError">
-                                <i class="fa-solid fa-triangle-exclamation"></i> ${ transferError }
-                            </div>
-
-                            <!-- Quantity -->
-                            <div class="mb-4">
-                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Số lượng chuyển</label>
-                                <input type="number" class="form-control border-info" v-model.number="forms.transfer.quantity" min="1" required @@input="updateTransferPreview">
-                            </div>
-
-                            <!-- Visual Transfer Arrow -->
-                            <div class="p-3 bg-info-subtle bg-opacity-20 text-info border border-info border-opacity-10 rounded-3 mb-4 text-center d-flex align-items-center justify-content-center gap-3" v-if="forms.transfer.productId && forms.transfer.quantity > 0 && !transferError">
-                                <div class="fw-bold text-sm text-dark">${ getWarehouseName(forms.transfer.fromWarehouseId) }</div>
-                                <div>
-                                    <i class="fa-solid fa-arrow-right-long text-info fs-5"></i>
-                                    <span class="badge bg-info text-dark d-block text-xxs px-2 mt-0.5">Chuyển ${ forms.transfer.quantity } cái</span>
-                                </div>
-                                <div class="fw-bold text-sm text-dark">${ getWarehouseName(forms.transfer.toWarehouseId) }</div>
-                            </div>
-
-                            <!-- Note -->
-                            <div class="mb-4">
-                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Ghi chú chuyển kho</label>
-                                <textarea class="form-control" v-model="forms.transfer.note" placeholder="Nhập ghi chú chi tiết hoặc thông tin vận chuyển..." rows="2"></textarea>
-                            </div>
-
-                            <!-- Action -->
-                            <button type="submit" class="btn btn-info rounded-3 w-100 fw-bold py-2.5 shadow-sm text-dark" :disabled="submitting || !!transferError">
-                                <span v-if="submitting" class="spinner-border spinner-border-sm me-2 text-dark"></span>
-                                <i class="fa-solid fa-truck-moving me-2 text-dark" v-else></i> Xác nhận vận chuyển
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 8. TRANSACTION HISTORY TAB -->
+        <!-- TRANSACTION HISTORY TAB -->
         <div class="tab-pane show active" v-if="activeTab === 'history'">
             <div class="card border-0 shadow-sm rounded-4 bg-glass">
                 <div class="card-body p-4">
@@ -758,7 +633,6 @@
                                 <option value="Xuất kho">Xuất kho</option>
                                 <option value="Kiểm kê">Kiểm kê</option>
                                 <option value="Điều chỉnh">Điều chỉnh</option>
-                                <option value="Chuyển kho">Chuyển kho</option>
                             </select>
                         </div>
                         <div class="col-md-3">
@@ -785,7 +659,6 @@
                                     <th>Thời gian</th>
                                     <th>Loại giao dịch</th>
                                     <th>Sản phẩm</th>
-                                    <th>Kho liên quan</th>
                                     <th class="text-center">Trước giao dịch</th>
                                     <th class="text-center">Thay đổi (+/-)</th>
                                     <th class="text-center">Sau giao dịch</th>
@@ -795,7 +668,7 @@
                             </thead>
                             <tbody>
                                 <tr v-if="filteredTransactions.length === 0">
-                                    <td colspan="10" class="text-center py-5 text-muted">
+                                    <td colspan="9" class="text-center py-5 text-muted">
                                         <i class="fa-solid fa-clock-rotate-left fs-2 mb-2 d-block"></i>
                                         Không tìm thấy giao dịch nào phù hợp!
                                     </td>
@@ -810,23 +683,12 @@
                                             'bg-success': tx.type === 'Nhập kho',
                                             'bg-danger': tx.type === 'Xuất kho',
                                             'bg-warning text-dark': tx.type === 'Kiểm kê',
-                                            'bg-primary': tx.type === 'Điều chỉnh',
-                                            'bg-info text-dark': tx.type === 'Chuyển kho'
+                                            'bg-primary': tx.type === 'Điều chỉnh'
                                         }">${ tx.type }</span>
                                     </td>
                                     <td>
                                         <span class="fw-bold text-xs d-block">${ tx.productName }</span>
                                         <small class="text-muted text-xxs">Mã: #${ tx.productSKU }</small>
-                                    </td>
-                                    <td>
-                                        <span v-if="tx.type === 'Chuyển kho'">
-                                            <span class="text-xs fw-semibold text-secondary">${ tx.tenKhoNguon }</span>
-                                            <i class="fa-solid fa-arrow-right mx-1 text-muted text-xxs"></i>
-                                            <span class="text-xs fw-semibold text-secondary">${ tx.tenKhoDich }</span>
-                                        </span>
-                                        <span class="text-xs fw-semibold text-secondary" v-else>
-                                            ${ tx.tenKho || 'Kho chính' }
-                                        </span>
                                     </td>
                                     <td class="text-center text-xs text-muted-custom">
                                         ${ tx.soLuongTruoc != null ? tx.soLuongTruoc + ' cái' : '---' }
@@ -908,7 +770,6 @@
                 activeTab: 'dashboard',
                 lastUpdated: '',
                 products: [],
-                warehouses: [],
                 transactions: [],
                 categories: [],
                 brands: [],
@@ -916,7 +777,6 @@
                 submitting: false,
                 exportError: '',
                 adjustError: '',
-                transferError: '',
                 filters: {
                     search: '',
                     category: '',
@@ -930,20 +790,17 @@
                         productId: '',
                         quantity: 10,
                         source: 'Nhà cung cấp',
-                        warehouseId: 1,
                         note: ''
                     },
                     export: {
                         productId: '',
                         quantity: 1,
                         source: 'Xuất POS',
-                        warehouseId: 1,
                         note: ''
                     },
                     audit: {
                         productId: '',
-                        actualQuantity: 0,
-                        warehouseId: 1,
+                        actualQuantity: '',
                         note: ''
                     },
                     adjust: {
@@ -951,14 +808,6 @@
                         direction: 'increase',
                         quantity: 1,
                         reason: '',
-                        warehouseId: 1,
-                        note: ''
-                    },
-                    transfer: {
-                        productId: '',
-                        quantity: 10,
-                        fromWarehouseId: 1,
-                        toWarehouseId: 2,
                         note: ''
                     }
                 }
@@ -1045,9 +894,6 @@
                 selectedAdjustProduct() {
                     return this.products.find(p => p.maSanPham === this.forms.adjust.productId) || {};
                 },
-                selectedTransferProduct() {
-                    return this.products.find(p => p.maSanPham === this.forms.transfer.productId) || {};
-                },
                 auditDiff() {
                     if (!this.forms.audit.productId || this.forms.audit.actualQuantity === '') return 0;
                     return this.forms.audit.actualQuantity - this.selectedAuditProduct.soLuongTon;
@@ -1086,33 +932,16 @@
                 async fetchData() {
                     this.loading = true;
                     try {
-                        const [prodRes, whRes, txRes, optRes] = await Promise.all([
+                        const [prodRes, txRes, optRes] = await Promise.all([
                             axios.get('/api/inventory'),
-                            axios.get('/api/inventory/warehouses'),
                             axios.get('/api/inventory/transactions'),
                             axios.get('/api/product/options')
                         ]);
 
                         this.products = prodRes.data;
-                        this.warehouses = whRes.data;
                         this.transactions = txRes.data;
                         this.categories = optRes.data.categories;
                         this.brands = optRes.data.brands;
-
-                        // Setup default form values
-                        if (this.warehouses.length > 0) {
-                            this.forms.import.warehouseId = this.warehouses[0].maKho;
-                            this.forms.export.warehouseId = this.warehouses[0].maKho;
-                            this.forms.audit.warehouseId = this.warehouses[0].maKho;
-                            this.forms.adjust.warehouseId = this.warehouses[0].maKho;
-                            if (this.warehouses.length > 1) {
-                                this.forms.transfer.fromWarehouseId = this.warehouses[0].maKho;
-                                this.forms.transfer.toWarehouseId = this.warehouses[1].maKho;
-                            } else {
-                                this.forms.transfer.fromWarehouseId = this.warehouses[0].maKho;
-                                this.forms.transfer.toWarehouseId = this.warehouses[0].maKho;
-                            }
-                        }
                     } catch (err) {
                         console.error('Lỗi khi tải dữ liệu:', err);
                         Swal.fire('Lỗi', 'Không thể tải dữ liệu kho hàng.', 'error');
@@ -1126,7 +955,6 @@
                     // Reset errors on tab change
                     this.exportError = '';
                     this.adjustError = '';
-                    this.transferError = '';
                 },
                 resetFilters() {
                     this.filters.search = '';
@@ -1137,10 +965,6 @@
                     this.filters.historySearch = '';
                     this.filters.historyType = '';
                     this.filters.historyTime = 'all';
-                },
-                getWarehouseName(id) {
-                    const wh = this.warehouses.find(w => w.maKho === id);
-                    return wh ? wh.tenKho : '---';
                 },
                 selectAuditProductQuick(p) {
                     this.forms.audit.productId = p.maSanPham;
@@ -1162,7 +986,9 @@
                     }
                 },
                 updateAuditPreview() {
-                    // Handled by computed properties
+                    if (this.forms.audit.productId) {
+                        this.forms.audit.actualQuantity = this.selectedAuditProduct.soLuongTon;
+                    }
                 },
                 updateAdjustPreview() {
                     this.adjustError = '';
@@ -1180,18 +1006,6 @@
                         return this.selectedAdjustProduct.soLuongTon - this.forms.adjust.quantity;
                     }
                 },
-                updateTransferPreview() {
-                    this.transferError = '';
-                    if (this.forms.transfer.fromWarehouseId === this.forms.transfer.toWarehouseId) {
-                        this.transferError = 'Kho nguồn và kho đích nhận không được giống nhau!';
-                        return;
-                    }
-                    if (this.forms.transfer.productId && this.forms.transfer.quantity) {
-                        if (this.forms.transfer.quantity > this.selectedTransferProduct.soLuongTon) {
-                            this.transferError = `Số lượng chuyển vượt quá tồn kho hiện tại (${this.selectedTransferProduct.soLuongTon} cái)!`;
-                        }
-                    }
-                },
 
                 // Forms submissions
                 async submitImport() {
@@ -1201,7 +1015,6 @@
                             productId: this.forms.import.productId,
                             quantity: this.forms.import.quantity,
                             source: this.forms.import.source,
-                            warehouseId: this.forms.import.warehouseId,
                             note: this.forms.import.note
                         };
 
@@ -1237,7 +1050,6 @@
                             productId: this.forms.export.productId,
                             quantity: this.forms.export.quantity,
                             source: this.forms.export.source,
-                            warehouseId: this.forms.export.warehouseId,
                             note: this.forms.export.note
                         };
 
@@ -1270,7 +1082,6 @@
                         const payload = {
                             productId: this.forms.audit.productId,
                             actualQuantity: this.forms.audit.actualQuantity,
-                            warehouseId: this.forms.audit.warehouseId,
                             note: this.forms.audit.note
                         };
 
@@ -1285,7 +1096,7 @@
 
                         // Reset form
                         this.forms.audit.productId = '';
-                        this.forms.audit.actualQuantity = 0;
+                        this.forms.audit.actualQuantity = '';
                         this.forms.audit.note = '';
 
                         await this.fetchData();
@@ -1309,7 +1120,6 @@
                             productId: this.forms.adjust.productId,
                             quantityChange: qtyChange,
                             reason: this.forms.adjust.reason,
-                            warehouseId: this.forms.adjust.warehouseId,
                             note: this.forms.adjust.note
                         };
 
@@ -1332,41 +1142,6 @@
                         this.setTab('stock');
                     } catch (err) {
                         const msg = err.response?.data?.message || 'Có lỗi xảy ra khi điều chỉnh kho.';
-                        Swal.fire('Lỗi', msg, 'error');
-                    } finally {
-                        this.submitting = false;
-                    }
-                },
-                async submitTransfer() {
-                    if (this.transferError) return;
-                    this.submitting = true;
-                    try {
-                        const payload = {
-                            productId: this.forms.transfer.productId,
-                            quantity: this.forms.transfer.quantity,
-                            fromWarehouseId: this.forms.transfer.fromWarehouseId,
-                            toWarehouseId: this.forms.transfer.toWarehouseId,
-                            note: this.forms.transfer.note
-                        };
-
-                        const res = await axios.post('/api/inventory/transfer', payload);
-
-                        await Swal.fire({
-                            title: 'Thành công!',
-                            text: res.data.message,
-                            icon: 'success',
-                            confirmButtonText: 'Đồng ý'
-                        });
-
-                        // Reset form
-                        this.forms.transfer.productId = '';
-                        this.forms.transfer.quantity = 10;
-                        this.forms.transfer.note = '';
-
-                        await this.fetchData();
-                        this.setTab('stock');
-                    } catch (err) {
-                        const msg = err.response?.data?.message || 'Có lỗi xảy ra khi chuyển kho.';
                         Swal.fire('Lỗi', msg, 'error');
                     } finally {
                         this.submitting = false;

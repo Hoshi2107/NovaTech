@@ -70,21 +70,6 @@ namespace DATN64.Controllers.Api
             }
         }
 
-        // GET: api/inventory/warehouses
-        [HttpGet("warehouses")]
-        public async Task<IActionResult> GetWarehouses()
-        {
-            try
-            {
-                var warehouses = await _context.KhoHangs.Where(w => w.TrangThai).ToListAsync();
-                return Ok(warehouses);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Lỗi khi tải danh sách kho hàng", error = ex.Message });
-            }
-        }
-
         // GET: api/inventory/transactions
         [HttpGet("transactions")]
         public async Task<IActionResult> GetTransactions()
@@ -92,32 +77,19 @@ namespace DATN64.Controllers.Api
             try
             {
                 var transactions = await _context.InventoryTransactions.ToListAsync();
-                var warehouses = await _context.KhoHangs.ToListAsync();
 
-                var result = transactions.OrderByDescending(t => t.Date).Select(t => {
-                    var wh = warehouses.FirstOrDefault(w => w.MaKho == t.MaKho);
-                    var whNguon = warehouses.FirstOrDefault(w => w.MaKho == t.MaKhoNguon);
-                    var whDich = warehouses.FirstOrDefault(w => w.MaKho == t.MaKhoDich);
-
-                    return new {
-                        t.Id,
-                        t.Code,
-                        t.Type,
-                        t.ProductSKU,
-                        t.ProductName,
-                        t.QuantityChange,
-                        t.Creator,
-                        Date = t.Date.ToString("yyyy-MM-dd HH:mm:ss"),
-                        t.Note,
-                        t.MaKho,
-                        TenKho = wh != null ? wh.TenKho : "",
-                        t.MaKhoNguon,
-                        TenKhoNguon = whNguon != null ? whNguon.TenKho : "",
-                        t.MaKhoDich,
-                        TenKhoDich = whDich != null ? whDich.TenKho : "",
-                        t.SoLuongTruoc,
-                        t.SoLuongSau
-                    };
+                var result = transactions.OrderByDescending(t => t.Date).Select(t => new {
+                    t.Id,
+                    t.Code,
+                    t.Type,
+                    t.ProductSKU,
+                    t.ProductName,
+                    t.QuantityChange,
+                    t.Creator,
+                    Date = t.Date.ToString("yyyy-MM-dd HH:mm:ss"),
+                    t.Note,
+                    t.SoLuongTruoc,
+                    t.SoLuongSau
                 }).ToList();
 
                 return Ok(result);
@@ -132,7 +104,7 @@ namespace DATN64.Controllers.Api
         [HttpPost("import")]
         public async Task<IActionResult> ImportInventory([FromBody] ImportRequest request)
         {
-            if (request == null || request.ProductId <= 0 || request.Quantity <= 0 || request.WarehouseId <= 0)
+            if (request == null || request.ProductId <= 0 || request.Quantity <= 0)
             {
                 return BadRequest(new { message = "Dữ liệu nhập kho không hợp lệ!" });
             }
@@ -143,12 +115,6 @@ namespace DATN64.Controllers.Api
                 if (product == null)
                 {
                     return NotFound(new { message = "Không tìm thấy sản phẩm!" });
-                }
-
-                var warehouse = await _context.KhoHangs.FirstOrDefaultAsync(w => w.MaKho == request.WarehouseId);
-                if (warehouse == null)
-                {
-                    return NotFound(new { message = "Không tìm thấy kho hàng nhận!" });
                 }
 
                 int beforeQty = product.SoLuongTon;
@@ -168,7 +134,6 @@ namespace DATN64.Controllers.Api
                     Creator = HttpContext.Session.GetString("UserName") ?? "Thủ kho",
                     Date = DateTime.Now,
                     Note = string.IsNullOrEmpty(request.Note) ? $"Nhập kho ({request.Source})" : $"{request.Note} (Nguồn: {request.Source})",
-                    MaKho = request.WarehouseId,
                     SoLuongTruoc = beforeQty,
                     SoLuongSau = afterQty
                 };
@@ -193,7 +158,7 @@ namespace DATN64.Controllers.Api
         [HttpPost("export")]
         public async Task<IActionResult> ExportInventory([FromBody] ExportRequest request)
         {
-            if (request == null || request.ProductId <= 0 || request.Quantity <= 0 || request.WarehouseId <= 0)
+            if (request == null || request.ProductId <= 0 || request.Quantity <= 0)
             {
                 return BadRequest(new { message = "Dữ liệu xuất kho không hợp lệ!" });
             }
@@ -204,12 +169,6 @@ namespace DATN64.Controllers.Api
                 if (product == null)
                 {
                     return NotFound(new { message = "Không tìm thấy sản phẩm!" });
-                }
-
-                var warehouse = await _context.KhoHangs.FirstOrDefaultAsync(w => w.MaKho == request.WarehouseId);
-                if (warehouse == null)
-                {
-                    return NotFound(new { message = "Không tìm thấy kho hàng xuất!" });
                 }
 
                 if (product.SoLuongTon < request.Quantity)
@@ -234,7 +193,6 @@ namespace DATN64.Controllers.Api
                     Creator = HttpContext.Session.GetString("UserName") ?? "Thủ kho",
                     Date = DateTime.Now,
                     Note = string.IsNullOrEmpty(request.Note) ? $"Xuất kho ({request.Source})" : $"{request.Note} (Lý do: {request.Source})",
-                    MaKho = request.WarehouseId,
                     SoLuongTruoc = beforeQty,
                     SoLuongSau = afterQty
                 };
@@ -259,7 +217,7 @@ namespace DATN64.Controllers.Api
         [HttpPost("audit")]
         public async Task<IActionResult> AuditInventory([FromBody] AuditRequest request)
         {
-            if (request == null || request.ProductId <= 0 || request.ActualQuantity < 0 || request.WarehouseId <= 0)
+            if (request == null || request.ProductId <= 0 || request.ActualQuantity < 0)
             {
                 return BadRequest(new { message = "Dữ liệu kiểm kê không hợp lệ!" });
             }
@@ -270,12 +228,6 @@ namespace DATN64.Controllers.Api
                 if (product == null)
                 {
                     return NotFound(new { message = "Không tìm thấy sản phẩm!" });
-                }
-
-                var warehouse = await _context.KhoHangs.FirstOrDefaultAsync(w => w.MaKho == request.WarehouseId);
-                if (warehouse == null)
-                {
-                    return NotFound(new { message = "Không tìm thấy kho hàng kiểm kê!" });
                 }
 
                 int beforeQty = product.SoLuongTon;
@@ -295,9 +247,8 @@ namespace DATN64.Controllers.Api
                     Creator = HttpContext.Session.GetString("UserName") ?? "Thủ kho",
                     Date = DateTime.Now,
                     Note = string.IsNullOrEmpty(request.Note) 
-                        ? $"Kiểm kê kho ({warehouse.TenKho}). Thực tế: {request.ActualQuantity}, Lệch: {(diff >= 0 ? "+" : "")}{diff}"
+                        ? $"Kiểm kê kho. Thực tế: {request.ActualQuantity}, Lệch: {(diff >= 0 ? "+" : "")}{diff}"
                         : $"{request.Note} (Thực tế: {request.ActualQuantity}, Lệch: {(diff >= 0 ? "+" : "")}{diff})",
-                    MaKho = request.WarehouseId,
                     SoLuongTruoc = beforeQty,
                     SoLuongSau = request.ActualQuantity
                 };
@@ -323,7 +274,7 @@ namespace DATN64.Controllers.Api
         [HttpPost("adjust")]
         public async Task<IActionResult> AdjustInventory([FromBody] AdjustRequest request)
         {
-            if (request == null || request.ProductId <= 0 || request.QuantityChange == 0 || request.WarehouseId <= 0 || string.IsNullOrEmpty(request.Reason))
+            if (request == null || request.ProductId <= 0 || request.QuantityChange == 0 || string.IsNullOrEmpty(request.Reason))
             {
                 return BadRequest(new { message = "Dữ liệu điều chỉnh không hợp lệ. Lý do điều chỉnh là bắt buộc!" });
             }
@@ -334,12 +285,6 @@ namespace DATN64.Controllers.Api
                 if (product == null)
                 {
                     return NotFound(new { message = "Không tìm thấy sản phẩm!" });
-                }
-
-                var warehouse = await _context.KhoHangs.FirstOrDefaultAsync(w => w.MaKho == request.WarehouseId);
-                if (warehouse == null)
-                {
-                    return NotFound(new { message = "Không tìm thấy kho hàng!" });
                 }
 
                 if (product.SoLuongTon + request.QuantityChange < 0)
@@ -364,9 +309,8 @@ namespace DATN64.Controllers.Api
                     Creator = HttpContext.Session.GetString("UserName") ?? "Thủ kho",
                     Date = DateTime.Now,
                     Note = string.IsNullOrEmpty(request.Note) 
-                        ? $"Điều chỉnh tồn kho ({warehouse.TenKho}). Lý do: {request.Reason}"
+                        ? $"Điều chỉnh tồn kho. Lý do: {request.Reason}"
                         : $"Lý do: {request.Reason}. Ghi chú: {request.Note}",
-                    MaKho = request.WarehouseId,
                     SoLuongTruoc = beforeQty,
                     SoLuongSau = afterQty
                 };
@@ -386,82 +330,6 @@ namespace DATN64.Controllers.Api
                 return StatusCode(500, new { message = "Lỗi hệ thống khi điều chỉnh kho", error = ex.Message });
             }
         }
-
-        // POST: api/inventory/transfer
-        [HttpPost("transfer")]
-        public async Task<IActionResult> TransferInventory([FromBody] TransferRequest request)
-        {
-            if (request == null || request.ProductId <= 0 || request.Quantity <= 0 || request.FromWarehouseId <= 0 || request.ToWarehouseId <= 0)
-            {
-                return BadRequest(new { message = "Dữ liệu chuyển kho không hợp lệ!" });
-            }
-
-            if (request.FromWarehouseId == request.ToWarehouseId)
-            {
-                return BadRequest(new { message = "Kho nguồn và kho đích không được trùng nhau!" });
-            }
-
-            try
-            {
-                var product = await _context.SanPhams.FirstOrDefaultAsync(p => p.MaSanPham == request.ProductId);
-                if (product == null)
-                {
-                    return NotFound(new { message = "Không tìm thấy sản phẩm!" });
-                }
-
-                var fromWarehouse = await _context.KhoHangs.FirstOrDefaultAsync(w => w.MaKho == request.FromWarehouseId);
-                var toWarehouse = await _context.KhoHangs.FirstOrDefaultAsync(w => w.MaKho == request.ToWarehouseId);
-                if (fromWarehouse == null || toWarehouse == null)
-                {
-                    return NotFound(new { message = "Không tìm thấy thông tin kho nguồn hoặc kho đích!" });
-                }
-
-                // Since SoLuongTon is global on SanPham, transferring doesn't change global SoLuongTon.
-                // We keep it unchanged but validate we have enough overall stock just in case.
-                if (product.SoLuongTon < request.Quantity)
-                {
-                    return BadRequest(new { message = $"Số lượng tổng tồn kho ({product.SoLuongTon}) không đủ để thực hiện chuyển {request.Quantity}!" });
-                }
-
-                int beforeQty = product.SoLuongTon;
-                int afterQty = product.SoLuongTon; // Net change is 0 on overall stock
-
-                int count = await _context.InventoryTransactions.CountAsync(t => t.Type == "Chuyển kho") + 1;
-                string code = "CK" + count.ToString("D6");
-
-                var tx = new InventoryTransaction
-                {
-                    Code = code,
-                    Type = "Chuyển kho",
-                    ProductSKU = product.MaSanPham.ToString(),
-                    ProductName = product.TenSanPham,
-                    QuantityChange = request.Quantity, // Log positive quantity moved
-                    Creator = HttpContext.Session.GetString("UserName") ?? "Thủ kho",
-                    Date = DateTime.Now,
-                    Note = string.IsNullOrEmpty(request.Note) 
-                        ? $"Chuyển {request.Quantity} cái từ {fromWarehouse.TenKho} sang {toWarehouse.TenKho}"
-                        : $"{request.Note} (Từ: {fromWarehouse.TenKho} -> Đến: {toWarehouse.TenKho})",
-                    MaKhoNguon = request.FromWarehouseId,
-                    MaKhoDich = request.ToWarehouseId,
-                    SoLuongTruoc = beforeQty,
-                    SoLuongSau = afterQty
-                };
-
-                _context.InventoryTransactions.Add(tx);
-                await _context.SaveChangesAsync();
-
-                return Ok(new { 
-                    message = $"Đã thực hiện chuyển kho {request.Quantity} sản phẩm!", 
-                    before = beforeQty, 
-                    after = afterQty, 
-                    code = code 
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Lỗi hệ thống khi chuyển kho", error = ex.Message });
-            }
-        }
     }
 
     // Request DTOs
@@ -470,7 +338,6 @@ namespace DATN64.Controllers.Api
         public int ProductId { get; set; }
         public int Quantity { get; set; }
         public string Source { get; set; } = "Nhà cung cấp";
-        public int WarehouseId { get; set; }
         public string? Note { get; set; }
     }
 
@@ -479,7 +346,6 @@ namespace DATN64.Controllers.Api
         public int ProductId { get; set; }
         public int Quantity { get; set; }
         public string Source { get; set; } = "Xuất POS";
-        public int WarehouseId { get; set; }
         public string? Note { get; set; }
     }
 
@@ -487,7 +353,6 @@ namespace DATN64.Controllers.Api
     {
         public int ProductId { get; set; }
         public int ActualQuantity { get; set; }
-        public int WarehouseId { get; set; }
         public string? Note { get; set; }
     }
 
@@ -496,16 +361,6 @@ namespace DATN64.Controllers.Api
         public int ProductId { get; set; }
         public int QuantityChange { get; set; }
         public string Reason { get; set; } = "";
-        public int WarehouseId { get; set; }
-        public string? Note { get; set; }
-    }
-
-    public class TransferRequest
-    {
-        public int ProductId { get; set; }
-        public int Quantity { get; set; }
-        public int FromWarehouseId { get; set; }
-        public int ToWarehouseId { get; set; }
         public string? Note { get; set; }
     }
 }
