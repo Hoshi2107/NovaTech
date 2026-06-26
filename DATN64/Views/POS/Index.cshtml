@@ -341,13 +341,19 @@
 
           <!-- Bank Transfer QR Section -->
           <div class="qr-payment-section mb-3 p-3 rounded-3 text-center" v-if="paymentMethod === 'Chuyển khoản'">
-            <label class="form-label text-xxs voucher-label fw-semibold mb-2 d-block">Quét mã QR để chuyển khoản</label>
-            <div class="qr-container d-inline-block p-2 bg-white rounded-3 shadow-sm mb-2">
-              <img :src="qrCodeUrl" alt="VietQR Thanh toán" class="img-fluid" style="max-width: 160px; display: block; margin: 0 auto;">
+            <div v-if="cart.length === 0" class="py-3 text-warning text-xs fw-semibold">
+              <i class="fa-solid fa-circle-exclamation fs-5 mb-1.5 d-block text-warning animate-bounce"></i>
+              Bạn cần chọn 1 sản phẩm trước khi thanh toán
             </div>
-            <div class="text-xxs text-secondary mt-1">
-              <div>Ngân hàng: <strong class="text-cyan">${ bankConfig.bankId }</strong> | STK: <strong class="text-cyan">${ bankConfig.accountNo }</strong></div>
-              <div>Chủ tài khoản: <strong class="text-cyan">${ bankConfig.accountName }</strong></div>
+            <div v-else>
+              <label class="form-label text-xxs voucher-label fw-semibold mb-2 d-block">Quét mã QR để chuyển khoản</label>
+              <div class="qr-container d-inline-block p-2 bg-white rounded-3 shadow-sm mb-2" @@click="zoomQR = true" style="cursor: zoom-in;">
+                <img :src="qrCodeUrl" alt="VietQR Thanh toán" class="img-fluid" style="max-width: 160px; display: block; margin: 0 auto;">
+              </div>
+              <div class="text-xxs text-secondary mt-1">
+                <div>Ngân hàng: <strong class="text-cyan">${ bankConfig.bankId }</strong> | STK: <strong class="text-cyan">${ bankConfig.accountNo }</strong></div>
+                <div>Chủ tài khoản: <strong class="text-cyan">${ bankConfig.accountName }</strong></div>
+              </div>
             </div>
           </div>
 
@@ -467,6 +473,32 @@
             <button type="button" class="btn btn-info text-white btn-sm px-4 fw-semibold" @@click="printReceipt">In hóa đơn</button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Zoomed QR Code Overlay Modal -->
+    <div class="qr-zoom-overlay d-flex align-items-center justify-content-center" v-if="zoomQR" @@click="zoomQR = false" style="background: rgba(0,0,0,0.85); position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999; cursor: zoom-out;">
+      <div class="qr-zoom-card p-4 bg-white rounded-4 shadow-lg text-center" @@click.stop style="max-width: 90%; width: 380px; cursor: default; border-radius: 16px;">
+        <h5 class="fw-bold text-dark mb-3">MÃ QR THANH TOÁN</h5>
+        <div class="p-3 bg-white rounded-3 border border-slate-200 d-inline-block shadow-sm mb-3">
+          <img :src="qrCodeUrl" alt="VietQR Zoomed" class="img-fluid" style="width: 260px; max-width: 100%; display: block; margin: 0 auto;">
+        </div>
+        <div class="text-xs text-dark mt-2 d-grid gap-1.5 text-start px-2">
+          <div class="fw-bold mb-1.5 text-center text-dark">Số tiền cần quét: <span class="text-danger fs-5 d-block mt-0.5 fw-extrabold">${ formatMoney(totalAmount) } đ</span></div>
+          <div class="d-flex justify-content-between border-top border-light pt-2">
+            <span class="text-muted">Ngân hàng:</span>
+            <strong>${ bankConfig.bankId }</strong>
+          </div>
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">Số tài khoản:</span>
+            <strong>${ bankConfig.accountNo }</strong>
+          </div>
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">Chủ tài khoản:</span>
+            <strong>${ bankConfig.accountName }</strong>
+          </div>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm px-4 mt-3.5 rounded-pill fw-bold text-xs" @@click="zoomQR = false">Đóng</button>
       </div>
     </div>
 </div>
