@@ -132,11 +132,11 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.theme-switch input:checked + .slider {
+.theme-switch input:checked+.slider {
   background-color: var(--accent-color);
 }
 
-.theme-switch input:checked + .slider::before {
+.theme-switch input:checked+.slider::before {
   transform: translateX(24px);
 }
 
@@ -201,8 +201,13 @@
 }
 
 @keyframes ticker-scroll {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
 }
 
 /* Products Panel & Search */
@@ -232,7 +237,8 @@
   transition: all 0.2s ease;
 }
 
-.btn-outline-slate:hover, .btn-outline-slate:focus {
+.btn-outline-slate:hover,
+.btn-outline-slate:focus {
   background-color: var(--qty-btn-bg);
   border-color: var(--accent-color);
   color: var(--text-primary);
@@ -318,7 +324,8 @@
 .pos-checkout-panel {
   background-color: var(--panel-bg);
   border-left: 1px solid var(--border-color);
-  padding: 1.5rem !important; /* spacious padding */
+  padding: 1.5rem !important;
+  /* spacious padding */
 }
 
 /* Cart list styling */
@@ -497,6 +504,7 @@
   .pos-main-container {
     overflow-y: auto;
   }
+
   .products-grid-container {
     overflow-y: visible;
   }
@@ -577,16 +585,18 @@
 .header-left-brand {
   width: 180px;
 }
+
 .header-right-actions {
   width: 320px;
 }
 
 @media (max-width: 991.98px) {
+
   .header-left-brand,
   .header-right-actions {
     width: auto !important;
   }
-  
+
   /* Enable scrolling in the checkout panel when stacked vertically to avoid overflow clipping */
   .pos-checkout-panel {
     overflow-y: auto !important;
@@ -625,4 +635,56 @@
 .qr-container:hover {
   transform: scale(1.02);
   box-shadow: 0 4px 12px rgba(0, 242, 254, 0.15);
+}
+
+/* Search bar POS */
+.search-box-pos .form-control {
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--input-color);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.search-box-pos .form-control:focus {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px rgba(0, 242, 254, 0.12);
+  background-color: var(--input-bg);
+  color: var(--input-color);
+  outline: none;
+}
+
+.search-box-pos .form-control::placeholder {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.btn-search-pos {
+  background: linear-gradient(135deg, var(--accent-color), #0ea5e9);
+  border: none;
+  color: #0B111E;
+  font-weight: 700;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+  padding: 0 12px;
+}
+
+.btn-search-pos:hover {
+  opacity: 0.88;
+  transform: scale(1.04);
+  color: #0B111E;
+}
+
+.btn-search-pos:active {
+  transform: scale(0.97);
+}
+
+/* Light mode overrides for search */
+.pos-wrapper.light-mode .search-box-pos .form-control {
+  background-color: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--input-color);
+}
+
+.pos-wrapper.light-mode .btn-search-pos {
+  background: linear-gradient(135deg, #0284C7, #0ea5e9);
+  color: #fff;
 }

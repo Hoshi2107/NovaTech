@@ -58,7 +58,7 @@
         </div>
 
         <a href="/Portal/Selection" class="btn btn-back rounded-pill px-2.5 px-sm-3.5 text-xs d-flex align-items-center gap-1.5">
-          <i class="fa-solid fa-arrow-left"></i> <span class="d-none d-sm-inline">Trở lại Cổng</span>
+          <i class="fa-solid fa-arrow-left"></i> <span class="d-none d-sm-inline">Trở lại</span>
         </a>
       </div>
     </header>
@@ -70,13 +70,27 @@
       <div class="col-lg-8 d-flex flex-column h-100 p-4 border-end border-slate-800 overflow-hidden" :class="{ 'd-none d-lg-flex': activeTab !== 'products' }">
         
         <!-- Search and Catalog Filter -->
-        <div class="d-flex flex-row flex-wrap gap-2 mb-4 flex-shrink-0 align-items-center">
+        <div class="d-flex flex-row flex-wrap gap-2 mb-4 flex-shrink-0 align-items-center justify-content-end">
+
+          <!-- Spacious Search Bar with Search Button -->
+          <div class="search-box-pos d-flex align-items-center" style="min-width: 260px; max-width: 480px; flex: 1 1 320px;">
+            <div class="input-group">
+              <input type="text" v-model="searchQuery" class="form-control" style="border-radius: 22px 0 0 22px; border-right: none; font-size: 0.8rem; padding: 0.45rem 1rem;" placeholder="🔍  Tìm tên sản phẩm hoặc mã SKU...">
+              <button class="btn btn-search-pos d-flex align-items-center justify-content-center" type="button" style="border-radius: 0 22px 22px 0; min-width: 44px; font-size: 0.9rem;">
+                <i class="fa-solid fa-magnifying-glass"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Divider -->
+          <div class="vr opacity-25 d-none d-md-block" style="height: 24px;"></div>
+
           <!-- Compact Dropdown Filter -->
           <div class="dropdown flex-shrink-0">
             <button class="btn btn-outline-slate rounded-pill px-3 py-1.5 text-xs fw-bold dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <i class="fa-solid fa-filter text-cyan"></i> Lọc: ${ activeCategory }
+              <i class="fa-solid fa-filter text-cyan"></i> ${ activeCategory }
             </button>
-            <ul class="dropdown-menu shadow">
+            <ul class="dropdown-menu dropdown-menu-end shadow">
               <li><a class="dropdown-item text-xs" href="#" @@click.prevent="activeCategory = 'Tất cả'">Tất cả</a></li>
               <li v-for="cat in categories" :key="cat">
                 <a class="dropdown-item text-xs" href="#" @@click.prevent="activeCategory = cat">${ cat }</a>
@@ -87,9 +101,9 @@
           <!-- Brand Dropdown Filter -->
           <div class="dropdown flex-shrink-0">
             <button class="btn btn-outline-slate rounded-pill px-3 py-1.5 text-xs fw-bold dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <i class="fa-solid fa-tag text-cyan"></i> Thương hiệu: ${ activeBrand }
+              <i class="fa-solid fa-tag text-cyan"></i> ${ activeBrand }
             </button>
-            <ul class="dropdown-menu shadow">
+            <ul class="dropdown-menu dropdown-menu-end shadow">
               <li><a class="dropdown-item text-xs" href="#" @@click.prevent="activeBrand = 'Tất cả'">Tất cả</a></li>
               <li v-for="brand in brands" :key="brand">
                 <a class="dropdown-item text-xs" href="#" @@click.prevent="activeBrand = brand">${ brand }</a>
@@ -100,21 +114,16 @@
           <!-- Sort Dropdown Filter -->
           <div class="dropdown flex-shrink-0">
             <button class="btn btn-outline-slate rounded-pill px-3 py-1.5 text-xs fw-bold dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <i class="fa-solid fa-arrow-down-wide-narrow text-cyan"></i> Sắp xếp: ${ getSortLabel() }
+              <i class="fa-solid fa-arrow-down-wide-narrow text-cyan"></i> ${ getSortLabel() }
             </button>
-            <ul class="dropdown-menu shadow">
+            <ul class="dropdown-menu dropdown-menu-end shadow">
               <li><a class="dropdown-item text-xs" href="#" @@click.prevent="sortBy = 'default'">Mặc định</a></li>
-              <li><a class="dropdown-item text-xs" href="#" @@click.prevent="sortBy = 'priceAsc'">Giá: Thấp -> Cao</a></li>
-              <li><a class="dropdown-item text-xs" href="#" @@click.prevent="sortBy = 'priceDesc'">Giá: Cao -> Thấp</a></li>
-              <li><a class="dropdown-item text-xs" href="#" @@click.prevent="sortBy = 'nameAsc'">Tên: A -> Z</a></li>
+              <li><a class="dropdown-item text-xs" href="#" @@click.prevent="sortBy = 'priceAsc'">Giá: Thấp → Cao</a></li>
+              <li><a class="dropdown-item text-xs" href="#" @@click.prevent="sortBy = 'priceDesc'">Giá: Cao → Thấp</a></li>
+              <li><a class="dropdown-item text-xs" href="#" @@click.prevent="sortBy = 'nameAsc'">Tên: A → Z</a></li>
             </ul>
           </div>
 
-          <!-- Spacious Search Bar -->
-          <div class="search-box-pos position-relative flex-grow-1" style="min-width: 200px;">
-            <input type="text" v-model="searchQuery" class="form-control text-xs rounded-pill" placeholder="Tìm tên sản phẩm hoặc mã SKU...">
-            <i class="fa-solid fa-magnifying-glass position-absolute top-50 translate-middle-y end-0 me-3 text-muted"></i>
-          </div>
         </div>
 
         <div v-if="loading" class="d-flex align-items-center justify-content-center flex-grow-1">
