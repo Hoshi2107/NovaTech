@@ -204,6 +204,32 @@ namespace DATN64.Models
                 );
             ");
 
+            // Create ChamCong table
+            ExecuteSql(db, @"
+                IF OBJECT_ID('dbo.ChamCong', 'U') IS NULL
+                CREATE TABLE dbo.ChamCong (
+                    Id INT IDENTITY(1,1) PRIMARY KEY,
+                    MaNhanVien INT NOT NULL,
+                    NgayCham DATETIME NOT NULL,
+                    GioVao DATETIME NULL,
+                    GioRa DATETIME NULL,
+                    TongGioLam FLOAT NULL,
+                    GhiChu NVARCHAR(255) NULL,
+                    TrangThai NVARCHAR(50) NOT NULL DEFAULT N'Đang làm'
+                );
+            ");
+
+            // Add LuongTheoGio to NhanVien
+            ExecuteSql(db, @"
+                IF NOT EXISTS (
+                    SELECT 1
+                    FROM sys.columns c
+                    INNER JOIN sys.objects o ON c.object_id = o.object_id
+                    WHERE o.name = 'NhanVien' AND c.name = 'LuongTheoGio'
+                )
+                ALTER TABLE dbo.NhanVien ADD LuongTheoGio DECIMAL(18,2) NULL;
+            ");
+
             // Ensure DonHang.MaNhanVien column allows NULL when the model is optional
             ExecuteSql(db, @"
                 IF OBJECT_ID('dbo.DonHang', 'U') IS NOT NULL

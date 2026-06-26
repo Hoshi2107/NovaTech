@@ -4,6 +4,9 @@
 @{
     Layout = "~/Views/Shared/_POSLayout.cshtml";
     ViewData["Title"] = "Bán hàng tại quầy (POS)";
+    var seller = ViewBag.CurrentSeller as DATN64.Models.NhanVien;
+    var todayChamCong = ViewBag.TodayChamCong as DATN64.Models.ChamCong;
+    bool daCheckIn = todayChamCong != null;
 }
 
 <div id="app" class="pos-wrapper min-vh-100 w-100 d-flex flex-column" :class="{ 'light-mode': !isDarkMode }" v-cloak>
@@ -45,6 +48,27 @@
           <i class="fa-solid fa-circle-user text-cyan"></i>
           <span>Thu ngân: <strong class="cashier-name" v-if="user">${ user.fullName }</strong></span>
         </div>
+        
+        <!-- Check In / Out Button -->
+        @if (seller != null)
+        {
+            @if (!daCheckIn)
+            {
+                <form asp-action="CheckIn" asp-controller="POS" method="post" class="m-0">
+                    <button type="submit" class="btn btn-sm btn-warning rounded-pill px-3 text-xs fw-bold text-dark">
+                        <i class="fa-solid fa-fingerprint me-1"></i> Check In
+                    </button>
+                </form>
+            }
+            else
+            {
+                <form asp-action="CheckOut" asp-controller="POS" method="post" class="m-0">
+                    <button type="submit" class="btn btn-sm btn-danger rounded-pill px-3 text-xs fw-bold" onclick="return confirm('Kết thúc ca làm việc?')">
+                        <i class="fa-solid fa-right-from-bracket me-1"></i> Check Out
+                    </button>
+                </form>
+            }
+        }
         
         <!-- Theme Toggle Switch -->
         <div class="theme-switch-wrapper">

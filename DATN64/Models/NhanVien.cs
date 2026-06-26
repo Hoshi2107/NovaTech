@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DATN64.Models
@@ -28,5 +28,9 @@ namespace DATN64.Models
 
         [StringLength(50)]
         public string? TrangThai { get; set; }
+
+        // Luong theo gio (VND/gio), dung de tinh luong thang
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? LuongTheoGio { get; set; }
     }
 }

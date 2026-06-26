@@ -46,9 +46,28 @@ namespace DATN64.Controllers
                 .Include(p => p.ThuongHieu)
                 .Where(p => p.TrangThai == "Đang bán").ToList();
             var customers = _context.KhachHangs.ToList();
-            
+
+            // Lấy nhân viên hiện tại
+            var seller = !string.IsNullOrEmpty(userEmail)
+                ? _context.NhanViens.FirstOrDefault(e => e.Email == userEmail)
+                : null;
+
+            // Kiểm tra trạng thái chấm công hôm nay
+            ChamCong? todayChamCong = null;
+            if (seller != null)
+            {
+                todayChamCong = _context.ChamCongs
+                    .Where(c => c.MaNhanVien == seller.MaNhanVien
+                             && c.NgayCham.Date == DateTime.Today
+                             && c.TrangThai == "Đang làm")
+                    .OrderByDescending(c => c.GioVao)
+                    .FirstOrDefault();
+            }
+
             ViewBag.Customers = customers;
             ViewBag.SellerName = HttpContext.Session.GetString("UserName") ?? "Nhân viên";
+            ViewBag.CurrentSeller = seller;
+            ViewBag.TodayChamCong = todayChamCong;
 
             return View(products);
         }
@@ -82,6 +101,96 @@ namespace DATN64.Controllers
                 phone = c.SoDienThoai ?? ""
             }).ToList();
             return Json(customers);
+        }
+
+        // ── CHECK IN ─────────────────────────────────────────────────
+        [HttpPost]
+        public IActionResult CheckIn()
+        {
+            var userEmail = HttpContext.Session.GetString("UserEmail");
+            if (string.IsNullOrEmpty(userEmail))
+                return RedirectToAction("Login", "Account");
+
+            var seller = _context.NhanViens.FirstOrDefault(e => e.Email == userEmail);
+            if (seller == null)
+            {
+                TempData["ToastMessage"] = "Không tìm thấy thông tin nhân viên!";
+                TempData["ToastType"] = "danger";
+                return RedirectToAction("Index");
+            }
+
+            // Kiểm tra đã check in hôm nay chưa (tránh tạo bản ghi trùng)
+            bool daCheckIn = _context.ChamCongs.Any(c =>
+                c.MaNhanVien == seller.MaNhanVien
+                && c.NgayCham.Date == DateTime.Today
+                && c.TrangThai == "Đang làm");
+
+            if (daCheckIn)
+            {
+                TempData["ToastMessage"] = "Bạn đã Check In rồi! Vui lòng Check Out trước khi bắt đầu ca mới.";
+                TempData["ToastType"] = "warning";
+                return RedirectToAction("Index");
+            }
+
+            var chamCong = new ChamCong
+            {
+                MaNhanVien = seller.MaNhanVien,
+                NgayCham = DateTime.Today,
+                GioVao = DateTime.Now,
+                TrangThai = "Đang làm"
+            };
+
+            _context.ChamCongs.Add(chamCong);
+            _context.SaveChanges();
+
+            TempData["ToastMessage"] = $"Check In thành công lúc {DateTime.Now:HH:mm}. Chúc bạn làm việc hiệu quả!";
+            TempData["ToastType"] = "success";
+            return RedirectToAction("Index");
+        }
+
+        // ── CHECK OUT ────────────────────────────────────────────────
+        [HttpPost]
+        public IActionResult CheckOut()
+        {
+            var userEmail = HttpContext.Session.GetString("UserEmail");
+            if (string.IsNullOrEmpty(userEmail))
+                return RedirectToAction("Login", "Account");
+
+            var seller = _context.NhanViens.FirstOrDefault(e => e.Email == userEmail);
+            if (seller == null)
+            {
+                TempData["ToastMessage"] = "Không tìm thấy thông tin nhân viên!";
+                TempData["ToastType"] = "danger";
+                return RedirectToAction("Index");
+            }
+
+            var chamCong = _context.ChamCongs
+                .Where(c => c.MaNhanVien == seller.MaNhanVien
+                         && c.NgayCham.Date == DateTime.Today
+                         && c.TrangThai == "Đang làm")
+                .OrderByDescending(c => c.GioVao)
+                .FirstOrDefault();
+
+            if (chamCong == null)
+            {
+                TempData["ToastMessage"] = "Bạn chưa Check In hôm nay!";
+                TempData["ToastType"] = "warning";
+                return RedirectToAction("Index");
+            }
+
+            chamCong.GioRa = DateTime.Now;
+            chamCong.TrangThai = "Hoàn thành";
+
+            if (chamCong.GioVao.HasValue)
+            {
+                chamCong.TongGioLam = Math.Round((chamCong.GioRa.Value - chamCong.GioVao.Value).TotalHours, 2);
+            }
+
+            _context.SaveChanges();
+
+            TempData["ToastMessage"] = $"Check Out thành công! Tổng giờ làm hôm nay: {chamCong.TongGioLam:F1} giờ.";
+            TempData["ToastType"] = "success";
+            return RedirectToAction("Index");
         }
 
         [HttpPost]
