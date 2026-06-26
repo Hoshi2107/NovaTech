@@ -63,6 +63,12 @@ namespace DATN64.Models
                     ALTER TABLE dbo.InventoryTransaction ADD SoLuongSau INT NULL;
                 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.InventoryTransaction') AND name = 'TrangThai')
                     ALTER TABLE dbo.InventoryTransaction ADD TrangThai NVARCHAR(50) NOT NULL DEFAULT N'Đã duyệt';
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.InventoryTransaction') AND name = 'NguoiDuyet')
+                    ALTER TABLE dbo.InventoryTransaction ADD NguoiDuyet NVARCHAR(200) NULL;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.InventoryTransaction') AND name = 'NgayDuyet')
+                    ALTER TABLE dbo.InventoryTransaction ADD NgayDuyet DATETIME2 NULL;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.InventoryTransaction') AND name = 'LyDoTuChoi')
+                    ALTER TABLE dbo.InventoryTransaction ADD LyDoTuChoi NVARCHAR(500) NULL;
             ");
 
             // Create SystemNotification

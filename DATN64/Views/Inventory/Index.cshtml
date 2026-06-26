@@ -47,6 +47,12 @@
                         <i class="fa-solid fa-sliders me-2 text-primary"></i>Điều chỉnh
                     </button>
                 </li>
+                <li class="nav-item" role="presentation" v-if="isManager">
+                    <button class="nav-link rounded-3 py-2.5" :class="{ active: activeTab === 'approval' }" @@click="setTab('approval')">
+                        <i class="fa-solid fa-clipboard-check me-2 text-warning"></i>Phê duyệt điều chỉnh
+                        <span v-if="pendingAdjustments.length > 0" class="badge bg-danger rounded-pill ms-1">${ pendingAdjustments.length }</span>
+                    </button>
+                </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link rounded-3 py-2.5" :class="{ active: activeTab === 'history' }" @@click="setTab('history')">
                         <i class="fa-solid fa-history me-2"></i>Lịch sử
@@ -608,6 +614,87 @@
             </div>
         </div>
 
+        <!-- PHÊ DUYỆT ĐIỀU CHỈNH TAB - Manager Only -->
+        <div class="tab-pane show active" v-if="activeTab === 'approval' && isManager">
+            <div class="card border-0 shadow-sm rounded-4 bg-glass">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="d-inline-flex align-items-center justify-content-center bg-warning-subtle text-warning rounded-circle me-3" style="width: 48px; height: 48px;">
+                            <i class="fa-solid fa-clipboard-check fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">Phê duyệt Điều chỉnh Tồn kho</h5>
+                            <p class="text-muted-custom text-sm mb-0">Xem và duyệt các phiếu điều chỉnh tồn kho chờ phê duyệt</p>
+                        </div>
+                        <span class="badge bg-warning text-dark rounded-pill ms-auto px-3 py-2 fs-6">
+                            <i class="fa-solid fa-hourglass-half me-1"></i>${ pendingAdjustments.length } phiếu chờ
+                        </span>
+                    </div>
+
+                    <div v-if="pendingAdjustments.length === 0" class="text-center py-5">
+                        <div class="d-inline-flex align-items-center justify-content-center bg-success-subtle text-success rounded-circle mb-3" style="width: 64px; height: 64px;">
+                            <i class="fa-solid fa-check-double fs-3"></i>
+                        </div>
+                        <h6 class="text-muted fw-bold">Không có phiếu điều chỉnh nào chờ duyệt</h6>
+                        <p class="text-muted-custom text-sm">Tất cả phiếu điều chỉnh đã được xử lý.</p>
+                    </div>
+
+                    <div v-else class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="fw-bold text-xs text-uppercase text-muted">Mã phiếu</th>
+                                    <th class="fw-bold text-xs text-uppercase text-muted">Sản phẩm</th>
+                                    <th class="fw-bold text-xs text-uppercase text-muted">Loại điều chỉnh</th>
+                                    <th class="fw-bold text-xs text-uppercase text-muted">Số lượng</th>
+                                    <th class="fw-bold text-xs text-uppercase text-muted">Người tạo</th>
+                                    <th class="fw-bold text-xs text-uppercase text-muted">Lý do</th>
+                                    <th class="fw-bold text-xs text-uppercase text-muted">Ngày tạo</th>
+                                    <th class="fw-bold text-xs text-uppercase text-muted">Trạng thái</th>
+                                    <th class="fw-bold text-xs text-uppercase text-muted text-center">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="tx in pendingAdjustments" :key="tx.id">
+                                    <td>
+                                        <span class="badge bg-primary-subtle text-primary px-2 py-1 rounded-pill">${ tx.code }</span>
+                                    </td>
+                                    <td>
+                                        <span class="fw-semibold">${ tx.productName }</span>
+                                        <br><small class="text-muted">SKU: ${ tx.productSKU }</small>
+                                    </td>
+                                    <td>
+                                        <span :class="tx.quantityChange > 0 ? 'badge bg-success-subtle text-success' : 'badge bg-danger-subtle text-danger'">
+                                            ${ tx.quantityChange > 0 ? 'Tăng' : 'Giảm' }
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span :class="tx.quantityChange > 0 ? 'text-success fw-bold' : 'text-danger fw-bold'">
+                                            ${ tx.quantityChange > 0 ? '+' : '' }${ tx.quantityChange } cái
+                                        </span>
+                                    </td>
+                                    <td>${ tx.creator }</td>
+                                    <td><small class="text-muted">${ tx.note }</small></td>
+                                    <td><small>${ tx.date }</small></td>
+                                    <td><span class="badge bg-warning text-dark">Chờ duyệt</span></td>
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-success rounded-start-pill px-3" @@click="approveAdjust(tx)" :disabled="submitting">
+                                                <i class="fa-solid fa-check me-1"></i>Duyệt
+                                            </button>
+                                            <button class="btn btn-outline-danger rounded-end-pill px-3" @@click="rejectAdjust(tx)" :disabled="submitting">
+                                                <i class="fa-solid fa-xmark me-1"></i>Từ chối
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- TRANSACTION HISTORY TAB -->
         <div class="tab-pane show active" v-if="activeTab === 'history'">
             <div class="card border-0 shadow-sm rounded-4 bg-glass">
@@ -637,11 +724,15 @@
                                     <tr v-for="tx in pendingTransactions" :key="tx.id">
                                         <td><span class="badge bg-dark fw-mono font-monospace">${ tx.code }</span></td>
                                         <td>
-                                            <span class="badge rounded-pill" :class="tx.type === 'Nhập kho' ? 'bg-success' : 'bg-danger'">${ tx.type }</span>
+                                            <span class="badge rounded-pill" :class="{
+                                                'bg-success': tx.type === 'Nhập kho',
+                                                'bg-danger': tx.type === 'Xuất kho',
+                                                'bg-warning text-dark': tx.type === 'Kiểm kê'
+                                            }">${ tx.type }</span>
                                         </td>
                                         <td class="fw-bold text-xs">${ tx.productName }</td>
-                                        <td class="text-center fw-bold" :class="tx.type === 'Nhập kho' ? 'text-success' : 'text-danger'">
-                                            ${ tx.type === 'Nhập kho' ? '+' : '' }${ tx.quantityChange } cái
+                                        <td class="text-center fw-bold" :class="tx.quantityChange >= 0 ? 'text-success' : 'text-danger'">
+                                            ${ tx.quantityChange >= 0 ? '+' : '' }${ tx.quantityChange } cái
                                         </td>
                                         <td class="text-xs text-secondary">${ tx.creator }</td>
                                         <td class="text-xs text-muted">${ tx.note }</td>
@@ -751,23 +842,30 @@
                                     <td class="text-center text-xs text-dark fw-bold">
                                         ${ tx.soLuongSau != null ? tx.soLuongSau + ' cái' : '---' }
                                     </td>
-                                    <td class="text-center">
-                                        <span class="badge rounded-pill" :class="{
+                                    <td class="text-center text-xs">
+                                        <span class="badge rounded-pill mb-1" :class="{
                                             'bg-warning text-dark': tx.trangThai === 'Chờ duyệt',
                                             'bg-success': tx.trangThai === 'Đã duyệt',
                                             'bg-danger': tx.trangThai === 'Đã từ chối'
                                         }">${ tx.trangThai || 'Đã duyệt' }</span>
+                                        <div v-if="tx.nguoiDuyet" class="text-xxs text-muted mt-1" style="line-height: 1.2;">
+                                            <div>Duyệt: <b>${ tx.nguoiDuyet }</b></div>
+                                            <div class="text-xxs">${ tx.ngayDuyet }</div>
+                                        </div>
                                     </td>
                                     <td class="text-xs text-secondary">${ tx.creator }</td>
-                                    <td class="text-xs text-muted-custom" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="tx.note">
-                                        ${ tx.note }
+                                    <td class="text-xs text-muted-custom" style="max-width: 250px;">
+                                        <div class="text-truncate" :title="tx.note">${ tx.note }</div>
+                                        <div v-if="tx.lyDoTuChoi" class="text-danger mt-1" style="font-size: 0.75rem; border-top: 1px dashed #fee2e2; padding-top: 2px;">
+                                            <strong>Lý do từ chối:</strong> ${ tx.lyDoTuChoi }
+                                        </div>
                                     </td>
                                     <td class="text-end" v-if="isManager">
                                         <div class="d-flex gap-1 justify-content-end" v-if="tx.trangThai === 'Chờ duyệt'">
-                                            <button class="btn btn-xs btn-success py-1 px-2 rounded text-xxs fw-bold" @@click="approveTx(tx)" :disabled="submitting">
+                                            <button class="btn btn-xs btn-success py-1 px-2 rounded text-xxs fw-bold" @@click="tx.type === 'Điều chỉnh' ? approveAdjust(tx) : approveTx(tx)" :disabled="submitting">
                                                 <i class="fa-solid fa-check"></i> Duyệt
                                             </button>
-                                            <button class="btn btn-xs btn-danger py-1 px-2 rounded text-xxs fw-bold" @@click="rejectTx(tx)" :disabled="submitting">
+                                            <button class="btn btn-xs btn-danger py-1 px-2 rounded text-xxs fw-bold" @@click="tx.type === 'Điều chỉnh' ? rejectAdjust(tx) : rejectTx(tx)" :disabled="submitting">
                                                 <i class="fa-solid fa-xmark"></i> Từ chối
                                             </button>
                                         </div>
@@ -978,7 +1076,10 @@
                     return diff > 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger';
                 },
                 pendingTransactions() {
-                    return this.transactions.filter(t => t.trangThai === 'Chờ duyệt');
+                    return this.transactions.filter(t => t.trangThai === 'Chờ duyệt' && t.type !== 'Điều chỉnh');
+                },
+                pendingAdjustments() {
+                    return this.transactions.filter(t => t.type === 'Điều chỉnh' && t.trangThai === 'Chờ duyệt');
                 }
             },
             mounted() {
@@ -1160,9 +1261,9 @@
                         const res = await axios.post('/api/inventory/audit', payload);
 
                         await Swal.fire({
-                            title: 'Hoàn thành!',
-                            text: res.data.message,
-                            icon: 'success',
+                            title: 'Đã tạo phiếu kiểm kê!',
+                            html: `<div class="text-start"><p>${res.data.message}</p><p class="mb-0 text-muted"><small>Phiếu đang chờ Quản lý/Admin phê duyệt.</small></p></div>`,
+                            icon: 'info',
                             confirmButtonText: 'Đồng ý'
                         });
 
@@ -1172,7 +1273,7 @@
                         this.forms.audit.note = '';
 
                         await this.fetchData();
-                        this.setTab('stock');
+                        this.setTab('history');
                     } catch (err) {
                         const msg = err.response?.data?.message || 'Có lỗi xảy ra khi kiểm kê kho.';
                         Swal.fire('Lỗi', msg, 'error');
@@ -1198,9 +1299,9 @@
                         const res = await axios.post('/api/inventory/adjust', payload);
 
                         await Swal.fire({
-                            title: 'Thành công!',
-                            text: res.data.message,
-                            icon: 'success',
+                            title: 'Đã tạo phiếu điều chỉnh!',
+                            html: `<div class="text-start"><p>${res.data.message}</p><p class="mb-0 text-muted"><small>Phiếu đang chờ Quản lý/Admin phê duyệt.</small></p></div>`,
+                            icon: 'info',
                             confirmButtonText: 'Đồng ý'
                         });
 
@@ -1211,7 +1312,7 @@
                         this.forms.adjust.note = '';
 
                         await this.fetchData();
-                        this.setTab('stock');
+                        this.setTab('history');
                     } catch (err) {
                         const msg = err.response?.data?.message || 'Có lỗi xảy ra khi điều chỉnh kho.';
                         Swal.fire('Lỗi', msg, 'error');
@@ -1274,6 +1375,73 @@
                         await this.fetchData();
                     } catch (err) {
                         const msg = err.response?.data?.message || 'Có lỗi xảy ra khi từ chối phiếu.';
+                        Swal.fire('Lỗi', msg, 'error');
+                    } finally {
+                        this.submitting = false;
+                    }
+                },
+
+                // Adjustment approval workflow
+                async approveAdjust(tx) {
+                    const confirm = await Swal.fire({
+                        title: 'Xác nhận duyệt phiếu điều chỉnh?',
+                        html: `Bạn có chắc muốn <b>duyệt</b> phiếu <b>${tx.code}</b>?<br>Sản phẩm: <b>${tx.productName}</b><br>Thay đổi: <b>${tx.quantityChange > 0 ? '+' : ''}${tx.quantityChange} cái</b>`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: '<i class="fa-solid fa-check me-1"></i>Duyệt phiếu',
+                        cancelButtonText: 'Huỷ',
+                        confirmButtonColor: '#198754'
+                    });
+                    if (!confirm.isConfirmed) return;
+
+                    this.submitting = true;
+                    try {
+                        const res = await axios.post(`/api/inventory/adjust/approve/${tx.id}`);
+                        await Swal.fire({
+                            title: 'Đã duyệt!',
+                            text: res.data.message || 'Phiếu điều chỉnh đã được duyệt và tồn kho đã được cập nhật.',
+                            icon: 'success',
+                            confirmButtonText: 'Đồng ý'
+                        });
+                        await this.fetchData();
+                    } catch (err) {
+                        const msg = err.response?.data?.message || 'Có lỗi xảy ra khi duyệt phiếu điều chỉnh.';
+                        Swal.fire('Lỗi', msg, 'error');
+                    } finally {
+                        this.submitting = false;
+                    }
+                },
+                async rejectAdjust(tx) {
+                    const { value: lyDo } = await Swal.fire({
+                        title: 'Từ chối phiếu điều chỉnh',
+                        html: `Phiếu: <b>${tx.code}</b><br>Sản phẩm: <b>${tx.productName}</b><br>Thay đổi: <b>${tx.quantityChange > 0 ? '+' : ''}${tx.quantityChange} cái</b>`,
+                        input: 'textarea',
+                        inputLabel: 'Lý do từ chối (bắt buộc)',
+                        inputPlaceholder: 'Nhập lý do từ chối...',
+                        inputAttributes: { required: true },
+                        inputValidator: (value) => {
+                            if (!value || !value.trim()) return 'Vui lòng nhập lý do từ chối!';
+                        },
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: '<i class="fa-solid fa-xmark me-1"></i>Xác nhận từ chối',
+                        cancelButtonText: 'Huỷ',
+                        confirmButtonColor: '#dc3545'
+                    });
+                    if (!lyDo) return;
+
+                    this.submitting = true;
+                    try {
+                        const res = await axios.post(`/api/inventory/adjust/reject/${tx.id}`, { lyDoTuChoi: lyDo });
+                        await Swal.fire({
+                            title: 'Đã từ chối!',
+                            text: res.data.message || 'Phiếu điều chỉnh đã bị từ chối. Tồn kho không thay đổi.',
+                            icon: 'info',
+                            confirmButtonText: 'Đồng ý'
+                        });
+                        await this.fetchData();
+                    } catch (err) {
+                        const msg = err.response?.data?.message || 'Có lỗi xảy ra khi từ chối phiếu điều chỉnh.';
                         Swal.fire('Lỗi', msg, 'error');
                     } finally {
                         this.submitting = false;

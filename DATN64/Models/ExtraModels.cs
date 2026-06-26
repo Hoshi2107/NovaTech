@@ -25,6 +25,11 @@ namespace DATN64.Models
         public int? MaKhoDich { get; set; }
         public int? SoLuongTruoc { get; set; }
         public int? SoLuongSau { get; set; }
+
+        // Approval workflow fields
+        public string? NguoiDuyet { get; set; }
+        public DateTime? NgayDuyet { get; set; }
+        public string? LyDoTuChoi { get; set; }
     }
 
     [Table("KhoHang")]
