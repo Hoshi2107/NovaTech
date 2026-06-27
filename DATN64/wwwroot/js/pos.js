@@ -41,6 +41,7 @@ var app = new Vue({
         user: null,
         cashReceived: 0,
         heldCarts: [],
+        zoomQR: false,
         bankConfig: {
             bankId: 'VietinBank',
             accountNo: '108602210708',
@@ -335,6 +336,7 @@ var app = new Vue({
                 this.customerPhone = "";
                 this.clearVoucher();
                 this.cashReceived = 0;
+                this.zoomQR = false;
                 this.activeTab = 'products';
                 
                 // Reload catalog counts from server
@@ -367,6 +369,7 @@ var app = new Vue({
                 this.customerPhone = "";
                 this.clearVoucher();
                 this.cashReceived = 0;
+                this.zoomQR = false;
                 this.activeTab = 'products';
             } finally {
                 this.checkingOut = false;
@@ -481,6 +484,9 @@ var app = new Vue({
             } else if (e.key === 'Escape') {
                 if (this.showReceiptModal) {
                     this.showReceiptModal = false;
+                }
+                if (this.zoomQR) {
+                    this.zoomQR = false;
                 }
             }
         }

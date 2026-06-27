@@ -32,6 +32,9 @@ namespace DATN64.Models
         public DbSet<NhanVienRole> NhanVienRoles { get; set; }
         public DbSet<CustomerInboxThread> CustomerInboxThreads { get; set; }
         public DbSet<CustomerInboxMessage> CustomerInboxMessages { get; set; }
+        public DbSet<ChamCong> ChamCongs { get; set; }
+        public DbSet<SoQuy> SoQuys { get; set; }
+        public DbSet<CongNoNCC> CongNoNCCs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

@@ -195,6 +195,54 @@ namespace DATN64.Controllers
             ViewBag.ChartRevenue = chartRevenue;
             ViewBag.ChartOrderCounts = chartOrderCounts;
 
+            // ── HR KPIs ──────────────────────────────────────────────
+            var now = DateTime.Now;
+            var allChamCong = _context.ChamCongs.ToList();
+            var chamCongThisMonth = allChamCong
+                .Where(c => c.NgayCham.Month == now.Month && c.NgayCham.Year == now.Year && c.TrangThai == "Hoàn thành")
+                .ToList();
+
+            ViewBag.TongGioLamThang = Math.Round(chamCongThisMonth.Sum(c => c.TongGioLam ?? 0), 1);
+
+            // Tổng chi phí lương tháng
+            var allEmployees = _context.NhanViens.ToList();
+            double tongLuong = 0;
+            var empGioThang = chamCongThisMonth.GroupBy(c => c.MaNhanVien)
+                .Select(g => new { MaNhanVien = g.Key, TongGio = g.Sum(c => c.TongGioLam ?? 0) }).ToList();
+
+            foreach (var eg in empGioThang)
+            {
+                var emp = allEmployees.FirstOrDefault(e => e.MaNhanVien == eg.MaNhanVien);
+                if (emp?.LuongTheoGio.HasValue == true)
+                    tongLuong += (double)emp.LuongTheoGio.Value * eg.TongGio;
+            }
+            ViewBag.TongChiPhiLuongThang = tongLuong;
+
+            // Nhân viên làm nhiều giờ nhất
+            var nvNhieuGio = empGioThang.OrderByDescending(e => e.TongGio).FirstOrDefault();
+            ViewBag.NvNhieuGioNhat = nvNhieuGio != null
+                ? allEmployees.FirstOrDefault(e => e.MaNhanVien == nvNhieuGio.MaNhanVien)?.HoTen ?? "—"
+                : "—";
+            ViewBag.NvNhieuGioNhatGio = nvNhieuGio?.TongGio.ToString("F1") ?? "0";
+
+            // Nhân viên nghỉ nhiều nhất (số ngày thiếu bản ghi hoàn thành trong tháng)
+            var workingDays = Enumerable.Range(1, DateTime.DaysInMonth(now.Year, now.Month))
+                .Count(d => new DateTime(now.Year, now.Month, d).DayOfWeek != DayOfWeek.Sunday);
+
+            var nvNghiNhieu = allEmployees
+                .Where(e => e.TrangThai == "Hoạt động")
+                .Select(e => new
+                {
+                    e.HoTen,
+                    SoNgayLam = chamCongThisMonth.Count(c => c.MaNhanVien == e.MaNhanVien)
+                })
+                .OrderBy(e => e.SoNgayLam)
+                .FirstOrDefault();
+            ViewBag.NvNghiNhieuNhat = nvNghiNhieu?.HoTen ?? "—";
+
+            // Số NV đang hoạt động
+            ViewBag.TotalActiveEmployees = allEmployees.Count(e => e.TrangThai == "Hoạt động");
+
             return View();
         }
 
