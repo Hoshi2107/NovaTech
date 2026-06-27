@@ -1,0 +1,629 @@
+@model DATN64.Models.ViewModels.AccountingDashboardViewModel
+@using DATN64.Helpers
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Tài chính & Kế toán";
+    ViewData["BreadcrumbActive"] = "Kế toán";
+    
+    // Serialize data for the Chart
+    var chartLabels = System.Text.Json.JsonSerializer.Serialize(Model.CashFlowChartData.Select(x => x.NgayLabel).ToList());
+    var chartThu = System.Text.Json.JsonSerializer.Serialize(Model.CashFlowChartData.Select(x => x.Thu).ToList());
+    var chartChi = System.Text.Json.JsonSerializer.Serialize(Model.CashFlowChartData.Select(x => x.Chi).ToList());
+}
+
+@section Styles {
+<style>
+    .kpi-card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        transition: transform 0.2s, box-shadow 0.2s;
+        height: 100%;
+    }
+    .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.09); }
+    .kpi-icon {
+        width: 48px; height: 48px;
+        border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.3rem;
+    }
+    .kpi-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #64748b; }
+    .kpi-value { font-size: 1.5rem; font-weight: 700; color: #1e293b; line-height: 1.2; margin-top: 4px; }
+    
+    /* Tabs customization */
+    .nav-tabs-custom {
+        border-bottom: 2px solid #e2e8f0;
+        margin-bottom: 24px;
+    }
+    .nav-tabs-custom .nav-link {
+        border: none;
+        color: #64748b;
+        font-weight: 600;
+        font-size: 0.9rem;
+        padding: 10px 20px;
+        position: relative;
+        background: transparent;
+        transition: color 0.2s;
+    }
+    .nav-tabs-custom .nav-link:hover {
+        color: #0ea5e9;
+    }
+    .nav-tabs-custom .nav-link.active {
+        color: #0284c7;
+        background: transparent;
+    }
+    .nav-tabs-custom .nav-link.active::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background-color: #0284c7;
+        border-radius: 2px;
+    }
+    .card-glass {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        border-radius: 16px;
+    }
+</style>
+}
+
+<!-- Page Header -->
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h3 class="fw-bold mb-1" style="color:#1e293b">
+                <i class="fa-solid fa-scale-balanced text-primary me-2"></i>Tài chính & Sổ quỹ Kế toán
+            </h3>
+            <p class="text-muted text-xs mb-0">Quản lý dòng tiền mặt/chuyển khoản, theo dõi công nợ nhà cung cấp gối đầu và báo cáo P&L.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary btn-sm rounded-pill px-3.5" data-bs-toggle="modal" data-bs-target="#createTransactionModal">
+                <i class="fa-solid fa-file-invoice-dollar me-1.5"></i>Lập phiếu thu/chi
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- KPI Summary Section -->
+<div class="row g-3 mb-4">
+    <!-- Tổng Thu -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="kpi-card">
+            <div class="d-flex align-items-center gap-3">
+                <div class="kpi-icon" style="background:#f0fdf4;">
+                    <i class="fa-solid fa-arrow-trend-up" style="color:#16a34a"></i>
+                </div>
+                <div>
+                    <div class="kpi-label">Tổng dòng tiền thu</div>
+                    <div class="kpi-value text-success">@Model.TongThu.ToString("N0")₫</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Tổng Chi -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="kpi-card">
+            <div class="d-flex align-items-center gap-3">
+                <div class="kpi-icon" style="background:#fef2f2;">
+                    <i class="fa-solid fa-arrow-trend-down" style="color:#dc2626"></i>
+                </div>
+                <div>
+                    <div class="kpi-label">Tổng dòng tiền chi</div>
+                    <div class="kpi-value text-danger">@Model.TongChi.ToString("N0")₫</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Số Dư Quỹ -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="kpi-card">
+            <div class="d-flex align-items-center gap-3">
+                <div class="kpi-icon" style="background:#eff6ff;">
+                    <i class="fa-solid fa-wallet" style="color:#2563eb"></i>
+                </div>
+                <div>
+                    <div class="kpi-label">Số dư quỹ hiện tại</div>
+                    <div class="kpi-value text-primary">@Model.SoDuQuy.ToString("N0")₫</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Công nợ NCC -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="kpi-card">
+            <div class="d-flex align-items-center gap-3">
+                <div class="kpi-icon" style="background:#faf5ff;">
+                    <i class="fa-solid fa-handshake" style="color:#7c3aed"></i>
+                </div>
+                <div>
+                    <div class="kpi-label">Nợ cần trả NCC</div>
+                    <div class="kpi-value" style="color: #7c3aed;">@Model.TongNoNCC.ToString("N0")₫</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabbed Workspace -->
+<div class="card card-glass p-4 border border-opacity-10">
+    <nav class="nav nav-tabs nav-tabs-custom" id="accountingTabs" role="tablist">
+        <button class="nav-link active" id="soquy-tab" data-bs-toggle="tab" data-bs-target="#soquy" type="button" role="tab" aria-controls="soquy" aria-selected="true">
+            <i class="fa-solid fa-book me-1.5"></i>Sổ quỹ tiền mặt & ngân hàng
+        </button>
+        <button class="nav-link" id="congno-tab" data-bs-toggle="tab" data-bs-target="#congno" type="button" role="tab" aria-controls="congno" aria-selected="false">
+            <i class="fa-solid fa-truck-ramp-box me-1.5"></i>Nợ phải trả nhà cung cấp
+        </button>
+        <button class="nav-link" id="baocao-tab" data-bs-toggle="tab" data-bs-target="#baocao" type="button" role="tab" aria-controls="baocao" aria-selected="false">
+            <i class="fa-solid fa-chart-simple me-1.5"></i>Báo cáo kết quả kinh doanh (P&L)
+        </button>
+    </nav>
+
+    <div class="tab-content" id="accountingTabsContent">
+        <!-- Tab 1: Sổ Quỹ -->
+        <div class="tab-pane fade show active" id="soquy" role="tabpanel" aria-labelledby="soquy-tab">
+            <form method="get" class="row g-3 mb-4">
+                <div class="col-12 col-md-4">
+                    <label class="form-label text-xs fw-semibold text-muted">Từ ngày</label>
+                    <input type="date" name="tuNgay" class="form-control text-sm" value="@Model.TuNgay?.ToString("yyyy-MM-dd")">
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label text-xs fw-semibold text-muted">Đến ngày</label>
+                    <input type="date" name="denNgay" class="form-control text-sm" value="@Model.DenNgay?.ToString("yyyy-MM-dd")">
+                </div>
+                <div class="col-12 col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-info w-100 text-sm fw-semibold"><i class="fa-solid fa-filter me-1.5"></i>Lọc dữ liệu</button>
+                </div>
+            </form>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr class="text-xs text-muted-custom">
+                            <th>Mã GD</th>
+                            <th>Ngày thực hiện</th>
+                            <th>Loại</th>
+                            <th>Nhóm khoản mục</th>
+                            <th>Số tiền</th>
+                            <th>Đối tượng</th>
+                            <th>Phương thức</th>
+                            <th>Ghi chú</th>
+                            <th>Người lập</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm">
+                        @if (!Model.GiaoDichs.Any())
+                        {
+                            <tr>
+                                <td colspan="9" class="text-center text-muted py-4">Chưa có bản ghi giao dịch thu chi nào trong thời gian này.</td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var gd in Model.GiaoDichs)
+                            {
+                                <tr>
+                                    <td class="fw-bold text-cyan">@gd.MaGiaoDich</td>
+                                    <td>@gd.NgayGiaoDich.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>
+                                        <span class="badge @(gd.LoaiGiaoDich == "Thu" ? "bg-success bg-opacity-10 text-success" : "bg-danger bg-opacity-10 text-danger") px-2 py-1 text-xs">
+                                            @(gd.LoaiGiaoDich == "Thu" ? "Thu tiền (+)" : "Chi tiền (-)")
+                                        </span>
+                                    </td>
+                                    <td class="fw-medium">@gd.NhomGiaoDich</td>
+                                    <td class="fw-bold @(gd.LoaiGiaoDich == "Thu" ? "text-success" : "text-danger")">
+                                        @(gd.LoaiGiaoDich == "Thu" ? "+" : "-")@gd.SoTien.ToString("N0")₫
+                                    </td>
+                                    <td>@gd.DoiTuongGiaoDich</td>
+                                    <td>
+                                        <span class="badge bg-secondary bg-opacity-10 text-dark text-xxs">@gd.PhuongThucThanhToan</span>
+                                    </td>
+                                    <td class="text-muted text-xs" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@gd.GhiChu</td>
+                                    <td>@gd.NhanVien?.HoTen</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab 2: Công nợ Nhà cung cấp -->
+        <div class="tab-pane fade" id="congno" role="tabpanel" aria-labelledby="congno-tab">
+            <h5 class="fw-bold text-dark mb-3"><i class="fa-solid fa-circle-info me-2 text-primary"></i>Tổng quan nợ theo Nhà cung cấp</h5>
+            <div class="table-responsive mb-5">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr class="text-xs text-muted-custom">
+                            <th>Nhà cung cấp</th>
+                            <th>Số điện thoại</th>
+                            <th>Tổng mua nhập</th>
+                            <th>Đã thanh toán</th>
+                            <th>Còn nợ NCC</th>
+                            <th>Số hóa đơn còn nợ</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm">
+                        @if (!Model.CongNoSummaries.Any())
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">Tuyệt vời! Hiện tại không nợ nhà cung cấp nào.</td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var ncc in Model.CongNoSummaries)
+                            {
+                                <tr>
+                                    <td class="fw-bold">@ncc.TenNCC</td>
+                                    <td>@ncc.SoDienThoai</td>
+                                    <td>@ncc.TongNo.ToString("N0")₫</td>
+                                    <td class="text-success">@ncc.DaThanhToan.ToString("N0")₫</td>
+                                    <td class="text-danger fw-bold">@ncc.ConNo.ToString("N0")₫</td>
+                                    <td><span class="badge bg-warning text-dark">@ncc.SoPhieuNoActive phiếu nợ</span></td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <h5 class="fw-bold text-dark mb-3"><i class="fa-solid fa-receipt me-2 text-danger"></i>Chi tiết các hóa đơn chưa trả hết nợ</h5>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr class="text-xs text-muted-custom">
+                            <th>ID nợ</th>
+                            <th>Nhà cung cấp</th>
+                            <th>Phiếu nhập</th>
+                            <th>Ngày nhập hàng</th>
+                            <th>Tổng tiền</th>
+                            <th>Đã trả</th>
+                            <th>Còn nợ</th>
+                            <th>Hạn trả nợ</th>
+                            <th>Trạng thái</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm">
+                        @if (!Model.ChiTietCongNos.Any())
+                        {
+                            <tr>
+                                <td colspan="10" class="text-center text-muted py-4">Không có hóa đơn nợ hoạt động.</td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var cn in Model.ChiTietCongNos)
+                            {
+                                var conNo = cn.TongTien - cn.DaThanhToan;
+                                <tr>
+                                    <td>#@cn.Id</td>
+                                    <td class="fw-medium">@cn.NhaCungCap?.TenNCC</td>
+                                    <td><span class="badge bg-secondary bg-opacity-20 text-dark">PN-@cn.MaPhieuNhap.ToString("D5")</span></td>
+                                    <td>@cn.NgayTao.ToString("dd/MM/yyyy")</td>
+                                    <td class="fw-bold">@cn.TongTien.ToString("N0")₫</td>
+                                    <td class="text-success">@cn.DaThanhToan.ToString("N0")₫</td>
+                                    <td class="text-danger fw-bold">@conNo.ToString("N0")₫</td>
+                                    <td class="@(cn.HanThanhToan < DateTime.Today ? "text-danger fw-bold" : "")">
+                                        @cn.HanThanhToan?.ToString("dd/MM/yyyy")
+                                        @if (cn.HanThanhToan < DateTime.Today)
+                                        {
+                                            <span class="d-block text-xxs text-danger"><i class="fa-solid fa-triangle-exclamation"></i> Quá hạn</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge @(cn.TrangThai == "ChuaThanhToan" ? "bg-danger bg-opacity-10 text-danger" : "bg-warning bg-opacity-10 text-dark") text-xs">
+                                            @(cn.TrangThai == "ChuaThanhToan" ? "Chưa thanh toán" : "Thanh toán một phần")
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-success btn-xs px-2.5 rounded-pill btn-pay-debt" 
+                                                data-id="@cn.Id" 
+                                                data-ncc="@cn.NhaCungCap?.TenNCC" 
+                                                data-conno="@conNo" 
+                                                data-phieunhap="PN-@cn.MaPhieuNhap.ToString("D5")"
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#paySupplierDebtModal">
+                                            <i class="fa-solid fa-money-bill-wave me-1"></i>Trả nợ
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab 3: Báo cáo tài chính P&L -->
+        <div class="tab-pane fade" id="baocao" role="tabpanel" aria-labelledby="baocao-tab">
+            <div class="row g-3 mb-4">
+                <!-- Doanh thu thuần -->
+                <div class="col-12 col-md-4">
+                    <div class="card p-3 border" style="background-color: #fafaf9;">
+                        <span class="text-muted text-xs fw-semibold">1. DOANH THU THUẦN</span>
+                        <h4 class="fw-bold text-dark mt-2">@Model.ReportPL.DoanhThuThuan.ToString("N0")₫</h4>
+                        <span class="text-xxs text-muted mt-1">Từ đơn hàng hoàn thành</span>
+                    </div>
+                </div>
+                <!-- Giá vốn hàng bán -->
+                <div class="col-12 col-md-4">
+                    <div class="card p-3 border" style="background-color: #fafaf9;">
+                        <span class="text-muted text-xs fw-semibold">2. GIÁ VỐN HÀNG BÁN (COGS)</span>
+                        <h4 class="fw-bold text-dark mt-2 text-danger">-@Model.ReportPL.GiaVonHangBan.ToString("N0")₫</h4>
+                        <span class="text-xxs text-muted mt-1">Chi phí gốc nhập hàng hóa</span>
+                    </div>
+                </div>
+                <!-- Lợi nhuận gộp -->
+                <div class="col-12 col-md-4">
+                    <div class="card p-3 border" style="background-color: #eff6ff;">
+                        <span class="text-primary text-xs fw-semibold">3. LỢI NHUẬN GỘP</span>
+                        <h4 class="fw-bold text-primary mt-2">@Model.ReportPL.LoiNhuanGop.ToString("N0")₫</h4>
+                        <span class="text-xxs text-primary mt-1">Mục (1) trừ đi mục (2)</span>
+                    </div>
+                </div>
+                <!-- Chi phí lương -->
+                <div class="col-12 col-md-4">
+                    <div class="card p-3 border" style="background-color: #fafaf9;">
+                        <span class="text-muted text-xs fw-semibold">4. CHI PHÍ NHÂN SỰ</span>
+                        <h4 class="fw-bold text-dark mt-2 text-danger">-@Model.ReportPL.ChiPhiLuong.ToString("N0")₫</h4>
+                        <span class="text-xxs text-muted mt-1">Tổng hợp giờ làm từ chấm công</span>
+                    </div>
+                </div>
+                <!-- Chi phí vận hành khác -->
+                <div class="col-12 col-md-4">
+                    <div class="card p-3 border" style="background-color: #fafaf9;">
+                        <span class="text-muted text-xs fw-semibold">5. CHI PHÍ VẬN HÀNH KHÁC</span>
+                        <h4 class="fw-bold text-dark mt-2 text-danger">-@Model.ReportPL.ChiPhiVanhHanhKhac.ToString("N0")₫</h4>
+                        <span class="text-xxs text-muted mt-1">Văn phòng, mặt bằng, trả nợ NCC thực tế</span>
+                    </div>
+                </div>
+                <!-- Lợi nhuận ròng -->
+                <div class="col-12 col-md-4">
+                    <div class="card p-3 border" style="background-color: #f0fdf4;">
+                        <span class="text-success text-xs fw-semibold">6. LỢI NHUẬN RÒNG (NET PROFIT)</span>
+                        <h4 class="fw-bold text-success mt-2">@Model.ReportPL.LoiNhuanRong.ToString("N0")₫</h4>
+                        <span class="text-xxs text-success mt-1">Lợi nhuận cuối cùng của doanh nghiệp</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dòng tiền Chart -->
+            <div class="card p-4 border rounded-3 mt-4">
+                <h6 class="fw-bold text-dark mb-3"><i class="fa-solid fa-chart-line text-info me-2"></i>Dòng tiền Thu vs Chi (7 ngày gần đây)</h6>
+                <div style="position: relative; height:250px;">
+                    <canvas id="cashFlowChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 1: Thêm Phiếu Giao Dịch Thu Chi Thủ Công -->
+<div class="modal fade" id="createTransactionModal" tabindex="-1" aria-labelledby="createTransactionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="@Url.Action("CreateTransaction", "Accounting")">
+                @Html.AntiForgeryToken()
+                <div class="modal-header bg-gradient-cyan text-white">
+                    <h6 class="modal-title fw-bold" id="createTransactionModalLabel"><i class="fa-solid fa-receipt me-2"></i>Tạo Phiếu Thu / Chi Thủ Công</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-sm">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Loại giao dịch</label>
+                        <select name="loaiGiaoDich" class="form-select text-sm" required id="loaiGiaoDichSelect">
+                            <option value="Thu">Phiếu Thu (Tiền vào +)</option>
+                            <option value="Chi">Phiếu Chi (Tiền ra -)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nhóm giao dịch</label>
+                        <select name="nhomGiaoDich" class="form-select text-sm" required id="nhomGiaoDichSelect">
+                            <!-- JS will load these based on Thu/Chi -->
+                            <option value="Bán hàng">Doanh thu bán lẻ</option>
+                            <option value="Khác">Giao dịch khác</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Số tiền thanh toán (VND)</label>
+                        <input type="number" name="soTien" class="form-control text-sm" placeholder="VD: 500000" min="1000" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Đối tượng giao dịch</label>
+                        <input type="text" name="doiTuongGiaoDich" class="form-control text-sm" placeholder="VD: Công ty Điện lực, Nguyễn Văn A" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Phương thức</label>
+                        <select name="phuongThucThanhToan" class="form-select text-sm" required>
+                            <option value="Chuyển khoản">Chuyển khoản ngân hàng</option>
+                            <option value="Tiền mặt">Tiền mặt</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Ghi chú</label>
+                        <textarea name="ghiChu" class="form-control text-sm" rows="3" placeholder="Ghi chi tiết lý do thu/chi..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary text-sm rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary text-sm rounded-pill px-4">Lập phiếu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 2: Thanh Toán Công Nợ Nhà Cung Cấp -->
+<div class="modal fade" id="paySupplierDebtModal" tabindex="-1" aria-labelledby="paySupplierDebtModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="@Url.Action("PaySupplierDebt", "Accounting")">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="congNoId" id="payDebtId">
+                <div class="modal-header bg-success text-white">
+                    <h6 class="modal-title fw-bold" id="paySupplierDebtModalLabel"><i class="fa-solid fa-money-bill-transfer me-2"></i>Thanh toán công nợ Nhà Cung Cấp</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-sm">
+                    <div class="alert alert-info py-2 px-3 text-xs mb-3">
+                        Đang thực hiện trả nợ cho: <strong id="payDebtNCC"></strong><br>
+                        Thuộc đơn nhập hàng: <strong id="payDebtPhieuNhap"></strong>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Số tiền trả nợ (VND)</label>
+                        <input type="number" name="paymentAmount" class="form-control text-sm" id="payDebtAmount" min="1000" required>
+                        <div class="form-text text-xxs">Còn nợ tối đa: <strong id="payDebtMax"></strong>₫</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Phương thức chi tiền</label>
+                        <select name="phuongThucThanhToan" class="form-select text-sm" required>
+                            <option value="Chuyển khoản">Chuyển khoản ngân hàng</option>
+                            <option value="Tiền mặt">Tiền mặt</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Ghi chú chi tiền</label>
+                        <textarea name="ghiChu" class="form-control text-sm" rows="2" placeholder="VD: Thanh toán tiền đợt 1 cho đơn nhập hàng..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary text-sm rounded-pill px-4" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-success text-sm rounded-pill px-4">Xác nhận chi tiền</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Dynamic Select Options for Manual Transaction
+        const loaiSelect = document.getElementById("loaiGiaoDichSelect");
+        const nhomSelect = document.getElementById("nhomGiaoDichSelect");
+
+        const options = {
+            "Thu": [
+                { value: "Bán hàng", text: "Doanh thu bán lẻ" },
+                { value: "Khác", text: "Khoản thu khác" }
+            ],
+            "Chi": [
+                { value: "Trả nợ NCC", text: "Chi trả tiền hàng cho NCC" },
+                { value: "Trả lương", text: "Chi trả lương nhân sự" },
+                { value: "Mặt bằng", text: "Chi phí thuê mặt bằng" },
+                { value: "Điện nước", text: "Chi phí điện, nước, internet" },
+                { value: "Marketing", text: "Chi phí marketing, quảng cáo" },
+                { value: "Văn phòng phẩm", text: "Chi phí thiết bị, văn phòng phẩm" },
+                { value: "Vận hành", text: "Chi phí vận hành khác" },
+                { value: "Khác", text: "Khoản chi khác" }
+            ]
+        };
+
+        if(loaiSelect && nhomSelect) {
+            loaiSelect.addEventListener("change", function() {
+                const val = loaiSelect.value;
+                nhomSelect.innerHTML = "";
+                if(options[val]) {
+                    options[val].forEach(opt => {
+                        const el = document.createElement("option");
+                        el.value = opt.value;
+                        el.textContent = opt.text;
+                        nhomSelect.appendChild(el);
+                    });
+                }
+            });
+            // trigger initial load
+            loaiSelect.dispatchEvent(new Event('change'));
+        }
+
+        // Setup Pay Debt Modal data
+        const payButtons = document.querySelectorAll(".btn-pay-debt");
+        payButtons.forEach(btn => {
+            btn.addEventListener("click", function() {
+                const id = this.getAttribute("data-id");
+                const ncc = this.getAttribute("data-ncc");
+                const conno = this.getAttribute("data-conno");
+                const phieunhap = this.getAttribute("data-phieunhap");
+
+                document.getElementById("payDebtId").value = id;
+                document.getElementById("payDebtNCC").textContent = ncc;
+                document.getElementById("payDebtPhieuNhap").textContent = phieunhap;
+                
+                const amountInput = document.getElementById("payDebtAmount");
+                amountInput.value = parseFloat(conno);
+                amountInput.max = parseFloat(conno);
+                
+                document.getElementById("payDebtMax").textContent = parseFloat(conno).toLocaleString('vi-VN');
+            });
+        });
+
+        // Initialize Chart.js for Cash Flow comparing Thu vs Chi
+        const chartLabels = @Html.Raw(chartLabels);
+        const chartThu = @Html.Raw(chartThu);
+        const chartChi = @Html.Raw(chartChi);
+
+        const ctx = document.getElementById('cashFlowChart');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [
+                        {
+                            label: 'Dòng tiền Thu (₫)',
+                            data: chartThu,
+                            borderColor: '#16a34a',
+                            backgroundColor: 'rgba(22,163,74,0.05)',
+                            borderWidth: 2.5,
+                            tension: 0.35,
+                            fill: true
+                        },
+                        {
+                            label: 'Dòng tiền Chi (₫)',
+                            data: chartChi,
+                            borderColor: '#dc2626',
+                            backgroundColor: 'rgba(220,38,38,0.05)',
+                            borderWidth: 2.5,
+                            tension: 0.35,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.y.toLocaleString('vi-VN') + '₫';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: function(value) {
+                                    return value >= 1000000 ? (value/1000000).toFixed(1) + 'M' : value.toLocaleString('vi-VN') + '₫';
+                                }
+                            },
+                            grid: { color: '#f1f5f9' }
+                        },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+    });
+</script>
+}

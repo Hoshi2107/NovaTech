@@ -121,6 +121,16 @@
                 </li>
             }
 
+            @if (AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Accounting"))
+            {
+                <li class="nav-item">
+                    <a href="@Url.Action("Index", "Accounting")" class="nav-link-custom @(ctrl == "Accounting" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                        <i class="fa-solid fa-scale-balanced text-cyan fs-5"></i>
+                        <span>Kế toán & Sổ quỹ</span>
+                    </a>
+                </li>
+            }
+
             @if (AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_TikTok"))
             {
                 <li class="nav-item-header text-xs text-uppercase tracking-widest text-muted-custom mt-3 mb-2 px-3">Tích hợp</li>

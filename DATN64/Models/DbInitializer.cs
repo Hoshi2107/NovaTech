@@ -414,6 +414,15 @@ namespace DATN64.Models
                 END
             ");
 
+            // Seed View_Accounting permission (idempotent)
+            ExecuteSql(db, @"
+                IF NOT EXISTS (SELECT 1 FROM dbo.RolePermission WHERE PermissionName = 'View_Accounting')
+                BEGIN
+                    INSERT INTO dbo.RolePermission (RoleName, PermissionName) VALUES
+                    ('Admin', 'View_Accounting');
+                END
+            ");
+
             // Clean up legacy roles in NhanVien table
             ExecuteSql(db, @"
                 UPDATE dbo.NhanVien SET VaiTro = N'Nhân viên bán hàng' WHERE VaiTro = N'Nhân viên';
