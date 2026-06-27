@@ -182,3 +182,27 @@
         </ul>
     </div>
 </aside>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        var sidebarMenu = document.querySelector('.sidebar-menu');
+        if (sidebarMenu) {
+            // Restore scroll position
+            var scrollPosition = localStorage.getItem('sidebarScrollPosition');
+            if (scrollPosition !== null) {
+                sidebarMenu.scrollTop = parseInt(scrollPosition, 10);
+            } else {
+                // Scroll active item into view if no saved position exists
+                var activeItem = sidebarMenu.querySelector('.nav-link-custom.active');
+                if (activeItem) {
+                    activeItem.scrollIntoView({ block: 'nearest' });
+                }
+            }
+
+            // Save scroll position when the user scrolls the sidebar menu
+            sidebarMenu.addEventListener('scroll', function () {
+                localStorage.setItem('sidebarScrollPosition', sidebarMenu.scrollTop);
+            });
+        }
+    });
+</script>
