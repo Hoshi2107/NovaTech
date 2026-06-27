@@ -80,7 +80,8 @@ var app = new Vue({
             const amount = this.totalAmount;
             const description = encodeURIComponent('Thanh toan POS NovaTech');
             const accName = encodeURIComponent(this.bankConfig.accountName);
-            return `https://img.vietqr.io/image/${this.bankConfig.bankId}-${this.bankConfig.accountNo}-${this.bankConfig.template}.png?amount=${amount}&addInfo=${description}&accountName=${accName}`;
+            // Use 970415 (VietinBank BIN) instead of "VietinBank" for maximum compatibility with the VietQR API
+            return `https://img.vietqr.io/image/970415-${this.bankConfig.accountNo}-${this.bankConfig.template}.png?amount=${amount}&addInfo=${description}&accountName=${accName}`;
         },
         categories() {
             const cats = this.products.map(p => p.category).filter(Boolean);
@@ -125,6 +126,30 @@ var app = new Vue({
         }
     },
     methods: {
+        handleQrError(e) {
+            console.error("QR code image failed to load, trying fallback...", e);
+            if (!e.target.dataset.fallbackAttempt) {
+                e.target.dataset.fallbackAttempt = 1;
+            } else {
+                e.target.dataset.fallbackAttempt = parseInt(e.target.dataset.fallbackAttempt) + 1;
+            }
+            
+            const attempt = parseInt(e.target.dataset.fallbackAttempt);
+            const amount = this.totalAmount;
+            const description = encodeURIComponent('Thanh toan POS NovaTech');
+            const accName = encodeURIComponent(this.bankConfig.accountName);
+
+            if (attempt === 1) {
+                // Fallback 1: Try using vietinbank name (lowercase) with .jpg
+                e.target.src = `https://img.vietqr.io/image/vietinbank-${this.bankConfig.accountNo}-${this.bankConfig.template}.jpg?amount=${amount}&addInfo=${description}&accountName=${accName}`;
+            } else if (attempt === 2) {
+                // Fallback 2: Try 970415 (BIN) with compact template and .png
+                e.target.src = `https://img.vietqr.io/image/970415-${this.bankConfig.accountNo}-compact.png?amount=${amount}&addInfo=${description}&accountName=${accName}`;
+            } else if (attempt === 3) {
+                // Fallback 3: Try VietinBank (capitalized name) with .jpg
+                e.target.src = `https://img.vietqr.io/image/VietinBank-${this.bankConfig.accountNo}-${this.bankConfig.template}.jpg?amount=${amount}&addInfo=${description}&accountName=${accName}`;
+            }
+        },
         async fetchProducts() {
             try {
                 const response = await axios.get('/POS/GetProducts');

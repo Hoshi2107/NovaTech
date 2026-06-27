@@ -12,20 +12,17 @@
 <div id="app" class="pos-wrapper min-vh-100 w-100 d-flex flex-column" :class="{ 'light-mode': !isDarkMode }" v-cloak>
     <!-- POS Header -->
     <header class="pos-header d-flex justify-content-between align-items-center px-4 py-3">
-      <!-- Left side logo -->
-      <div class="d-flex align-items-center gap-2 flex-shrink-0 header-left-brand">
-        <h4 class="fw-bold m-0 text-cyan d-flex align-items-center gap-2">
+      <!-- Left side logo & Cashier Info -->
+      <div class="d-flex align-items-center gap-3 flex-shrink-0 header-left-brand">
+        <h4 class="fw-bold m-0 text-cyan d-flex align-items-center gap-2 text-nowrap">
           <i class="fa-solid fa-cash-register animate-pulse text-cyan"></i>
-          <span class="d-none d-sm-inline">NovaTech POS</span>
-          <span class="d-inline d-sm-none">POS</span>
+          <span class="d-none d-sm-inline text-nowrap">NovaTech POS</span>
+          <span class="d-inline d-sm-none text-nowrap">POS</span>
         </h4>
-      </div>
-      
-      <!-- Center running Announcement Marquee (Hidden on mobile) -->
-      <div class="welcome-ticker-wrap flex-grow-1 mx-3 d-none d-lg-block" style="max-width: calc(100% - 520px);">
-        <div class="welcome-ticker-inner">
-          <span class="welcome-ticker-text">🎉 Chào mừng Quý khách đến với NovaTech! &nbsp;&nbsp;✨ Chúc Quý khách mua sắm vui vẻ! &nbsp;&nbsp;🛒 Hàng ngàn sản phẩm chính hãng đang chờ bạn! &nbsp;&nbsp;💎 Ưu đãi hấp dẫn mỗi ngày tại NovaTech! &nbsp;&nbsp;🚀 Dịch vụ tận tâm – Chất lượng hàng đầu! &nbsp;&nbsp;</span>
-          <span class="welcome-ticker-text" aria-hidden="true">🎉 Chào mừng Quý khách đến với NovaTech! &nbsp;&nbsp;✨ Chúc Quý khách mua sắm vui vẻ! &nbsp;&nbsp;🛒 Hàng ngàn sản phẩm chính hãng đang chờ bạn! &nbsp;&nbsp;💎 Ưu đãi hấp dẫn mỗi ngày tại NovaTech! &nbsp;&nbsp;🚀 Dịch vụ tận tâm – Chất lượng hàng đầu! &nbsp;&nbsp;</span>
+        <div style="width: 1px; height: 20px; background-color: var(--border-color); flex-shrink: 0;"></div>
+        <div class="d-flex align-items-center gap-2 text-xs header-cashier-info text-nowrap">
+          <i class="fa-solid fa-circle-user text-cyan flex-shrink-0"></i>
+          <span class="text-nowrap"><span class="d-none d-sm-inline text-nowrap">Thu ngân: </span><strong class="cashier-name text-nowrap" v-if="user">${ user.fullName }</strong></span>
         </div>
       </div>
 
@@ -44,10 +41,6 @@
 
       <!-- Right side Cashier and Toggle switch -->
       <div class="d-flex align-items-center gap-3 flex-shrink-0 header-right-actions" style="justify-content: flex-end;">
-        <div class="d-none d-lg-flex align-items-center gap-2 text-xs header-cashier-info">
-          <i class="fa-solid fa-circle-user text-cyan"></i>
-          <span>Thu ngân: <strong class="cashier-name" v-if="user">${ user.fullName }</strong></span>
-        </div>
         
         <!-- Check In / Out Button -->
         @if (seller != null)
@@ -348,7 +341,7 @@
             <div v-else>
               <label class="form-label text-xxs voucher-label fw-semibold mb-2 d-block">Quét mã QR để chuyển khoản</label>
               <div class="qr-container d-inline-block p-2 bg-white rounded-3 shadow-sm mb-2" @@click="zoomQR = true" style="cursor: zoom-in;">
-                <img :src="qrCodeUrl" alt="VietQR Thanh toán" class="img-fluid" style="max-width: 160px; display: block; margin: 0 auto;">
+                <img :key="qrCodeUrl" :src="qrCodeUrl" @@error="handleQrError" alt="VietQR Thanh toán" class="img-fluid" style="max-width: 160px; display: block; margin: 0 auto;">
               </div>
               <div class="text-xxs text-secondary mt-1">
                 <div>Ngân hàng: <strong class="text-cyan">${ bankConfig.bankId }</strong> | STK: <strong class="text-cyan">${ bankConfig.accountNo }</strong></div>
@@ -481,7 +474,7 @@
       <div class="qr-zoom-card p-4 bg-white rounded-4 shadow-lg text-center" @@click.stop style="max-width: 90%; width: 380px; cursor: default; border-radius: 16px;">
         <h5 class="fw-bold text-dark mb-3">MÃ QR THANH TOÁN</h5>
         <div class="p-3 bg-white rounded-3 border border-slate-200 d-inline-block shadow-sm mb-3">
-          <img :src="qrCodeUrl" alt="VietQR Zoomed" class="img-fluid" style="width: 260px; max-width: 100%; display: block; margin: 0 auto;">
+          <img :key="qrCodeUrl" :src="qrCodeUrl" @@error="handleQrError" alt="VietQR Zoomed" class="img-fluid" style="width: 260px; max-width: 100%; display: block; margin: 0 auto;">
         </div>
         <div class="text-xs text-dark mt-2 d-grid gap-1.5 text-start px-2">
           <div class="fw-bold mb-1.5 text-center text-dark">Số tiền cần quét: <span class="text-danger fs-5 d-block mt-0.5 fw-extrabold">${ formatMoney(totalAmount) } đ</span></div>
