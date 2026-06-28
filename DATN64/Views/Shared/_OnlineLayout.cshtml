@@ -12,6 +12,9 @@
     var cartJson = session?.GetString("Cart");
     var cartItems = string.IsNullOrEmpty(cartJson) ? new List<DATN64.Controllers.OnlineController.CartItem>() : System.Text.Json.JsonSerializer.Deserialize<List<DATN64.Controllers.OnlineController.CartItem>>(cartJson) ?? new();
     var cartCount = cartItems.Sum(i => i.Quantity);
+
+    var onlineCtrl = ViewContext.RouteData.Values["controller"]?.ToString();
+    var onlineAct = ViewContext.RouteData.Values["action"]?.ToString();
 }
 <!DOCTYPE html>
 <html lang="vi">
@@ -23,7 +26,31 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="/css/admin_custom.css" rel="stylesheet">
+    <link href="/css/admin_custom.css?v=@DateTime.Now.Ticks" rel="stylesheet">
+    <script>
+        (function () {
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            document.addEventListener('DOMContentLoaded', () => {
+                document.body.setAttribute('data-theme', currentTheme);
+                const themeCheckbox = document.getElementById('themeCheckbox');
+                if (themeCheckbox) {
+                    themeCheckbox.checked = (currentTheme === 'dark');
+                    themeCheckbox.addEventListener('change', function () {
+                        if (this.checked) {
+                            document.documentElement.setAttribute('data-theme', 'dark');
+                            document.body.setAttribute('data-theme', 'dark');
+                            localStorage.setItem('theme', 'dark');
+                        } else {
+                            document.documentElement.setAttribute('data-theme', 'light');
+                            document.body.setAttribute('data-theme', 'light');
+                            localStorage.setItem('theme', 'light');
+                        }
+                    });
+                }
+            });
+        })();
+    </script>
     <style>
         :root {
             --nt-primary: #0284c7;
@@ -55,11 +82,28 @@
         }
         .nav-link {
             color: #475569 !important;
-            font-weight: 500;
-            transition: color 0.3s;
+            font-weight: 600;
+            font-size: 13px;
+            padding: 8px 16px !important;
+            border-radius: 50rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.25s ease;
         }
-        .nav-link:hover, .nav-link.active {
-            color: var(--nt-primary) !important;
+        .nav-link:hover {
+            background-color: #f1f5f9;
+            color: #0f172a !important;
+        }
+        .nav-link.active {
+            background-color: #e0f2fe !important;
+            color: #0284c7 !important;
+        }
+        .nav-link i {
+            transition: transform 0.2s ease;
+        }
+        .nav-link:hover i {
+            transform: scale(1.1);
         }
         .card-product {
             background: #ffffff;
@@ -277,22 +321,34 @@
             <div class="collapse navbar-collapse" id="onlineNav">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-2">
                     <li class="nav-item">
-                        <a class="nav-link active" href="@Url.Action("Index", "Online")">Trang chủ</a>
+                        <a class="nav-link @(onlineCtrl == "Online" && onlineAct == "Index" ? "active" : "")" href="@Url.Action("Index", "Online")">
+                            <i class="fa-solid fa-house text-primary"></i> Trang chủ
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="@Url.Action("ProductsList", "Online")">Sản phẩm</a>
+                        <a class="nav-link @(onlineCtrl == "Online" && (onlineAct == "ProductsList" || onlineAct == "ProductDetail") ? "active" : "")" href="@Url.Action("ProductsList", "Online")">
+                            <i class="fa-solid fa-box-open text-primary"></i> Sản phẩm
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="@Url.Action("Favorites", "Online")">Yêu thích</a>
+                        <a class="nav-link @(onlineCtrl == "Online" && onlineAct == "Favorites" ? "active" : "")" href="@Url.Action("Favorites", "Online")">
+                            <i class="fa-solid fa-heart text-primary"></i> Yêu thích
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="@Url.Action("OrderHistory", "Online")">Lịch sử</a>
+                        <a class="nav-link @(onlineCtrl == "Online" && (onlineAct == "OrderHistory" || onlineAct == "OrderDetail") ? "active" : "")" href="@Url.Action("OrderHistory", "Online")">
+                            <i class="fa-solid fa-clock-rotate-left text-primary"></i> Lịch sử
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="@Url.Action("Privacy", "Home")">Chính sách</a>
+                        <a class="nav-link @(onlineCtrl == "Home" && onlineAct == "Privacy" ? "active" : "")" href="@Url.Action("Privacy", "Home")">
+                            <i class="fa-solid fa-file-shield text-primary"></i> Chính sách
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="@Url.Action("Support", "Online")">Hỗ trợ kỹ thuật</a>
+                        <a class="nav-link @(onlineCtrl == "Online" && onlineAct == "Support" ? "active" : "")" href="@Url.Action("Support", "Online")">
+                            <i class="fa-solid fa-headset text-primary"></i> Hỗ trợ kỹ thuật
+                        </a>
                     </li>
                 </ul>
                 <div class="d-flex align-items-center gap-3">
@@ -300,6 +356,16 @@
                         <i class="fa-solid fa-cart-shopping fs-5 text-secondary"></i>
                         <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger text-white" style="font-size: 0.65rem; padding: 0.25em 0.5em;">@cartCount</span>
                     </a>
+
+                    <!-- Theme Switch Slider Toggle -->
+                    <div class="theme-switch-wrapper d-flex align-items-center me-2">
+                        <i class="fa-solid fa-sun text-warning me-2" style="font-size: 0.85rem;" title="Chế độ Sáng"></i>
+                        <label class="theme-switch" for="themeCheckbox">
+                            <input type="checkbox" id="themeCheckbox" />
+                            <div class="theme-slider"></div>
+                        </label>
+                        <i class="fa-solid fa-moon text-primary ms-2" style="font-size: 0.85rem;" title="Chế độ Tối"></i>
+                    </div>
                     
                     @if (isLogged)
                     {
@@ -319,6 +385,17 @@
                                     <li><hr class="dropdown-divider border-secondary"></li>
                                 }
                                 <li>
+                                    <a class="dropdown-item py-2" href="@Url.Action("Profile", "Online")">
+                                        <i class="fa-solid fa-circle-user me-2 text-primary"></i>Trang cá nhân
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item py-2" href="@Url.Action("OrderHistory", "Online")">
+                                        <i class="fa-solid fa-clock-rotate-left me-2 text-secondary"></i>Lịch sử đơn hàng
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider border-secondary"></li>
+                                <li>
                                     <a class="dropdown-item py-2 text-danger" href="@Url.Action("Logout", "Account")">
                                         <i class="fa-solid fa-right-from-bracket me-2"></i>Đăng xuất
                                     </a>
@@ -328,6 +405,9 @@
                     }
                     else
                     {
+                        <a href="@Url.Action("Register", "Account")" class="btn btn-outline-info rounded-pill px-4 fw-bold me-2">
+                            <i class="fa-solid fa-user-plus me-2"></i>Đăng ký
+                        </a>
                         <a href="@Url.Action("Login", "Account")" class="btn btn-info rounded-pill px-4 text-white fw-bold">
                             <i class="fa-solid fa-user me-2"></i>Đăng nhập
                         </a>

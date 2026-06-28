@@ -1,0 +1,529 @@
+@model DATN64.Models.ProfileViewModel
+@{
+    Layout = "~/Views/Shared/_OnlineLayout.cshtml";
+    ViewData["Title"] = "Trang cá nhân";
+    var activeTab = TempData["ProfileTab"]?.ToString() ?? "info";
+}
+
+<style>
+    .profile-hero {
+        background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0284c7 100%);
+        padding: 48px 0 70px;
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+    .profile-hero::before {
+        content: '';
+        position: absolute;
+        top: -80px; right: -80px;
+        width: 280px; height: 280px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 50%;
+    }
+    .profile-avatar {
+        width: 80px; height: 80px;
+        background: linear-gradient(135deg, #38bdf8, #0284c7);
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 2rem;
+        color: white;
+        border: 3px solid rgba(255,255,255,0.3);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        flex-shrink: 0;
+    }
+    .profile-card {
+        background: white;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+        margin-top: -40px;
+        position: relative;
+        z-index: 10;
+    }
+    body[data-theme="dark"] .profile-card {
+        background: #1e293b;
+        border-color: rgba(255,255,255,0.08);
+    }
+    .profile-tabs {
+        display: flex;
+        border-bottom: 2px solid #f1f5f9;
+        padding: 0 24px;
+        gap: 4px;
+        overflow-x: auto;
+    }
+    body[data-theme="dark"] .profile-tabs {
+        border-bottom-color: rgba(255,255,255,0.08);
+    }
+    .profile-tab-btn {
+        padding: 14px 20px;
+        border: none;
+        background: none;
+        font-weight: 600;
+        font-size: 0.88rem;
+        color: #94a3b8;
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+        margin-bottom: -2px;
+        white-space: nowrap;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .profile-tab-btn.active {
+        color: #0284c7;
+        border-bottom-color: #0284c7;
+    }
+    .profile-tab-btn:hover:not(.active) {
+        color: #334155;
+        background: rgba(2,132,199,0.04);
+    }
+    .profile-tab-content {
+        display: none;
+        padding: 28px;
+    }
+    .profile-tab-content.active {
+        display: block;
+    }
+
+    .form-field {
+        margin-bottom: 20px;
+    }
+    .form-field label {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 8px;
+    }
+    .form-field input, .form-field select, .form-field textarea {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        font-size: 0.92rem;
+        background: #f8fafc;
+        transition: all 0.2s;
+        outline: none;
+        color: #0f172a;
+    }
+    .form-field input:focus, .form-field select:focus {
+        border-color: #0284c7;
+        background: white;
+        box-shadow: 0 0 0 4px rgba(2,132,199,0.08);
+    }
+    body[data-theme="dark"] .form-field input,
+    body[data-theme="dark"] .form-field select {
+        background: #0f172a;
+        border-color: rgba(255,255,255,0.1);
+        color: #f1f5f9;
+    }
+    body[data-theme="dark"] .form-field input:focus {
+        border-color: #38bdf8;
+    }
+
+    .save-btn {
+        background: linear-gradient(135deg, #0284c7, #0ea5e9);
+        border: none;
+        color: white;
+        padding: 12px 28px;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 0.92rem;
+        cursor: pointer;
+        transition: all 0.25s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .save-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(2,132,199,0.3);
+    }
+
+    .info-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 12px;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+    .info-badge.green { background: rgba(34,197,94,0.1); color: #16a34a; }
+    .info-badge.blue  { background: rgba(2,132,199,0.1); color: #0284c7; }
+
+    /* Order table */
+    .order-row {
+        display: grid;
+        grid-template-columns: 80px 1fr 120px 130px 110px;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+        border-radius: 12px;
+        border: 1px solid #f1f5f9;
+        margin-bottom: 8px;
+        transition: box-shadow 0.2s, transform 0.2s;
+        background: white;
+    }
+    body[data-theme="dark"] .order-row {
+        background: #0f172a;
+        border-color: rgba(255,255,255,0.06);
+    }
+    .order-row:hover {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.07);
+        transform: translateY(-1px);
+    }
+    .order-status {
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 999px;
+        display: inline-block;
+    }
+    .status-delivered { background: rgba(34,197,94,0.1); color: #16a34a; }
+    .status-pending   { background: rgba(234,179,8,0.1);  color: #d97706; }
+    .status-cancelled { background: rgba(239,68,68,0.1);  color: #dc2626; }
+    .status-other     { background: rgba(100,116,139,0.1); color: #475569; }
+
+    @@media (max-width: 768px) {
+        .order-row {
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+    }
+
+    .stat-mini {
+        text-align: center;
+        padding: 16px;
+        border-radius: 12px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+    }
+    body[data-theme="dark"] .stat-mini {
+        background: #0f172a;
+        border-color: rgba(255,255,255,0.06);
+    }
+    .stat-mini .num {
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: #0284c7;
+        line-height: 1;
+    }
+    .stat-mini .lbl {
+        font-size: 0.75rem;
+        color: #94a3b8;
+        margin-top: 4px;
+    }
+</style>
+
+<!-- Hero -->
+<div class="profile-hero">
+    <div class="container">
+        <div class="d-flex align-items-center gap-4">
+            <div class="profile-avatar">
+                <i class="fa-solid fa-user"></i>
+            </div>
+            <div>
+                <h1 class="fw-black fs-2 mb-1">@Model.HoTen</h1>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="info-badge green"><i class="fa-solid fa-circle-check"></i> @(Model.TrangThai ?? "Hoạt động")</span>
+                    <span class="info-badge blue"><i class="fa-solid fa-star"></i> @Model.DiemTichLuy điểm tích lũy</span>
+                    <span class="opacity-60" style="font-size:0.82rem;"><i class="fa-solid fa-calendar me-1"></i>Thành viên từ @Model.NgayTao.ToString("dd/MM/yyyy")</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container py-4">
+    <div class="profile-card">
+        <!-- Tab navigation -->
+        <div class="profile-tabs">
+            <button class="profile-tab-btn active" id="tab-btn-info" onclick="switchProfileTab('info')">
+                <i class="fa-solid fa-user-pen"></i> Thông tin cá nhân
+            </button>
+            <button class="profile-tab-btn" id="tab-btn-password" onclick="switchProfileTab('password')">
+                <i class="fa-solid fa-lock"></i> Đổi mật khẩu
+            </button>
+            <button class="profile-tab-btn" id="tab-btn-orders" onclick="switchProfileTab('orders')">
+                <i class="fa-solid fa-box"></i> Đơn hàng của tôi
+                @if (Model.DonHangs.Any())
+                {
+                    <span class="badge rounded-pill bg-primary ms-1" style="font-size:0.7rem;">@Model.DonHangs.Count</span>
+                }
+            </button>
+            <button class="profile-tab-btn" id="tab-btn-delivered" onclick="switchProfileTab('delivered')">
+                <i class="fa-solid fa-circle-check text-success"></i> Đơn đã giao
+                @{
+                    var deliveredCount = Model.DonHangs.Count(d => d.TrangThai == "Đã giao");
+                }
+                @if (deliveredCount > 0)
+                {
+                    <span class="badge rounded-pill bg-success ms-1" style="font-size:0.7rem;">@deliveredCount</span>
+                }
+            </button>
+        </div>
+
+        <!-- Tab: Thông tin cá nhân -->
+        <div id="pane-info" class="profile-tab-content active">
+            <form method="post" action="@Url.Action("Profile", "Online")?activeTab=info">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="activeTab" value="info" />
+
+                <div class="row g-3 mb-4">
+                    <div class="col-12">
+                        <h6 class="fw-bold text-muted" style="font-size:0.8rem; text-transform:uppercase; letter-spacing:0.05em;">
+                            <i class="fa-solid fa-id-card me-2 text-primary"></i>Thông tin cơ bản
+                        </h6>
+                        <hr class="mt-1 mb-3 opacity-25">
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-field">
+                            <label>Họ và tên *</label>
+                            <input type="text" name="HoTen" value="@Model.HoTen" placeholder="Nhập họ và tên..." required />
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-field">
+                            <label>Số điện thoại</label>
+                            <input type="tel" name="SoDienThoai" value="@Model.SoDienThoai" placeholder="VD: 0901234567" />
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-field">
+                            <label>Email đăng nhập</label>
+                            <input type="email" name="Email" value="@Model.Email" placeholder="email@example.com" />
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-field">
+                            <label>Địa chỉ giao hàng</label>
+                            <input type="text" name="DiaChi" value="@Model.DiaChi" placeholder="Số nhà, đường, phường/xã, quận/huyện..." />
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="p-3 rounded-3" style="background: rgba(234,179,8,0.06); border: 1px solid rgba(234,179,8,0.25);">
+                            <div class="d-flex align-items-start gap-2" style="font-size:0.82rem; color:#92400e;">
+                                <i class="fa-solid fa-triangle-exclamation mt-1"></i>
+                                <span>Nếu bạn đổi email, lần đăng nhập tiếp theo hãy dùng email mới. Nếu đổi mật khẩu, hãy chuyển sang tab <strong>"Đổi mật khẩu"</strong>.</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="save-btn">
+                            <i class="fa-solid fa-floppy-disk"></i> Lưu thay đổi
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Tab: Đổi mật khẩu -->
+        <div id="pane-password" class="profile-tab-content">
+            <form method="post" action="@Url.Action("Profile", "Online")?activeTab=password">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="activeTab" value="password" />
+
+                <div class="row g-3">
+                    <div class="col-12">
+                        <h6 class="fw-bold text-muted" style="font-size:0.8rem; text-transform:uppercase; letter-spacing:0.05em;">
+                            <i class="fa-solid fa-shield-halved me-2 text-warning"></i>Bảo mật tài khoản
+                        </h6>
+                        <hr class="mt-1 mb-3 opacity-25">
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-field">
+                            <label>Mật khẩu hiện tại *</label>
+                            <input type="password" name="MatKhauCu" placeholder="Nhập mật khẩu đang dùng..." />
+                        </div>
+                    </div>
+                    <div class="col-md-6"></div>
+                    <div class="col-md-6">
+                        <div class="form-field">
+                            <label>Mật khẩu mới *</label>
+                            <input type="password" name="MatKhauMoi" placeholder="Tối thiểu 6 ký tự..." />
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-field">
+                            <label>Xác nhận mật khẩu mới *</label>
+                            <input type="password" name="XacNhanMatKhau" placeholder="Nhập lại mật khẩu mới..." />
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="p-3 rounded-3" style="background: rgba(2,132,199,0.06); border: 1px solid rgba(2,132,199,0.2);">
+                            <div style="font-size:0.82rem; color:#0369a1;">
+                                <i class="fa-solid fa-circle-info me-2"></i>
+                                Sau khi đổi mật khẩu thành công, bạn cần dùng mật khẩu mới để đăng nhập lần sau.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="save-btn" style="background: linear-gradient(135deg, #d97706, #f59e0b);">
+                            <i class="fa-solid fa-key"></i> Đổi mật khẩu
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Tab: Tất cả đơn hàng -->
+        <div id="pane-orders" class="profile-tab-content">
+            @{
+                var totalSpent = Model.DonHangs.Where(d => d.TrangThai != "Đã hủy").Sum(d => d.TongTien ?? 0);
+            }
+            <!-- Stats mini -->
+            <div class="row g-3 mb-4">
+                <div class="col-4">
+                    <div class="stat-mini">
+                        <div class="num">@Model.DonHangs.Count</div>
+                        <div class="lbl">Tổng đơn</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="stat-mini">
+                        <div class="num">@Model.DonHangs.Count(d => d.TrangThai == "Đã giao")</div>
+                        <div class="lbl">Đã hoàn thành</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="stat-mini">
+                        <div class="num" style="font-size:1.1rem;">@totalSpent.ToString("N0")đ</div>
+                        <div class="lbl">Tổng chi tiêu</div>
+                    </div>
+                </div>
+            </div>
+
+            @if (!Model.DonHangs.Any())
+            {
+                <div class="text-center py-5 text-muted">
+                    <i class="fa-solid fa-box-open" style="font-size:3rem; opacity:0.3;"></i>
+                    <p class="mt-3">Bạn chưa có đơn hàng nào.</p>
+                    <a href="@Url.Action("ProductsList", "Online")" class="save-btn d-inline-flex mt-2" style="text-decoration:none;">
+                        <i class="fa-solid fa-shop"></i> Mua sắm ngay
+                    </a>
+                </div>
+            }
+            else
+            {
+                <!-- Header row -->
+                <div class="order-row" style="background: #f8fafc; font-size:0.78rem; font-weight:700; color:#64748b; text-transform:uppercase;">
+                    <div>Mã đơn</div>
+                    <div>Sản phẩm</div>
+                    <div>Ngày đặt</div>
+                    <div>Tổng tiền</div>
+                    <div>Trạng thái</div>
+                </div>
+                @foreach (var order in Model.DonHangs)
+                {
+                    var statusClass = order.TrangThai switch {
+                        "Đã giao" => "status-delivered",
+                        "Chờ duyệt" or "Đang xử lý" => "status-pending",
+                        "Đã hủy" => "status-cancelled",
+                        _ => "status-other"
+                    };
+                    var firstItem = order.ChiTietDonHangs.FirstOrDefault();
+                    var moreCount = order.ChiTietDonHangs.Count - 1;
+
+                    <div class="order-row">
+                        <div class="fw-bold text-primary" style="font-size:0.9rem;">#@order.MaDonHang</div>
+                        <div style="font-size:0.85rem;">
+                            @if (firstItem?.SanPham != null)
+                            {
+                                <div class="fw-semibold" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:200px;">
+                                    @firstItem.SanPham.TenSanPham
+                                </div>
+                                @if (moreCount > 0)
+                                {
+                                    <div class="text-muted" style="font-size:0.78rem;">+@moreCount sản phẩm khác</div>
+                                }
+                            }
+                            else { <span class="text-muted">—</span> }
+                        </div>
+                        <div style="font-size:0.85rem; color:#64748b;">@order.NgayDat?.ToString("dd/MM/yyyy")</div>
+                        <div class="fw-bold" style="color:#dc2626; font-size:0.9rem;">@order.TongTien?.ToString("N0")đ</div>
+                        <div><span class="order-status @statusClass">@order.TrangThai</span></div>
+                    </div>
+                }
+            }
+        </div>
+
+        <!-- Tab: Đơn đã giao -->
+        <div id="pane-delivered" class="profile-tab-content">
+            @{
+                var deliveredOrders = Model.DonHangs.Where(d => d.TrangThai == "Đã giao").ToList();
+            }
+            @if (!deliveredOrders.Any())
+            {
+                <div class="text-center py-5 text-muted">
+                    <i class="fa-solid fa-truck-ramp-box" style="font-size:3rem; opacity:0.3; color:#22c55e;"></i>
+                    <p class="mt-3 fw-semibold">Chưa có đơn hàng nào đã giao.</p>
+                    <p style="font-size:0.85rem;">Đơn hàng sẽ xuất hiện tại đây sau khi được giao thành công.</p>
+                </div>
+            }
+            else
+            {
+                <div class="d-flex align-items-center gap-2 mb-4">
+                    <i class="fa-solid fa-circle-check text-success fs-5"></i>
+                    <span class="fw-bold">@deliveredOrders.Count đơn hàng đã giao thành công</span>
+                    <span class="text-muted" style="font-size:0.82rem;">• Tổng: @deliveredOrders.Sum(d => d.TongTien ?? 0).ToString("N0")đ</span>
+                </div>
+
+                <div class="order-row" style="background: #f8fafc; font-size:0.78rem; font-weight:700; color:#64748b; text-transform:uppercase;">
+                    <div>Mã đơn</div>
+                    <div>Sản phẩm</div>
+                    <div>Ngày giao</div>
+                    <div>Tổng tiền</div>
+                    <div>Thanh toán</div>
+                </div>
+                @foreach (var order in deliveredOrders)
+                {
+                    var firstItem = order.ChiTietDonHangs.FirstOrDefault();
+                    var moreCount = order.ChiTietDonHangs.Count - 1;
+                    <div class="order-row" style="border-left: 3px solid #22c55e;">
+                        <div class="fw-bold text-success" style="font-size:0.9rem;">#@order.MaDonHang</div>
+                        <div style="font-size:0.85rem;">
+                            @if (firstItem?.SanPham != null)
+                            {
+                                <div class="fw-semibold" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:200px;">
+                                    @firstItem.SanPham.TenSanPham
+                                </div>
+                                @if (moreCount > 0)
+                                {
+                                    <div class="text-muted" style="font-size:0.78rem;">+@moreCount sản phẩm khác</div>
+                                }
+                            }
+                        </div>
+                        <div style="font-size:0.85rem; color:#64748b;">@order.NgayDat?.ToString("dd/MM/yyyy")</div>
+                        <div class="fw-bold" style="color:#16a34a; font-size:0.9rem;">@order.TongTien?.ToString("N0")đ</div>
+                        <div style="font-size:0.82rem; color:#64748b;">@(order.PhuongThucThanhToan ?? "—")</div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function switchProfileTab(tab) {
+        document.querySelectorAll('.profile-tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.profile-tab-content').forEach(p => p.classList.remove('active'));
+        document.getElementById('tab-btn-' + tab).classList.add('active');
+        document.getElementById('pane-' + tab).classList.add('active');
+    }
+
+    // Auto-open tab if toast came from password or info
+    document.addEventListener('DOMContentLoaded', function() {
+        const initialTab = '@activeTab';
+        if (initialTab && initialTab !== 'info') {
+            switchProfileTab(initialTab);
+        }
+    });
+</script>
+}

@@ -101,7 +101,21 @@ namespace DATN64.Controllers
                 HttpContext.Session.SetString("UserRoles", rolesStr);
                 HttpContext.Session.SetString("UserPermissions", permissionsStr);
 
+                // Ensure CustomerId is set when the logged-in user has role "Khách hàng"
+                // so Online cart can show checkout form.
+                if (roles.Contains("Khách hàng"))
+                {
+                    var empCustomer = _context.KhachHangs.FirstOrDefault(k => k.Email != null && k.Email.ToLower() == (emp.Email ?? "").ToLower());
+                    if (empCustomer != null)
+                    {
+                        HttpContext.Session.SetString("CustomerId", empCustomer.MaKhachHang.ToString());
+                    }
+                }
+
+
+
                 TempData["ToastMessage"] = "Đăng nhập thành công!";
+
                 TempData["ToastType"] = "success";
 
                 if (roles.Contains("Khách hàng"))
@@ -114,8 +128,8 @@ namespace DATN64.Controllers
                 }
             }
 
-            // Customer check (database lookup)
-            var customer = _context.KhachHangs.FirstOrDefault(c => c.Email != null && c.Email.Equals(email));
+            // Customer check (database lookup by email or phone)
+            var customer = _context.KhachHangs.FirstOrDefault(c => (c.Email != null && c.Email.Equals(email)) || (c.SoDienThoai != null && c.SoDienThoai.Equals(email)));
             if (customer != null)
             {
                 var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<KhachHang>();
@@ -182,6 +196,7 @@ namespace DATN64.Controllers
                 HttpContext.Session.SetString("UserName", customer.HoTen);
                 HttpContext.Session.SetString("UserRoles", "Khách hàng");
                 HttpContext.Session.SetString("UserPermissions", "");
+                HttpContext.Session.SetString("CustomerId", customer.MaKhachHang.ToString());
 
                 TempData["ToastMessage"] = "Chào mừng bạn đến với NovaTech Store!";
                 TempData["ToastType"] = "success";
@@ -277,6 +292,90 @@ namespace DATN64.Controllers
             }
 
             return View();
+        }
+
+        [HttpGet]
+        public IActionResult Register()
+        {
+            return View(new RegisterViewModel());
+        }
+
+        [HttpPost]
+        public IActionResult Register(RegisterViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            if (string.IsNullOrEmpty(model.FullName))
+            {
+                ModelState.AddModelError("", "Họ và tên không được để trống.");
+                return View(model);
+            }
+
+            if (string.IsNullOrEmpty(model.Email) && string.IsNullOrEmpty(model.Phone))
+            {
+                ModelState.AddModelError("", "Vui lòng nhập Email hoặc Số điện thoại để đăng ký.");
+                return View(model);
+            }
+
+            if (model.Password != model.ConfirmPassword)
+            {
+                ModelState.AddModelError("", "Mật khẩu và xác nhận mật khẩu không trùng khớp.");
+                return View(model);
+            }
+
+            // Check email uniqueness
+            if (!string.IsNullOrEmpty(model.Email))
+            {
+                var existingEmail = _context.KhachHangs.FirstOrDefault(k => k.Email != null && k.Email.ToLower() == model.Email.ToLower());
+                if (existingEmail != null)
+                {
+                    ModelState.AddModelError("", "Email này đã được sử dụng bởi tài khoản khác.");
+                    return View(model);
+                }
+            }
+
+            // Check phone uniqueness
+            if (!string.IsNullOrEmpty(model.Phone))
+            {
+                var existingPhone = _context.KhachHangs.FirstOrDefault(k => k.SoDienThoai == model.Phone);
+                if (existingPhone != null)
+                {
+                    ModelState.AddModelError("", "Số điện thoại này đã được sử dụng bởi tài khoản khác.");
+                    return View(model);
+                }
+            }
+
+            var customer = new KhachHang
+            {
+                HoTen = model.FullName,
+                Email = string.IsNullOrEmpty(model.Email) ? null : model.Email,
+                SoDienThoai = model.Phone,
+                DiaChi = model.Address ?? "",
+                DiemTichLuy = 0,
+                TrangThai = "Hoạt động",
+                NgayTao = System.DateTime.Now
+            };
+
+            var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<KhachHang>();
+            customer.MatKhau = hasher.HashPassword(customer, model.Password);
+
+            _context.KhachHangs.Add(customer);
+            _context.SaveChanges();
+
+            // Set session variables to automatically log in the registered customer
+            HttpContext.Session.SetString("UserEmail", customer.Email ?? customer.SoDienThoai ?? "");
+            HttpContext.Session.SetString("UserName", customer.HoTen);
+            HttpContext.Session.SetString("UserRoles", "Khách hàng");
+            HttpContext.Session.SetString("UserPermissions", "");
+            HttpContext.Session.SetString("CustomerId", customer.MaKhachHang.ToString());
+
+            TempData["ToastMessage"] = "Đăng ký tài khoản thành công!";
+            TempData["ToastType"] = "success";
+
+            return RedirectToAction("Index", "Online");
         }
     }
 }

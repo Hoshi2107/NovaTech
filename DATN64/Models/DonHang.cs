@@ -33,6 +33,6 @@ namespace DATN64.Models
         [ForeignKey("MaNhanVien")]
         public virtual NhanVien? NhanVien { get; set; }
 
-        public virtual ICollection<ChiTietDonHang>? ChiTietDonHangs { get; set; }
+        public virtual ICollection<ChiTietDonHang> ChiTietDonHangs { get; set; } = new List<ChiTietDonHang>();
     }
 }

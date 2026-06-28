@@ -114,7 +114,7 @@
                             <button class="btn btn-outline-primary text-xs px-3" type="button" onclick="applyVoucher()">Áp dụng</button>
                         </div>
                         <div class="text-xxs text-muted mt-2" style="line-height: 1.4;">
-                            <i class="fa-solid fa-circle-info me-1 text-info"></i>Mã giảm giá chỉ được tính trên sản phẩm giá thường, không áp dụng cho sản phẩm đang giảm giá Flash Sale.
+                            <i class="fa-solid fa-circle-info me-1 text-info"></i>Mã giảm giá chỉ tính trên sản phẩm giá thường, <strong>không áp dụng cho Flash Sale</strong>.
                         </div>
                         <div id="voucherMsg" class="text-xxs mt-2 d-none"></div>
 
@@ -123,11 +123,15 @@
                         {
                             <div class="mt-3">
                                 <span class="text-xxs fw-bold text-secondary">MÃ GIẢM GIÁ ĐANG CÓ:</span>
-                                <div class="d-flex flex-wrap gap-2 mt-1.5">
+                                <div class="d-flex flex-wrap gap-2 mt-1">
                                     @foreach (var v in vouchers)
                                     {
-                                        <span class="badge bg-light text-primary border border-info border-opacity-25 cursor-pointer text-xxs py-1.5 px-2" onclick="useVoucherCode('@v.MaCode')" title="Giảm @(v.GiaTri?.ToString("N0")) đ">
-                                            @v.MaCode
+                                        <span class="badge bg-light text-primary border border-info border-opacity-25 cursor-pointer text-xxs py-1 px-2"
+                                              onclick="useVoucherCode('@v.MaCode')"
+                                              style="cursor:pointer;"
+                                              title="Click để áp dụng">
+                                            <i class="fa-solid fa-tag me-1"></i>@v.MaCode
+                                            <span class="text-danger fw-bold ms-1">-@((v.GiaTri ?? 0).ToString("N0"))đ</span>
                                         </span>
                                     }
                                 </div>
@@ -249,11 +253,11 @@
                 if (data.success) {
                     discountVal = data.discount;
                     msgEl.className = 'text-xxs mt-2 text-success fw-bold';
-                    msgEl.innerText = data.message;
+                    msgEl.innerHTML = data.message;  // dùng innerHTML để render HTML tag <strong>
                     
                     // Update Summary
                     document.getElementById('summaryDiscount').innerText = '- ' + discountVal.toLocaleString('vi-VN') + ' đ';
-                    var totalVal = currentSubtotalVal - discountVal;
+                    var totalVal = Math.max(0, currentSubtotalVal - discountVal);
                     document.getElementById('summaryTotal').innerText = totalVal.toLocaleString('vi-VN') + ' đ';
 
                     // Update Form fields
@@ -262,7 +266,7 @@
                 } else {
                     discountVal = 0;
                     msgEl.className = 'text-xxs mt-2 text-danger fw-bold';
-                    msgEl.innerText = data.message;
+                    msgEl.innerHTML = data.message;  // có thể chứa HTML
 
                     document.getElementById('summaryDiscount').innerText = '- 0 đ';
                     document.getElementById('summaryTotal').innerText = currentSubtotalVal.toLocaleString('vi-VN') + ' đ';

@@ -125,20 +125,28 @@ namespace DATN64.Controllers
                 return customerId;
             }
 
-            var roles = HttpContext.Session.GetString("UserRoles") ?? string.Empty;
-            if (roles.Contains("Khách hàng"))
+            var email = HttpContext.Session.GetString("UserEmail");
+            if (!string.IsNullOrEmpty(email))
             {
-                var email = HttpContext.Session.GetString("UserEmail");
-                if (!string.IsNullOrEmpty(email))
+                var lowerEmail = email.ToLower();
+                var customer = _context.KhachHangs.FirstOrDefault(k => k.Email != null && k.Email.ToLower() == lowerEmail);
+                if (customer == null)
                 {
-                    var lowerEmail = email.ToLower();
-                    var customer = _context.KhachHangs.FirstOrDefault(k => k.Email != null && k.Email.ToLower() == lowerEmail);
-                    if (customer != null)
+                    // Create a customer record on the fly for this logged-in account to ensure they can checkout
+                    var userName = HttpContext.Session.GetString("UserName") ?? "Khách Hàng";
+                    customer = new KhachHang
                     {
-                        HttpContext.Session.SetString("CustomerId", customer.MaKhachHang.ToString());
-                        return customer.MaKhachHang;
-                    }
+                        HoTen = userName,
+                        Email = email,
+                        SoDienThoai = "0900000000",
+                        DiaChi = "Chưa cập nhật",
+                        DiemTichLuy = 0
+                    };
+                    _context.KhachHangs.Add(customer);
+                    _context.SaveChanges();
                 }
+                HttpContext.Session.SetString("CustomerId", customer.MaKhachHang.ToString());
+                return customer.MaKhachHang;
             }
 
             return null;
@@ -165,7 +173,13 @@ namespace DATN64.Controllers
         public IActionResult Cart()
         {
             var cart = GetCartFromSession();
-            ViewBag.Vouchers = _context.Vouchers.Where(v => v.NgayKetThuc > DateTime.Now).ToList();
+            // Chỉ hiển thị voucher còn hạn và còn số lượng
+            ViewBag.Vouchers = _context.Vouchers
+                .Where(v => v.NgayKetThuc > DateTime.Now
+                         && (v.SoLuong == null || v.SoLuong > 0)
+                         && (v.NgayBatDau == null || v.NgayBatDau <= DateTime.Now))
+                .OrderBy(v => v.GiaTri)
+                .ToList();
             ViewBag.CanCheckout = IsCustomerLoggedIn();
             return View(cart);
         }
@@ -368,30 +382,58 @@ namespace DATN64.Controllers
         [HttpPost]
         public IActionResult ApplyVoucher(string code, decimal currentSubtotal)
         {
-            var voucher = _context.Vouchers.FirstOrDefault(v => 
-                v.MaCode != null && v.MaCode.Equals(code, StringComparison.OrdinalIgnoreCase) && 
-                (v.NgayKetThuc == null || v.NgayKetThuc > DateTime.Now) && 
-                (v.NgayBatDau == null || v.NgayBatDau <= DateTime.Now));
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                return Json(new { success = false, message = "Vui lòng nhập mã giảm giá!" });
+            }
+
+            var voucher = _context.Vouchers.FirstOrDefault(v =>
+                v.MaCode != null && v.MaCode.ToLower() == code.Trim().ToLower());
 
             if (voucher == null)
             {
-                return Json(new { success = false, message = "Mã giảm giá không tồn tại hoặc đã hết hạn!" });
+                return Json(new { success = false, message = "Mã giảm giá không tồn tại!" });
+            }
+
+            if (voucher.SoLuong.HasValue && voucher.SoLuong <= 0)
+            {
+                return Json(new { success = false, message = "Mã giảm giá này đã hết lượt sử dụng!" });
+            }
+
+            if (voucher.NgayBatDau.HasValue && voucher.NgayBatDau > DateTime.Now)
+            {
+                return Json(new { success = false, message = "Mã giảm giá chưa đến thời gian áp dụng!" });
+            }
+
+            if (voucher.NgayKetThuc.HasValue && voucher.NgayKetThuc < DateTime.Now)
+            {
+                return Json(new { success = false, message = "Mã giảm giá đã hết hạn!" });
             }
 
             var cart = GetCartFromSession();
-            decimal subtotal = cart.Sum(i => i.Total);
 
-            decimal eligibleSubtotal = subtotal;
+            // Tính tổng tiền CHỈ trên sản phẩm giá thường (không áp dụng cho Flash Sale)
+            decimal eligibleSubtotal = cart
+                .Where(i => !i.IsDiscounted)
+                .Sum(i => i.Total);
 
-            decimal discount = voucher.GiaTri ?? 0;
-            discount = Math.Min(discount, eligibleSubtotal);
+            decimal voucherValue = voucher.GiaTri ?? 0;
 
-            return Json(new { 
-                success = true, 
-                discount = discount, 
-                message = $"Áp dụng mã thành công! Đã giảm {discount.ToString("N0")} đ" 
+            if (eligibleSubtotal <= 0)
+            {
+                return Json(new { success = false, message = "Mã giảm giá không áp dụng cho sản phẩm Flash Sale!" });
+            }
+
+            // Giảm tối đa bằng tổng tiền sản phẩm đủ điều kiện (không giảm âm)
+            decimal discount = Math.Min(voucherValue, eligibleSubtotal);
+
+            return Json(new {
+                success = true,
+                discount = discount,
+                message = $"Áp dụng mã <strong>{voucher.MaCode}</strong> thành công! Giảm <strong>{discount.ToString("N0")}đ</strong>"
             });
         }
+
 
         [HttpPost]
         public IActionResult Checkout(string customerName, string customerPhone, string customerAddress, string paymentMethod, string voucherCode, decimal discountVal)
@@ -600,6 +642,141 @@ namespace DATN64.Controllers
 
             if (order == null) return NotFound();
             return View(order);
+        }
+
+        // ==================== CUSTOMER PROFILE ====================
+
+        public IActionResult Profile()
+        {
+            var customerId = GetCurrentCustomerId();
+            if (customerId == null)
+            {
+                TempData["ToastMessage"] = "Bạn cần đăng nhập để xem trang cá nhân.";
+                TempData["ToastType"] = "info";
+                return RedirectToAction("Login", "Account");
+            }
+
+            var customer = _context.KhachHangs
+                .Include(k => k.DonHangs)
+                    .ThenInclude(d => d.ChiTietDonHangs)
+                        .ThenInclude(c => c.SanPham)
+                .FirstOrDefault(k => k.MaKhachHang == customerId);
+
+            if (customer == null) return NotFound();
+
+            var model = new ProfileViewModel
+            {
+                MaKhachHang = customer.MaKhachHang,
+                HoTen       = customer.HoTen,
+                SoDienThoai = customer.SoDienThoai,
+                Email       = customer.Email,
+                DiaChi      = customer.DiaChi,
+                DiemTichLuy = customer.DiemTichLuy,
+                TrangThai   = customer.TrangThai,
+                NgayTao     = customer.NgayTao,
+                DonHangs    = customer.DonHangs
+                                .OrderByDescending(d => d.NgayDat)
+                                .ToList()
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        public IActionResult Profile(ProfileViewModel model, string activeTab = "info")
+        {
+            var customerId = GetCurrentCustomerId();
+            if (customerId == null) return RedirectToAction("Login", "Account");
+
+            var customer = _context.KhachHangs.FirstOrDefault(k => k.MaKhachHang == customerId);
+            if (customer == null) return NotFound();
+
+            // --- Update personal info ---
+            if (activeTab == "info")
+            {
+                if (string.IsNullOrWhiteSpace(model.HoTen))
+                {
+                    TempData["ToastMessage"] = "Họ tên không được để trống.";
+                    TempData["ToastType"] = "danger";
+                    return RedirectToAction("Profile");
+                }
+
+                // Check email uniqueness if changed
+                if (!string.IsNullOrWhiteSpace(model.Email) &&
+                    model.Email.ToLower() != (customer.Email ?? "").ToLower())
+                {
+                    var emailTaken = _context.KhachHangs
+                        .Any(k => k.Email != null && k.Email.ToLower() == model.Email.ToLower() && k.MaKhachHang != customerId);
+                    if (emailTaken)
+                    {
+                        TempData["ToastMessage"] = "Email này đã được sử dụng bởi tài khoản khác.";
+                        TempData["ToastType"] = "danger";
+                        return RedirectToAction("Profile");
+                    }
+                }
+
+                customer.HoTen      = model.HoTen.Trim();
+                customer.SoDienThoai = model.SoDienThoai?.Trim();
+                customer.DiaChi     = model.DiaChi?.Trim();
+
+                // Update email and session
+                if (!string.IsNullOrWhiteSpace(model.Email))
+                {
+                    customer.Email = model.Email.Trim();
+                    HttpContext.Session.SetString("UserEmail", customer.Email);
+                }
+
+                // Update session name
+                HttpContext.Session.SetString("UserName", customer.HoTen);
+                if (!string.IsNullOrWhiteSpace(customer.SoDienThoai))
+                    HttpContext.Session.SetString("CustomerPhone", customer.SoDienThoai);
+
+                _context.SaveChanges();
+
+                TempData["ToastMessage"] = "Cập nhật thông tin thành công!";
+                TempData["ToastType"] = "success";
+            }
+            // --- Change password ---
+            else if (activeTab == "password")
+            {
+                if (string.IsNullOrWhiteSpace(model.MatKhauCu) ||
+                    string.IsNullOrWhiteSpace(model.MatKhauMoi) ||
+                    string.IsNullOrWhiteSpace(model.XacNhanMatKhau))
+                {
+                    TempData["ToastMessage"] = "Vui lòng điền đầy đủ thông tin đổi mật khẩu.";
+                    TempData["ToastType"] = "danger";
+                    return RedirectToAction("Profile");
+                }
+
+                if (customer.MatKhau != model.MatKhauCu)
+                {
+                    TempData["ToastMessage"] = "Mật khẩu cũ không đúng.";
+                    TempData["ToastType"] = "danger";
+                    return RedirectToAction("Profile");
+                }
+
+                if (model.MatKhauMoi != model.XacNhanMatKhau)
+                {
+                    TempData["ToastMessage"] = "Mật khẩu mới và xác nhận không khớp.";
+                    TempData["ToastType"] = "danger";
+                    return RedirectToAction("Profile");
+                }
+
+                if (model.MatKhauMoi!.Length < 6)
+                {
+                    TempData["ToastMessage"] = "Mật khẩu mới phải ít nhất 6 ký tự.";
+                    TempData["ToastType"] = "danger";
+                    return RedirectToAction("Profile");
+                }
+
+                customer.MatKhau = model.MatKhauMoi;
+                _context.SaveChanges();
+
+                TempData["ToastMessage"] = "Đổi mật khẩu thành công! Lần đăng nhập sau hãy dùng mật khẩu mới.";
+                TempData["ToastType"] = "success";
+            }
+
+            return RedirectToAction("Profile");
         }
     }
 }

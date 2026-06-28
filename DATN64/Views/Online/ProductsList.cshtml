@@ -29,26 +29,26 @@
                 <!-- 2. Nhóm danh mục -->
                 <div class="mb-4">
                     <label class="form-label fw-bold text-secondary text-xs text-uppercase mb-2">Danh mục sản phẩm</label>
-                    <div class="list-group shadow-sm rounded-4 overflow-hidden">
-                        <button type="button" class="list-group-item list-group-item-action px-3 py-3 text-start text-xs fw-semibold @(string.IsNullOrEmpty(currentCat) ? "active" : "")" onclick="filterCategory('', this)">
+                    <div class="filter-sidebar-list d-flex flex-column">
+                        <button type="button" class="filter-sidebar-item @(string.IsNullOrEmpty(currentCat) ? "active" : "")" data-category="" onclick="filterCategory('', this)">
                             <i class="fa-solid fa-layer-group me-2"></i> Tất cả sản phẩm
                         </button>
-                        <button type="button" class="list-group-item list-group-item-action px-3 py-3 text-start text-xs fw-semibold @(currentCat == "Điện thoại" ? "active" : "")" onclick="filterCategory('Điện thoại', this)">
+                        <button type="button" class="filter-sidebar-item @(currentCat == "Điện thoại" ? "active" : "")" data-category="Điện thoại" onclick="filterCategory('Điện thoại', this)">
                             <i class="fa-solid fa-mobile-screen-button me-2"></i> Điện thoại
                         </button>
-                        <button type="button" class="list-group-item list-group-item-action px-3 py-3 text-start text-xs fw-semibold @(currentCat == "Laptop" ? "active" : "")" onclick="filterCategory('Laptop', this)">
+                        <button type="button" class="filter-sidebar-item @(currentCat == "Laptop" ? "active" : "")" data-category="Laptop" onclick="filterCategory('Laptop', this)">
                             <i class="fa-solid fa-laptop me-2"></i> Laptop
                         </button>
-                        <button type="button" class="list-group-item list-group-item-action px-3 py-3 text-start text-xs fw-semibold @(currentCat == "Máy tính bảng" ? "active" : "")" onclick="filterCategory('Máy tính bảng', this)">
+                        <button type="button" class="filter-sidebar-item @(currentCat == "Máy tính bảng" ? "active" : "")" data-category="Máy tính bảng" onclick="filterCategory('Máy tính bảng', this)">
                             <i class="fa-solid fa-tablet-screen-button me-2"></i> Máy tính bảng
                         </button>
-                        <button type="button" class="list-group-item list-group-item-action px-3 py-3 text-start text-xs fw-semibold @(currentCat == "Tai nghe" ? "active" : "")" onclick="filterCategory('Tai nghe', this)">
+                        <button type="button" class="filter-sidebar-item @(currentCat == "Tai nghe" ? "active" : "")" data-category="Tai nghe" onclick="filterCategory('Tai nghe', this)">
                             <i class="fa-solid fa-headphones me-2"></i> Tai nghe
                         </button>
-                        <button type="button" class="list-group-item list-group-item-action px-3 py-3 text-start text-xs fw-semibold @(currentCat == "Phụ kiện" ? "active" : "")" onclick="filterCategory('Phụ kiện', this)">
+                        <button type="button" class="filter-sidebar-item @(currentCat == "Phụ kiện" ? "active" : "")" data-category="Phụ kiện" onclick="filterCategory('Phụ kiện', this)">
                             <i class="fa-solid fa-keyboard me-2"></i> Phụ kiện
                         </button>
-                        <button type="button" class="list-group-item list-group-item-action px-3 py-3 text-start text-xs fw-semibold @(currentCat == "Loa" ? "active" : "")" onclick="filterCategory('Loa', this)">
+                        <button type="button" class="filter-sidebar-item @(currentCat == "Loa" ? "active" : "")" data-category="Loa" onclick="filterCategory('Loa', this)">
                             <i class="fa-solid fa-volume-high me-2"></i> Loa & Âm thanh
                         </button>
                     </div>
@@ -115,15 +115,29 @@
                 </div>
             </div>
 
-            <div class="mb-4 overflow-auto">
-                <div class="btn-group btn-group-sm flex-nowrap" role="group" aria-label="Danh mục sản phẩm">
-                    <button type="button" class="btn btn-outline-secondary category-filter-btn @(string.IsNullOrEmpty(currentCat) ? "active" : "")" onclick="filterCategory('', this)">Tất cả sản phẩm</button>
-                    <button type="button" class="btn btn-outline-secondary category-filter-btn @(currentCat == "Điện thoại" ? "active" : "")" onclick="filterCategory('Điện thoại', this)">Điện thoại</button>
-                    <button type="button" class="btn btn-outline-secondary category-filter-btn @(currentCat == "Laptop" ? "active" : "")" onclick="filterCategory('Laptop', this)">Laptop</button>
-                    <button type="button" class="btn btn-outline-secondary category-filter-btn @(currentCat == "Máy tính bảng" ? "active" : "")" onclick="filterCategory('Máy tính bảng', this)">Máy tính bảng</button>
-                    <button type="button" class="btn btn-outline-secondary category-filter-btn @(currentCat == "Tai nghe" ? "active" : "")" onclick="filterCategory('Tai nghe', this)">Tai nghe</button>
-                    <button type="button" class="btn btn-outline-secondary category-filter-btn @(currentCat == "Phụ kiện" ? "active" : "")" onclick="filterCategory('Phụ kiện', this)">Phụ kiện</button>
-                    <button type="button" class="btn btn-outline-secondary category-filter-btn @(currentCat == "Loa" ? "active" : "")" onclick="filterCategory('Loa', this)">Loa & Âm thanh</button>
+            <div class="mb-4">
+                <div class="horizontal-tabs-container">
+                    <button type="button" class="tab-btn @(string.IsNullOrEmpty(currentCat) ? "active" : "")" data-category="" onclick="filterCategory('', this)">
+                        <i class="fa-solid fa-layer-group me-1.5"></i> Tất cả sản phẩm
+                    </button>
+                    <button type="button" class="tab-btn @(currentCat == "Điện thoại" ? "active" : "")" data-category="Điện thoại" onclick="filterCategory('Điện thoại', this)">
+                        <i class="fa-solid fa-mobile-screen-button me-1.5"></i> Điện thoại
+                    </button>
+                    <button type="button" class="tab-btn @(currentCat == "Laptop" ? "active" : "")" data-category="Laptop" onclick="filterCategory('Laptop', this)">
+                        <i class="fa-solid fa-laptop me-1.5"></i> Laptop
+                    </button>
+                    <button type="button" class="tab-btn @(currentCat == "Máy tính bảng" ? "active" : "")" data-category="Máy tính bảng" onclick="filterCategory('Máy tính bảng', this)">
+                        <i class="fa-solid fa-tablet-screen-button me-1.5"></i> Máy tính bảng
+                    </button>
+                    <button type="button" class="tab-btn @(currentCat == "Tai nghe" ? "active" : "")" data-category="Tai nghe" onclick="filterCategory('Tai nghe', this)">
+                        <i class="fa-solid fa-headphones me-1.5"></i> Tai nghe
+                    </button>
+                    <button type="button" class="tab-btn @(currentCat == "Phụ kiện" ? "active" : "")" data-category="Phụ kiện" onclick="filterCategory('Phụ kiện', this)">
+                        <i class="fa-solid fa-keyboard me-1.5"></i> Phụ kiện
+                    </button>
+                    <button type="button" class="tab-btn @(currentCat == "Loa" ? "active" : "")" data-category="Loa" onclick="filterCategory('Loa', this)">
+                        <i class="fa-solid fa-volume-high me-1.5"></i> Loa & Âm thanh
+                    </button>
                 </div>
             </div>
 
@@ -189,12 +203,25 @@
 
         function filterCategory(cat, btn) {
             selectedCategory = cat;
-            document.querySelectorAll('.category-filter-btn').forEach(b => {
-                b.classList.remove('active');
+            
+            // Sync horizontal tab active state
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                if (b.getAttribute('data-category') === cat) {
+                    b.classList.add('active');
+                } else {
+                    b.classList.remove('active');
+                }
             });
-            if (btn) {
-                btn.classList.add('active');
-            }
+
+            // Sync sidebar list active state
+            document.querySelectorAll('.filter-sidebar-item').forEach(b => {
+                if (b.getAttribute('data-category') === cat) {
+                    b.classList.add('active');
+                } else {
+                    b.classList.remove('active');
+                }
+            });
+
             document.getElementById('currentCatTitle').innerText = cat === '' ? "Tất cả sản phẩm NovaTech" : "Thiết bị: " + cat;
             filterProducts();
         }
@@ -286,7 +313,7 @@
             document.querySelectorAll('.price-filter-checkbox').forEach(cb => cb.checked = false);
             document.getElementById('sortSelect').value = 'default';
             filterBrandCheckboxes();
-            filterCategory('', document.querySelector('.category-filter-btn'));
+            filterCategory('');
         }
 
         function addToCart(productId) {

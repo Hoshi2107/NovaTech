@@ -4,118 +4,381 @@
     ViewData["Title"] = "Hỗ trợ kỹ thuật";
 }
 
-<div class="container my-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-10">
-            <div class="card rounded-4 shadow-sm border-0 overflow-hidden">
-                <div class="card-body p-4 p-lg-5">
-                    <div class="d-flex align-items-center justify-content-between mb-4">
-                        <div>
-                            <h2 class="fw-bold mb-1">Hỗ trợ kỹ thuật NovaTech</h2>
-                            <p class="text-muted mb-0">Kiểm tra bảo hành hoặc gửi yêu cầu sửa máy của bạn.</p>
+<style>
+    .support-hero {
+        background: linear-gradient(135deg, #0f172a 0%, #0284c7 60%, #38bdf8 100%);
+        color: white;
+        padding: 64px 0 80px;
+        position: relative;
+        overflow: hidden;
+    }
+    .support-hero::before {
+        content: '';
+        position: absolute;
+        top: -60px; right: -60px;
+        width: 300px; height: 300px;
+        background: rgba(255,255,255,0.06);
+        border-radius: 50%;
+    }
+    .support-hero::after {
+        content: '';
+        position: absolute;
+        bottom: -80px; left: -40px;
+        width: 220px; height: 220px;
+        background: rgba(255,255,255,0.04);
+        border-radius: 50%;
+    }
+    .support-hero .badge-live {
+        background: rgba(34,197,94,0.18);
+        border: 1px solid rgba(34,197,94,0.4);
+        color: #4ade80;
+        font-size: 0.75rem;
+        padding: 4px 12px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 16px;
+    }
+    .support-hero .badge-live::before {
+        content: '';
+        width: 8px; height: 8px;
+        background: #4ade80;
+        border-radius: 50%;
+        animation: pulse-green 1.5s infinite;
+    }
+    @@keyframes pulse-green {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(1.3); }
+    }
+
+    .support-stat-card {
+        background: rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 16px;
+        padding: 20px 24px;
+        backdrop-filter: blur(12px);
+        text-align: center;
+        transition: transform 0.25s ease, background 0.25s ease;
+    }
+    .support-stat-card:hover {
+        transform: translateY(-4px);
+        background: rgba(255,255,255,0.18);
+    }
+    .support-stat-card .stat-num {
+        font-size: 2rem;
+        font-weight: 800;
+        line-height: 1;
+        margin-bottom: 4px;
+    }
+    .support-stat-card .stat-label {
+        font-size: 0.8rem;
+        opacity: 0.8;
+    }
+
+    .support-tab-pills {
+        display: flex;
+        gap: 8px;
+        background: #f1f5f9;
+        border-radius: 16px;
+        padding: 6px;
+        margin-bottom: 32px;
+    }
+    .support-tab-btn {
+        flex: 1;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 12px;
+        background: transparent;
+        color: #64748b;
+        font-weight: 600;
+        font-size: 0.88rem;
+        cursor: pointer;
+        transition: all 0.25s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+    .support-tab-btn.active {
+        background: white;
+        color: #0284c7;
+        box-shadow: 0 4px 12px rgba(2,132,199,0.15);
+    }
+    .support-tab-btn:hover:not(.active) {
+        background: rgba(255,255,255,0.6);
+        color: #0284c7;
+    }
+
+    body[data-theme="dark"] .support-tab-pills {
+        background: #1e293b;
+    }
+    body[data-theme="dark"] .support-tab-btn.active {
+        background: #0f172a;
+    }
+
+    .support-section {
+        display: none;
+    }
+    .support-section.active {
+        display: block;
+    }
+
+    .support-card {
+        background: white;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    }
+    body[data-theme="dark"] .support-card {
+        background: #1e293b;
+        border-color: rgba(255,255,255,0.08);
+    }
+
+    .support-card-header {
+        padding: 24px 28px 20px;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    body[data-theme="dark"] .support-card-header {
+        border-bottom-color: rgba(255,255,255,0.08);
+    }
+    .support-card-icon {
+        width: 48px; height: 48px;
+        border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.2rem;
+    }
+    .support-card-body {
+        padding: 28px;
+    }
+
+    .nt-input-group {
+        position: relative;
+        margin-bottom: 20px;
+    }
+    .nt-input-group label {
+        display: block;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 8px;
+    }
+    .nt-input-group .nt-input {
+        width: 100%;
+        padding: 14px 16px 14px 48px;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        font-size: 0.95rem;
+        background: #f8fafc;
+        transition: all 0.25s ease;
+        outline: none;
+        color: #0f172a;
+    }
+    .nt-input-group .nt-input:focus {
+        border-color: #0284c7;
+        background: white;
+        box-shadow: 0 0 0 4px rgba(2,132,199,0.08);
+    }
+    .nt-input-group .nt-input-icon {
+        position: absolute;
+        left: 16px;
+        bottom: 14px;
+        color: #94a3b8;
+        font-size: 1rem;
+        pointer-events: none;
+    }
+    body[data-theme="dark"] .nt-input-group .nt-input {
+        background: #0f172a;
+        border-color: rgba(255,255,255,0.12);
+        color: #f1f5f9;
+    }
+    body[data-theme="dark"] .nt-input-group .nt-input:focus {
+        border-color: #38bdf8;
+        background: rgba(56,189,248,0.05);
+    }
+
+    .nt-btn-primary {
+        background: linear-gradient(135deg, #0284c7, #0ea5e9);
+        border: none;
+        color: white;
+        padding: 14px 28px;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: all 0.25s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        justify-content: center;
+    }
+    .nt-btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(2,132,199,0.3);
+    }
+
+    .result-card {
+        border-radius: 16px;
+        padding: 24px;
+        margin-top: 24px;
+        animation: fadeInUp 0.4s ease;
+    }
+    .result-card.success {
+        background: linear-gradient(135deg, rgba(34,197,94,0.08), rgba(34,197,94,0.04));
+        border: 1.5px solid rgba(34,197,94,0.3);
+    }
+    .result-card.warning {
+        background: linear-gradient(135deg, rgba(234,179,8,0.08), rgba(234,179,8,0.04));
+        border: 1.5px solid rgba(234,179,8,0.3);
+    }
+    .result-card.danger {
+        background: linear-gradient(135deg, rgba(239,68,68,0.08), rgba(239,68,68,0.04));
+        border: 1.5px solid rgba(239,68,68,0.3);
+    }
+    @@keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(12px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    .result-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(0,0,0,0.06);
+        font-size: 0.9rem;
+    }
+    .result-item:last-child { border-bottom: none; }
+    .result-item .label { color: #64748b; font-weight: 500; }
+    .result-item .value { font-weight: 700; color: #0f172a; }
+    body[data-theme="dark"] .result-item .value { color: #f1f5f9; }
+
+    .order-item-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        background: white;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        margin-bottom: 8px;
+        transition: box-shadow 0.2s;
+    }
+    .order-item-row:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.07); }
+    body[data-theme="dark"] .order-item-row { background: #0f172a; border-color: rgba(255,255,255,0.08); }
+
+    .quick-contact-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-top: 24px;
+    }
+    @@media (max-width: 768px) {
+        .quick-contact-grid { grid-template-columns: 1fr; }
+    }
+    .quick-contact-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+        border-radius: 14px;
+        border: 1.5px solid #e2e8f0;
+        text-align: center;
+        gap: 10px;
+        transition: all 0.25s ease;
+        text-decoration: none;
+        color: inherit;
+    }
+    .quick-contact-card:hover {
+        border-color: #0284c7;
+        background: rgba(2,132,199,0.04);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(2,132,199,0.1);
+        color: #0284c7;
+    }
+    .quick-contact-card .qc-icon {
+        width: 48px; height: 48px;
+        border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.3rem;
+        background: rgba(2,132,199,0.1);
+        color: #0284c7;
+    }
+    .quick-contact-card .qc-label { font-weight: 700; font-size: 0.9rem; }
+    .quick-contact-card .qc-sub { font-size: 0.78rem; color: #94a3b8; }
+    body[data-theme="dark"] .quick-contact-card { border-color: rgba(255,255,255,0.1); }
+
+    .faq-item {
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        margin-bottom: 10px;
+        overflow: hidden;
+        transition: box-shadow 0.2s;
+    }
+    .faq-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+    body[data-theme="dark"] .faq-item { border-color: rgba(255,255,255,0.08); }
+    .faq-toggle {
+        width: 100%;
+        background: none;
+        border: none;
+        padding: 16px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        text-align: left;
+        color: inherit;
+        transition: background 0.2s;
+    }
+    .faq-toggle:hover { background: rgba(2,132,199,0.04); }
+    .faq-toggle.open { color: #0284c7; }
+    .faq-toggle .faq-chevron { transition: transform 0.3s ease; font-size: 0.75rem; }
+    .faq-toggle.open .faq-chevron { transform: rotate(180deg); }
+    .faq-body {
+        display: none;
+        padding: 0 20px 16px;
+        font-size: 0.88rem;
+        color: #64748b;
+        line-height: 1.6;
+    }
+    .faq-body.open { display: block; }
+</style>
+
+<!-- Hero Banner -->
+<div class="support-hero">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-7">
+                <span class="badge-live">Hỗ trợ 24/7</span>
+                <h1 class="fw-black fs-1 mb-2">Trung tâm Hỗ trợ<br>Kỹ thuật NovaTech</h1>
+                <p class="opacity-75 mb-4 fs-6">Kiểm tra bảo hành, gửi yêu cầu sửa chữa và nhận hỗ trợ nhanh chóng từ đội ngũ kỹ thuật viên chuyên nghiệp của chúng tôi.</p>
+            </div>
+            <div class="col-lg-5">
+                <div class="row g-3">
+                    <div class="col-4">
+                        <div class="support-stat-card">
+                            <div class="stat-num">99%</div>
+                            <div class="stat-label">Tỉ lệ hài lòng</div>
                         </div>
-                        <span class="badge bg-info text-dark text-uppercase px-3 py-2">@Model.ActiveTab == "warranty" ? "Check bảo hành" : "Nhận sửa máy"</span>
                     </div>
-
-                    <ul class="nav nav-pills mb-4" role="tablist">
-                        <li class="nav-item me-2" role="presentation">
-                            <button class="nav-link @(Model.ActiveTab == "warranty" ? "active" : "") rounded-pill" type="button" onclick="location.href='@Url.Action("Support", "Online", new { tab = "warranty" })'">Check máy / Bảo hành</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link @(Model.ActiveTab == "repair" ? "active" : "") rounded-pill" type="button" onclick="location.href='@Url.Action("Support", "Online", new { tab = "repair" })'">Nhận sửa máy</button>
-                        </li>
-                    </ul>
-
-                    <div class="tab-content">
-                        <div class="tab-pane fade @(Model.ActiveTab == "warranty" ? "show active" : "")">
-                            <h5 class="fw-semibold mb-3">Check máy / Bảo hành</h5>
-                            <p class="text-muted mb-4">Nhập mã đơn hàng hoặc số điện thoại đã đăng ký mua để kiểm tra trạng thái đơn và bảo hành.</p>
-
-                            <form method="get" action="@Url.Action("Support", "Online")">
-                                <input type="hidden" name="tab" value="warranty" />
-                                <div class="row g-3 align-items-end">
-                                    <div class="col-md-8">
-                                        <label class="form-label text-secondary text-xs mb-2">Mã đơn hàng hoặc số điện thoại</label>
-                                        <input type="text" class="form-control form-control-lg" name="query" value="@Model.WarrantyCheck.Query" placeholder="Nhập mã đơn / số điện thoại..." />
-                                    </div>
-                                    <div class="col-md-4">
-                                        <button type="submit" class="btn btn-primary btn-lg w-100">Kiểm tra ngay</button>
-                                    </div>
-                                </div>
-                            </form>
-
-                            @if (Model.WarrantyCheck.HasResult)
-                            {
-                                if (Model.WarrantyCheck.Found)
-                                {
-                                    <div class="mt-4 p-4 rounded-4 border border-success bg-success bg-opacity-10">
-                                        <h6 class="fw-semibold mb-2">Kết quả tìm kiếm</h6>
-                                        <p class="mb-1"><strong>Khách hàng:</strong> @Model.WarrantyCheck.CustomerName</p>
-                                        <p class="mb-1"><strong>Số điện thoại:</strong> @Model.WarrantyCheck.CustomerPhone</p>
-                                        <p class="mb-1"><strong>Mã đơn hàng:</strong> @Model.WarrantyCheck.OrderId</p>
-                                        <p class="mb-1"><strong>Ngày đặt:</strong> @Model.WarrantyCheck.OrderDate?.ToString("dd/MM/yyyy")</p>
-                                        <p class="mb-1"><strong>Tổng tiền:</strong> @Model.WarrantyCheck.TotalAmount?.ToString("N0") đ</p>
-                                        <p class="mb-0"><strong>Trạng thái:</strong> @Model.WarrantyCheck.Status</p>
-                                        @if (Model.WarrantyCheck.OrderItems?.Any() == true)
-                                        {
-                                            <div class="mt-3">
-                                                <h6 class="fw-semibold">Sản phẩm trong đơn</h6>
-                                                <ul class="list-group list-group-flush rounded-3 overflow-hidden">
-                                                    @foreach (var item in Model.WarrantyCheck.OrderItems!)
-                                                    {
-                                                        <li class="list-group-item px-3 py-2">
-                                                            @item.SoLuong x @item.SanPham?.TenSanPham (@item.DonGia.ToString("N0") đ)
-                                                        </li>
-                                                    }
-                                                </ul>
-                                            </div>
-                                        }
-                                    </div>
-                                }
-                                else
-                                {
-                                    <div class="alert alert-warning mt-4">@Model.WarrantyCheck.Message</div>
-                                }
-                            }
+                    <div class="col-4">
+                        <div class="support-stat-card">
+                            <div class="stat-num">&lt;2h</div>
+                            <div class="stat-label">Thời gian phản hồi</div>
                         </div>
-
-                        <div class="tab-pane fade @(Model.ActiveTab == "repair" ? "show active" : "")">
-                            <h5 class="fw-semibold mb-3">Nhận sửa máy</h5>
-                            <p class="text-muted mb-4">Nếu bạn đã mua tại NovaTech, nhập mã đơn hoặc số điện thoại để gửi yêu cầu sửa chữa.</p>
-
-                            <form method="post" action="@Url.Action("Support", "Online")">
-                                <input type="hidden" name="tab" value="repair" />
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label text-secondary text-xs mb-2">Mã đơn hàng hoặc số điện thoại</label>
-                                        <input type="text" class="form-control form-control-lg" name="query" value="@Model.RepairRequest.Query" placeholder="Nhập mã đơn / số điện thoại..." />
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label text-secondary text-xs mb-2">Mô tả lỗi / yêu cầu</label>
-                                        <textarea class="form-control form-control-lg" name="issue" rows="3" placeholder="Ví dụ: Máy không lên nguồn, màn hình sọc...">@Model.RepairRequest.Issue</textarea>
-                                    </div>
-                                    <div class="col-12">
-                                        <button type="submit" class="btn btn-info btn-lg w-100">Gửi yêu cầu sửa</button>
-                                    </div>
-                                </div>
-                            </form>
-
-                            @if (Model.RepairRequest.HasAttempted)
-                            {
-                                <div class="mt-4">
-                                    @if (Model.RepairRequest.Success)
-                                    {
-                                        <div class="alert alert-success">@Model.RepairRequest.Message</div>
-                                        <p><strong>Khách hàng:</strong> @Model.RepairRequest.CustomerName</p>
-                                        <p><strong>Số điện thoại:</strong> @Model.RepairRequest.CustomerPhone</p>
-                                        <p><strong>Mã đơn:</strong> @Model.RepairRequest.OrderId</p>
-                                    }
-                                    else
-                                    {
-                                        <div class="alert alert-danger">@Model.RepairRequest.Message</div>
-                                    }
-                                </div>
-                            }
+                    </div>
+                    <div class="col-4">
+                        <div class="support-stat-card">
+                            <div class="stat-num">5K+</div>
+                            <div class="stat-label">Máy đã sửa thành công</div>
                         </div>
                     </div>
                 </div>
@@ -123,3 +386,359 @@
         </div>
     </div>
 </div>
+
+<div class="container py-5">
+    <div class="row g-4">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+
+            <!-- Tab Pills -->
+            <div class="support-tab-pills">
+                <button class="support-tab-btn @(Model.ActiveTab == "warranty" ? "active" : "")" onclick="switchTab('warranty')">
+                    <i class="fa-solid fa-shield-halved"></i> Check máy / Bảo hành
+                </button>
+                <button class="support-tab-btn @(Model.ActiveTab == "repair" ? "active" : "")" onclick="switchTab('repair')">
+                    <i class="fa-solid fa-screwdriver-wrench"></i> Nhận sửa máy
+                </button>
+                <button class="support-tab-btn @(Model.ActiveTab == "faq" ? "active" : "")" onclick="switchTab('faq')">
+                    <i class="fa-solid fa-circle-question"></i> Câu hỏi thường gặp
+                </button>
+            </div>
+
+            <!-- Tab: Bảo hành -->
+            <div id="tab-warranty" class="support-section @(Model.ActiveTab == "warranty" ? "active" : "")">
+                <div class="support-card">
+                    <div class="support-card-header">
+                        <div class="support-card-icon" style="background: rgba(2,132,199,0.1); color: #0284c7;">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">Kiểm tra bảo hành</h5>
+                            <p class="text-muted mb-0" style="font-size:0.85rem;">Nhập mã đơn hàng hoặc số điện thoại đã đặt mua để tra cứu bảo hành.</p>
+                        </div>
+                    </div>
+                    <div class="support-card-body">
+                        <form method="get" action="@Url.Action("Support", "Online")" id="warrantyForm">
+                            <input type="hidden" name="tab" value="warranty" />
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-8">
+                                    <div class="nt-input-group">
+                                        <label>Mã đơn hàng hoặc số điện thoại</label>
+                                        <i class="fa-solid fa-magnifying-glass nt-input-icon"></i>
+                                        <input class="nt-input" type="text" name="query" value="@Model.WarrantyCheck.Query" placeholder="VD: DH00123 hoặc 0901234567" />
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <button type="submit" class="nt-btn-primary mb-5">
+                                        <i class="fa-solid fa-search"></i> Kiểm tra ngay
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+
+                        @if (Model.WarrantyCheck.HasResult)
+                        {
+                            if (Model.WarrantyCheck.Found)
+                            {
+                                <div class="result-card success">
+                                    <div class="d-flex align-items-center gap-2 mb-3">
+                                        <i class="fa-solid fa-circle-check text-success fs-5"></i>
+                                        <span class="fw-bold text-success">Tìm thấy đơn hàng</span>
+                                    </div>
+                                    <div class="result-item">
+                                        <span class="label"><i class="fa-solid fa-user me-2"></i>Khách hàng</span>
+                                        <span class="value">@Model.WarrantyCheck.CustomerName</span>
+                                    </div>
+                                    <div class="result-item">
+                                        <span class="label"><i class="fa-solid fa-phone me-2"></i>Số điện thoại</span>
+                                        <span class="value">@Model.WarrantyCheck.CustomerPhone</span>
+                                    </div>
+                                    <div class="result-item">
+                                        <span class="label"><i class="fa-solid fa-hashtag me-2"></i>Mã đơn hàng</span>
+                                        <span class="value">#@Model.WarrantyCheck.OrderId</span>
+                                    </div>
+                                    <div class="result-item">
+                                        <span class="label"><i class="fa-solid fa-calendar me-2"></i>Ngày đặt</span>
+                                        <span class="value">@Model.WarrantyCheck.OrderDate?.ToString("dd/MM/yyyy")</span>
+                                    </div>
+                                    <div class="result-item">
+                                        <span class="label"><i class="fa-solid fa-money-bill me-2"></i>Tổng tiền</span>
+                                        <span class="value text-danger">@Model.WarrantyCheck.TotalAmount?.ToString("N0") đ</span>
+                                    </div>
+                                    <div class="result-item">
+                                        <span class="label"><i class="fa-solid fa-circle-info me-2"></i>Trạng thái</span>
+                                        <span class="badge bg-success">@Model.WarrantyCheck.Status</span>
+                                    </div>
+
+                                    @if (Model.WarrantyCheck.OrderItems?.Any() == true)
+                                    {
+                                        <hr class="my-3 opacity-25"/>
+                                        <h6 class="fw-bold mb-3"><i class="fa-solid fa-box me-2 text-primary"></i>Sản phẩm trong đơn</h6>
+                                        @foreach (var item in Model.WarrantyCheck.OrderItems!)
+                                        {
+                                            <div class="order-item-row">
+                                                <i class="fa-solid fa-mobile-screen text-muted"></i>
+                                                <div class="flex-grow-1">
+                                                    <div class="fw-semibold" style="font-size:0.88rem;">@item.SanPham?.TenSanPham</div>
+                                                    <div class="text-muted" style="font-size:0.78rem;">Số lượng: @item.SoLuong</div>
+                                                </div>
+                                                <div class="fw-bold text-danger" style="font-size:0.9rem;">@item.DonGia.ToString("N0") đ</div>
+                                            </div>
+                                        }
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="result-card warning">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="fa-solid fa-triangle-exclamation text-warning fs-5"></i>
+                                        <span class="fw-bold text-warning">Không tìm thấy kết quả</span>
+                                    </div>
+                                    <p class="mb-0 mt-2 text-muted" style="font-size:0.88rem;">@Model.WarrantyCheck.Message</p>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Sửa máy -->
+            <div id="tab-repair" class="support-section @(Model.ActiveTab == "repair" ? "active" : "")">
+                <div class="support-card">
+                    <div class="support-card-header">
+                        <div class="support-card-icon" style="background: rgba(234,179,8,0.1); color: #d97706;">
+                            <i class="fa-solid fa-screwdriver-wrench"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">Đăng ký sửa chữa</h5>
+                            <p class="text-muted mb-0" style="font-size:0.85rem;">Gửi yêu cầu sửa máy – đội ngũ kỹ thuật viên sẽ liên hệ trong vòng 2 giờ.</p>
+                        </div>
+                    </div>
+                    <div class="support-card-body">
+                        <form method="post" action="@Url.Action("Support", "Online")">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="tab" value="repair" />
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="nt-input-group">
+                                        <label>Mã đơn hàng hoặc số điện thoại</label>
+                                        <i class="fa-solid fa-receipt nt-input-icon"></i>
+                                        <input class="nt-input" type="text" name="query" value="@Model.RepairRequest.Query" placeholder="VD: DH00123 hoặc 0901234567" />
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="nt-input-group">
+                                        <label>Loại thiết bị</label>
+                                        <i class="fa-solid fa-mobile-screen nt-input-icon"></i>
+                                        <input class="nt-input" type="text" name="deviceType" placeholder="VD: iPhone 15, Samsung S24..." />
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="nt-input-group">
+                                        <label>Mô tả lỗi / yêu cầu</label>
+                                        <i class="fa-solid fa-pen nt-input-icon" style="top: 18px; bottom: auto;"></i>
+                                        <textarea class="nt-input" name="issue" rows="4" style="padding-top: 14px; resize: none;" placeholder="Ví dụ: Máy không lên nguồn, màn hình sọc màu, pin chai, camera mờ...">@Model.RepairRequest.Issue</textarea>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="nt-input-group">
+                                        <label>Thời gian mang máy đến</label>
+                                        <i class="fa-solid fa-calendar nt-input-icon"></i>
+                                        <input class="nt-input" type="datetime-local" name="preferredTime" />
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="nt-input-group">
+                                        <label>Ưu tiên xử lý</label>
+                                        <i class="fa-solid fa-bolt nt-input-icon"></i>
+                                        <select class="nt-input" name="priority" style="padding-left: 48px;">
+                                            <option value="normal">Bình thường (3-5 ngày)</option>
+                                            <option value="fast">Nhanh (1-2 ngày)</option>
+                                            <option value="urgent">Khẩn cấp (trong ngày)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="nt-btn-primary">
+                                        <i class="fa-solid fa-paper-plane"></i> Gửi yêu cầu sửa máy
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+
+                        @if (Model.RepairRequest.HasAttempted)
+                        {
+                            <div class="mt-4">
+                                @if (Model.RepairRequest.Success)
+                                {
+                                    <div class="result-card success">
+                                        <div class="d-flex align-items-center gap-2 mb-3">
+                                            <i class="fa-solid fa-circle-check text-success fs-5"></i>
+                                            <span class="fw-bold text-success">Gửi yêu cầu thành công!</span>
+                                        </div>
+                                        <p class="mb-3 text-muted" style="font-size:0.88rem;">@Model.RepairRequest.Message</p>
+                                        <div class="result-item">
+                                            <span class="label">Khách hàng</span>
+                                            <span class="value">@Model.RepairRequest.CustomerName</span>
+                                        </div>
+                                        <div class="result-item">
+                                            <span class="label">Số điện thoại</span>
+                                            <span class="value">@Model.RepairRequest.CustomerPhone</span>
+                                        </div>
+                                        <div class="result-item">
+                                            <span class="label">Mã đơn hàng</span>
+                                            <span class="value">#@Model.RepairRequest.OrderId</span>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="result-card danger">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fa-solid fa-circle-xmark text-danger fs-5"></i>
+                                            <span class="fw-bold text-danger">Không tìm thấy đơn hàng</span>
+                                        </div>
+                                        <p class="mb-0 mt-2 text-muted" style="font-size:0.88rem;">@Model.RepairRequest.Message</p>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: FAQ -->
+            <div id="tab-faq" class="support-section @(Model.ActiveTab == "faq" ? "active" : "")">
+                <div class="support-card">
+                    <div class="support-card-header">
+                        <div class="support-card-icon" style="background: rgba(139,92,246,0.1); color: #7c3aed;">
+                            <i class="fa-solid fa-circle-question"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">Câu hỏi thường gặp</h5>
+                            <p class="text-muted mb-0" style="font-size:0.85rem;">Giải đáp nhanh các thắc mắc phổ biến về sản phẩm và dịch vụ.</p>
+                        </div>
+                    </div>
+                    <div class="support-card-body">
+                        @{
+                            var faqs = new[] {
+                                new { Q = "Thời gian bảo hành sản phẩm là bao lâu?", A = "Tất cả sản phẩm mua tại NovaTech được bảo hành chính hãng từ 12 đến 24 tháng tùy từng dòng sản phẩm. Điện thoại và Laptop thường được bảo hành 12 tháng, một số dòng cao cấp lên đến 24 tháng." },
+                                new { Q = "Làm thế nào để kiểm tra tình trạng sửa chữa máy của tôi?", A = "Bạn có thể tra cứu trong tab 'Check máy / Bảo hành' bằng mã đơn hàng hoặc số điện thoại đã đăng ký. Hệ thống sẽ hiển thị trạng thái xử lý chi tiết của yêu cầu." },
+                                new { Q = "NovaTech có hỗ trợ sửa các sản phẩm mua nơi khác không?", A = "Có, NovaTech nhận sửa chữa tất cả các thương hiệu như Apple, Samsung, Asus, Dell,... kể cả sản phẩm không mua tại NovaTech. Phí sửa chữa sẽ được báo giá miễn phí trước khi thực hiện." },
+                                new { Q = "Thời gian chờ sửa máy mất bao lâu?", A = "Tùy mức độ hư hỏng và gói dịch vụ: Bình thường 3-5 ngày làm việc, Nhanh 1-2 ngày, Khẩn cấp trong ngày (với phụ kiện sẵn có). NovaTech cam kết thông báo tiến trình qua tin nhắn SMS." },
+                                new { Q = "Tôi có thể gửi máy qua bưu điện để sửa không?", A = "Có. NovaTech hỗ trợ nhận máy qua đường bưu điện toàn quốc. Vui lòng đóng gói cẩn thận và gửi kèm thông tin liên hệ. Chi phí vận chuyển hai chiều sẽ được tính theo thực tế." },
+                                new { Q = "Chính sách đổi trả như thế nào?", A = "Đổi máy trong 30 ngày nếu lỗi phần cứng do nhà sản xuất. Trả hàng trong 7 ngày nếu máy không đúng mô tả. NovaTech cam kết hoàn tiền 100% hoặc đổi sản phẩm tương đương." }
+                            };
+                        }
+                        @foreach (var (faq, i) in faqs.Select((f, idx) => (f, idx)))
+                        {
+                            <div class="faq-item">
+                                <button class="faq-toggle" onclick="toggleFaq(this)">
+                                    <span><i class="fa-solid fa-chevron-right text-primary me-2" style="font-size:0.75rem;"></i>@faq.Q</span>
+                                    <i class="fa-solid fa-chevron-down faq-chevron text-muted"></i>
+                                </button>
+                                <div class="faq-body">@faq.A</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Quick Contact -->
+            <div class="support-card mb-4">
+                <div class="support-card-header">
+                    <div class="support-card-icon" style="background: rgba(34,197,94,0.1); color: #16a34a;">
+                        <i class="fa-solid fa-headset"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-0">Liên hệ nhanh</h6>
+                        <p class="text-muted mb-0" style="font-size:0.8rem;">Hỗ trợ trực tiếp 7:30 - 21:30</p>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <a href="tel:0965419137" class="quick-contact-card mb-3 d-flex flex-row gap-3 align-items-center" style="text-decoration:none; color: inherit;">
+                        <div class="qc-icon" style="flex-shrink: 0;"><i class="fa-solid fa-phone"></i></div>
+                        <div>
+                            <div class="qc-label">Gọi hotline</div>
+                            <div class="qc-sub" style="color:#0284c7; font-weight:700;">0965 419 137</div>
+                        </div>
+                    </a>
+                    <a href="#" class="quick-contact-card mb-3 d-flex flex-row gap-3 align-items-center" style="text-decoration:none; color: inherit;">
+                        <div class="qc-icon" style="background: rgba(34,197,94,0.1); color: #16a34a; flex-shrink: 0;"><i class="fa-brands fa-whatsapp"></i></div>
+                        <div>
+                            <div class="qc-label">Nhắn Zalo / WhatsApp</div>
+                            <div class="qc-sub">Phản hồi trong 5 phút</div>
+                        </div>
+                    </a>
+                    <a href="mailto:hotro@novatech.vn" class="quick-contact-card d-flex flex-row gap-3 align-items-center" style="text-decoration:none; color: inherit;">
+                        <div class="qc-icon" style="background: rgba(239,68,68,0.1); color: #dc2626; flex-shrink: 0;"><i class="fa-solid fa-envelope"></i></div>
+                        <div>
+                            <div class="qc-label">Gửi email</div>
+                            <div class="qc-sub">hotro@novatech.vn</div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Store Map / Hours -->
+            <div class="support-card">
+                <div class="support-card-header">
+                    <div class="support-card-icon" style="background: rgba(239,68,68,0.1); color: #dc2626;">
+                        <i class="fa-solid fa-location-dot"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-0">Địa chỉ cửa hàng</h6>
+                        <p class="text-muted mb-0" style="font-size:0.8rem;">Mang máy đến trực tiếp</p>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <div class="d-flex gap-3 align-items-start mb-4">
+                        <i class="fa-solid fa-map-pin text-danger mt-1" style="font-size:1.1rem;"></i>
+                        <div>
+                            <div class="fw-semibold" style="font-size:0.9rem;">NovaTech Store — Biên Hòa</div>
+                            <div class="text-muted" style="font-size:0.82rem;">TP. Biên Hòa, Đồng Nai</div>
+                        </div>
+                    </div>
+                    <div class="p-3 rounded-3" style="background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border: 1px solid #bae6fd;">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <i class="fa-solid fa-clock text-primary"></i>
+                            <span class="fw-bold text-primary" style="font-size:0.85rem;">Giờ làm việc</span>
+                        </div>
+                        <div style="font-size:0.82rem; color:#334155;">
+                            Thứ 2 – Thứ 7: <strong>7:30 – 21:30</strong><br>
+                            Chủ nhật: <strong>8:00 – 18:00</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.support-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.support-tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        function toggleFaq(btn) {
+            const body = btn.nextElementSibling;
+            const isOpen = btn.classList.contains('open');
+            document.querySelectorAll('.faq-toggle.open').forEach(b => {
+                b.classList.remove('open');
+                b.nextElementSibling.classList.remove('open');
+            });
+            if (!isOpen) {
+                btn.classList.add('open');
+                body.classList.add('open');
+            }
+        }
+    </script>
+}

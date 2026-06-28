@@ -55,7 +55,6 @@
                     <span class="fw-bold fs-2" style="line-height: 1;">@Model.GiaBan.ToString("N0") ₫</span>
                     <span class="text-decoration-line-through text-white-50 fs-6">@((Model.GiaBan * 1.1m).ToString("N0")) ₫</span>
                 </div>
-                <div class="text-sm">Trả góp chỉ từ @((Model.GiaBan / 12).ToString("N0")) ₫/tháng</div>
             </div>
 
             <!-- Options (Mock) -->
@@ -63,10 +62,13 @@
                 <p class="fw-bold mb-2">Chọn màu sắc:</p>
                 <div class="d-flex gap-2">
                     <button class="btn btn-outline-secondary text-dark active border-danger" style="width: 100px;">
-                        <strong>Đen</strong><br><small>@Model.GiaBan.ToString("N0") ₫</small>
+                        Titan Tự Nhiên
                     </button>
                     <button class="btn btn-outline-secondary text-dark" style="width: 100px;">
-                        <strong>Trắng</strong><br><small>@Model.GiaBan.ToString("N0") ₫</small>
+                        Titan Xanh
+                    </button>
+                    <button class="btn btn-outline-secondary text-dark" style="width: 100px;">
+                        Titan Đen
                     </button>
                 </div>
             </div>
@@ -86,24 +88,11 @@
             </div>
 
             <!-- Actions -->
-            <div class="row g-2 mb-4">
-                <div class="col-8">
-                    <button class="btn btn-danger w-100 py-3 fw-bold fs-5 text-white rounded-3 shadow-sm" style="background: #D70018;" onclick="addToCart(@Model.MaSanPham)">
-                        MUA NGAY
-                        <div class="fw-normal" style="font-size: 0.85rem;">Giao tận nơi hoặc nhận tại cửa hàng</div>
-                    </button>
-                </div>
-                <div class="col-4 d-flex flex-column gap-2">
-                    @{ var isFavorite = ViewBag.IsFavorite as bool? ?? false; }
-                    <button id="favoriteBtn" class="btn @(isFavorite ? "btn-danger" : "btn-outline-danger") w-100 py-3 fw-bold fs-5 rounded-3 shadow-sm text-white" type="button" onclick="toggleFavorite(@Model.MaSanPham)">
-                        <i class="fa-solid fa-heart me-2"></i>
-                        <span id="favoriteText">@(isFavorite ? "Bỏ yêu thích" : "Yêu thích")</span>
-                    </button>
-                    <button class="btn btn-primary w-100 py-3 fw-bold fs-5 text-white rounded-3 shadow-sm" style="background: #277da1;">
-                        TRẢ GÓP
-                        <div class="fw-normal" style="font-size: 0.85rem;">Duyệt hồ sơ 5 phút</div>
-                    </button>
-                </div>
+            <div class="mb-4">
+                <button class="btn btn-danger w-100 py-3 fw-bold fs-5 text-white rounded-3 shadow-sm" style="background: #D70018;" onclick="addToCart(@Model.MaSanPham)">
+                    MUA NGAY
+                    <div class="fw-normal" style="font-size: 0.85rem;">Giao tận nơi hoặc nhận tại cửa hàng</div>
+                </button>
             </div>
 
             <!-- Specs Info -->

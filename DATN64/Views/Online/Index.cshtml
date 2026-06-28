@@ -6,26 +6,87 @@
     var flashSaleProducts = Model.Take(4).ToList();
     var bestSellers = Model.Skip(4).Take(4).ToList();
 }
-
-<!-- Hero Banner Section -->
-<div class="p-5 mb-5 rounded-4 shadow-sm" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(241, 245, 249, 0.9) 100%), url('https://images.unsplash.com/photo-1531297484001-80022131f5a1?q=80&w=1200&auto=format&fit=crop'); background-blend-mode: overlay; background-size: cover; border: 1px solid #e2e8f0;">
-    <div class="container-fluid py-5">
-        <h1 class="display-4 fw-extrabold text-neon">Siêu Thị Công Nghệ NovaTech</h1>
-        <p class="col-md-8 fs-5 text-dark" style="line-height: 1.6;">Chào mừng đến với cửa hàng bán lẻ thiết bị công nghệ uy tín. Tận hưởng ưu đãi độc quyền tại cửa hàng trực tuyến tích hợp của chúng tôi.</p>
-        <div class="d-flex gap-3 mt-4">
-            <a href="@Url.Action("ProductsList", "Online")" class="btn btn-info rounded-pill px-4 text-white fw-bold shadow-sm">Mua Sắm Ngay <i class="fa-solid fa-arrow-right ms-2"></i></a>
-            <a href="#" class="btn btn-outline-secondary rounded-pill px-4">Tìm hiểu thêm</a>
+<!-- Hero Banner Section (Carousel) -->
+<div id="heroBannerCarousel" class="carousel slide carousel-fade mb-5 rounded-4 overflow-hidden shadow-sm animate-fade-in" data-bs-ride="carousel" data-bs-interval="4000">
+    <div class="carousel-indicators">
+        <button type="button" data-bs-target="#heroBannerCarousel" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+        <button type="button" data-bs-target="#heroBannerCarousel" data-bs-slide-to="1" aria-label="Slide 2"></button>
+        <button type="button" data-bs-target="#heroBannerCarousel" data-bs-slide-to="2" aria-label="Slide 3"></button>
+    </div>
+    <div class="carousel-inner">
+        <!-- Slide 1 -->
+        <div class="carousel-item active" style="height: 380px;">
+            <div class="w-100 h-100" style="background: linear-gradient(rgba(15, 23, 42, 0.55), rgba(15, 23, 42, 0.65)), url('https://images.unsplash.com/photo-1531297484001-80022131f5a1?q=80&w=1200&auto=format&fit=crop') center/cover no-repeat;">
+                <div class="container h-100 d-flex align-items-center">
+                    <div class="text-white py-5 px-3 px-md-5">
+                        <span class="badge bg-info text-dark text-xxs fw-bold px-3 py-1.5 rounded-pill mb-3 text-uppercase">Công nghệ đỉnh cao</span>
+                        <h1 class="display-5 fw-extrabold mb-3">Siêu Thị Công Nghệ NovaTech</h1>
+                        <p class="fs-6 opacity-90 col-lg-8 mb-4">Chào mừng đến với cửa hàng bán lẻ thiết bị công nghệ uy tín. Tận hưởng ưu đãi độc quyền tại cửa hàng trực tuyến tích hợp của chúng tôi.</p>
+                        <div class="d-flex gap-3">
+                            <a href="@Url.Action("ProductsList", "Online")" class="btn btn-info rounded-pill px-4 py-2.5 text-white fw-bold shadow-sm">Mua Sắm Ngay <i class="fa-solid fa-arrow-right ms-2"></i></a>
+                            <a href="#" class="btn btn-outline-light rounded-pill px-4 py-2.5 fw-bold">Tìm hiểu thêm</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Slide 2 -->
+        <div class="carousel-item" style="height: 380px;">
+            <div class="w-100 h-100" style="background: linear-gradient(rgba(15, 23, 42, 0.55), rgba(15, 23, 42, 0.65)), url('https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=1200&auto=format&fit=crop') center/cover no-repeat;">
+                <div class="container h-100 d-flex align-items-center">
+                    <div class="text-white py-5 px-3 px-md-5">
+                        <span class="badge bg-warning text-dark text-xxs fw-bold px-3 py-1.5 rounded-pill mb-3 text-uppercase">Hot Trend 2026</span>
+                        <h1 class="display-5 fw-extrabold mb-3">Trải Nghiệm Smartphone Mới</h1>
+                        <p class="fs-6 opacity-90 col-lg-8 mb-4">Khám phá các dòng điện thoại thông minh, máy tính bảng hàng đầu thế giới với chương trình trợ giá tốt nhất hiện nay.</p>
+                        <div class="d-flex gap-3">
+                            <a href="@Url.Action("ProductsList", "Online", new { category = "Điện thoại" })" class="btn btn-warning rounded-pill px-4 py-2.5 text-dark fw-bold shadow-sm">Xem Ngay <i class="fa-solid fa-arrow-right ms-2"></i></a>
+                            <a href="#" class="btn btn-outline-light rounded-pill px-4 py-2.5 fw-bold">Tìm hiểu thêm</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Slide 3 -->
+        <div class="carousel-item" style="height: 380px;">
+            <div class="w-100 h-100" style="background: linear-gradient(rgba(15, 23, 42, 0.55), rgba(15, 23, 42, 0.65)), url('https://images.unsplash.com/photo-1484704849700-f032a568e944?q=80&w=1200&auto=format&fit=crop') center/cover no-repeat;">
+                <div class="container h-100 d-flex align-items-center">
+                    <div class="text-white py-5 px-3 px-md-5">
+                        <span class="badge bg-danger text-white text-xxs fw-bold px-3 py-1.5 rounded-pill mb-3 text-uppercase">Âm Thanh Sống Động</span>
+                        <h1 class="display-5 fw-extrabold mb-3">Thế Giới Âm Nhạc Cực Chất</h1>
+                        <p class="fs-6 opacity-90 col-lg-8 mb-4">Các sản phẩm Tai nghe, Loa Bluetooth chính hãng mang đến chất lượng âm thanh đỉnh cao, chân thực đến từng chi tiết.</p>
+                        <div class="d-flex gap-3">
+                            <a href="@Url.Action("ProductsList", "Online", new { category = "Tai nghe" })" class="btn btn-danger rounded-pill px-4 py-2.5 text-white fw-bold shadow-sm">Khám Phá <i class="fa-solid fa-arrow-right ms-2"></i></a>
+                            <a href="#" class="btn btn-outline-light rounded-pill px-4 py-2.5 fw-bold">Tìm hiểu thêm</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+    <button class="carousel-control-prev" type="button" data-bs-target="#heroBannerCarousel" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Previous</span>
+    </button>
+    <button class="carousel-control-next" type="button" data-bs-target="#heroBannerCarousel" data-bs-slide="next">
+        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Next</span>
+    </button>
 </div>
 
 <!-- Category Navigation Row -->
 <div class="container my-5 animate-fade-in">
-    <h5 class="fw-bold mb-4 text-dark">
-        <i class="fa-solid fa-layer-group text-primary me-2"></i>Danh mục sản phẩm
-    </h5>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="fw-bold mb-0 text-dark">
+            <i class="fa-solid fa-layer-group text-primary me-2"></i>Danh mục sản phẩm
+        </h5>
+        <!-- Expandable Arrow Button -->
+        <button id="toggleCategoryBtn" class="btn btn-outline-info rounded-pill px-3 py-1.5 btn-sm fw-bold transition-all d-flex align-items-center gap-1">
+            <span id="toggleText">Xem tất cả</span>
+            <i id="toggleIcon" class="fa-solid fa-chevron-down"></i>
+        </button>
+    </div>
 
-    <div class="d-flex flex-wrap justify-content-center justify-content-md-between gap-3">
+    <div id="categoryContainer" class="scroll-category-container">
         <a href="@Url.Action("ProductsList", "Online", new { category = "Điện thoại" })" class="text-decoration-none">
             <div class="chotot-cat-card">
                 <div class="chotot-cat-icon">
@@ -49,7 +110,7 @@
                 <div class="chotot-cat-icon">
                     <i class="fa-solid fa-tablet-screen-button"></i>
                 </div>
-                <div class="chotot-cat-title">Máy tính<br />bảng</div>
+                <div class="chotot-cat-title">Máy tính bảng</div>
             </div>
         </a>
 
@@ -76,54 +137,32 @@
                 <div class="chotot-cat-icon">
                     <i class="fa-solid fa-volume-high"></i>
                 </div>
-                <div class="chotot-cat-title">Loa & Âm<br />thanh</div>
+                <div class="chotot-cat-title">Loa & Âm thanh</div>
             </div>
         </a>
-   
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4 justify-content-center text-center">
-        <div class="col">
-
-                    
-         
-            
-                
-   
-      
-                
-          
-          
-                   
-        
-         
-                
-     
-          
-      
-                </div>
-            </a>
-        </div>
     </div>
 </div>
 
 <!-- Advertising Carousel Panels -->
 <div class="container my-5">
-    <div class="row gy-4 align-items-start">
-        <div class="col-lg-3">
-            <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100">
-                <div class="card-body p-0">
-                    <div id="leftAdCarousel" class="carousel slide" data-bs-ride="carousel">
-                        <div class="carousel-inner">
+    <div class="row gy-4 align-items-stretch">
+        <!-- Left Banner Carousel -->
+        <div class="col-lg-3 d-flex">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden w-100 h-100">
+                <div class="card-body p-0 h-100">
+                    <div id="leftAdCarousel" class="carousel slide h-100" data-bs-ride="carousel">
+                        <div class="carousel-inner h-100">
                             @if (ViewBag.LeftCarouselProducts is List<DATN64.Models.SanPham> leftAds && leftAds.Any())
                             {
                                 var index = 0;
                                 foreach (var ad in leftAds)
                                 {
-                                    <div class="carousel-item @(index == 0 ? "active" : "")">
-                                        <img src="@(ad.HinhAnh ?? "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=400")" class="d-block w-100" style="height: 260px; object-fit: cover;" alt="@ad.TenSanPham">
-                                        <div class="carousel-caption d-none d-md-block text-start">
-                                            <span class="badge bg-info text-dark">Hot</span>
-                                            <h6 class="fw-bold text-white mt-2">@ad.TenSanPham</h6>
-                                            <p class="mb-0 text-white">@ad.GiaBan.ToString("N0") đ</p>
+                                    <div class="carousel-item h-100 @(index == 0 ? "active" : "")">
+                                        <img src="@(ad.HinhAnh ?? "https://images.unsplash.com/photo-1598327105666-5b89351aff97?q=80&w=500")" class="d-block w-100 h-100" style="height: 535px !important; object-fit: cover;" alt="@ad.TenSanPham">
+                                        <div class="carousel-caption d-block text-start p-3 rounded-4" style="background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); left: 15px; right: 15px; bottom: 15px; border: 1px solid rgba(255,255,255,0.1);">
+                                            <span class="badge bg-info text-dark text-xxs fw-bold px-2.5 py-1 mb-2">HOT DEAL</span>
+                                            <h6 class="fw-bold text-white mb-1">@ad.TenSanPham</h6>
+                                            <p class="mb-0 text-warning fw-bold">@ad.GiaBan.ToString("N0") đ</p>
                                         </div>
                                     </div>
                                     index++;
@@ -131,12 +170,31 @@
                             }
                             else
                             {
-                                <div class="carousel-item active">
-                                    <img src="https://images.unsplash.com/photo-1555617117-08b5e3acc50b?q=80&w=400" class="d-block w-100" style="height: 260px; object-fit: cover;" alt="Quảng cáo">
-                                    <div class="carousel-caption d-none d-md-block text-start">
-                                        <span class="badge bg-info text-dark">Khuyến mãi</span>
-                                        <h6 class="fw-bold text-white mt-2">Ưu đãi đặc biệt</h6>
-                                        <p class="mb-0 text-white">Giảm giá sốc dành cho khách mới</p>
+                                <!-- Slide 1 (Phone) -->
+                                <div class="carousel-item active h-100">
+                                    <img src="https://images.unsplash.com/photo-1598327105666-5b89351aff97?q=80&w=500" class="d-block w-100 h-100" style="height: 535px !important; object-fit: cover;" alt="Smartphone">
+                                    <div class="carousel-caption d-block text-start p-3 rounded-4" style="background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); left: 15px; right: 15px; bottom: 15px; border: 1px solid rgba(255,255,255,0.1);">
+                                        <span class="badge bg-info text-dark text-xxs fw-bold px-2.5 py-1 mb-2">HOT DEAL</span>
+                                        <h6 class="fw-bold text-white mb-1">Galaxy S24 Ultra</h6>
+                                        <p class="mb-0 text-warning fw-bold">29,990,000 đ</p>
+                                    </div>
+                                </div>
+                                <!-- Slide 2 (Smartwatch) -->
+                                <div class="carousel-item h-100">
+                                    <img src="https://images.unsplash.com/photo-1546868871-7041f2a55e12?q=80&w=500" class="d-block w-100 h-100" style="height: 535px !important; object-fit: cover;" alt="Smartwatch">
+                                    <div class="carousel-caption d-block text-start p-3 rounded-4" style="background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); left: 15px; right: 15px; bottom: 15px; border: 1px solid rgba(255,255,255,0.1);">
+                                        <span class="badge bg-info text-dark text-xxs fw-bold px-2.5 py-1 mb-2">MỚI VỀ</span>
+                                        <h6 class="fw-bold text-white mb-1">Apple Watch S9</h6>
+                                        <p class="mb-0 text-warning fw-bold">10,490,000 đ</p>
+                                    </div>
+                                </div>
+                                <!-- Slide 3 (Earbuds) -->
+                                <div class="carousel-item h-100">
+                                    <img src="https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?q=80&w=500" class="d-block w-100 h-100" style="height: 535px !important; object-fit: cover;" alt="Earbuds">
+                                    <div class="carousel-caption d-block text-start p-3 rounded-4" style="background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); left: 15px; right: 15px; bottom: 15px; border: 1px solid rgba(255,255,255,0.1);">
+                                        <span class="badge bg-info text-dark text-xxs fw-bold px-2.5 py-1 mb-2">BEST SELLER</span>
+                                        <h6 class="fw-bold text-white mb-1">Sony WF-1000XM5</h6>
+                                        <p class="mb-0 text-warning fw-bold">6,490,000 đ</p>
                                     </div>
                                 </div>
                             }
@@ -154,23 +212,28 @@
             </div>
         </div>
 
-        <div class="col-lg-6">
-            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
-                <div class="d-flex flex-column justify-content-center h-100">
-                    <h5 class="text-info fw-bold">Ưu đãi hôm nay</h5>
-                    <p class="text-muted">Xem nhanh các sản phẩm bán chạy và chương trình khuyến mãi đang được ưa chuộng.</p>
+        <!-- Middle Product List -->
+        <div class="col-lg-6 d-flex">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white w-100 h-100">
+                <div class="d-flex flex-column justify-content-between h-100">
+                    <div>
+                        <h5 class="text-info fw-bold mb-1">Ưu đãi hôm nay</h5>
+                        <p class="text-muted text-sm mb-4">Xem nhanh các sản phẩm bán chạy và chương trình khuyến mãi đang được ưa chuộng.</p>
+                    </div>
                     <div class="row gy-3">
                         @if (ViewBag.HeroBannerProducts is List<DATN64.Models.SanPham> heroAds && heroAds.Any())
                         {
                             foreach (var hero in heroAds)
                             {
                                 <div class="col-12">
-                                    <div class="d-flex align-items-center gap-3 border rounded-4 p-3 bg-light">
-                                        <img src="@(hero.HinhAnh ?? "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=150")" class="rounded-4" style="width: 90px; height: 90px; object-fit: cover;" alt="@hero.TenSanPham">
-                                        <div>
-                                            <h6 class="mb-1 fw-bold text-dark">@hero.TenSanPham</h6>
-                                            <p class="text-secondary mb-1 text-xxs">@hero.ThuongHieu?.TenThuongHieu ?? "NovaTech"</p>
-                                            <span class="text-primary fw-bold">@hero.GiaBan.ToString("N0") đ</span>
+                                    <div class="d-flex align-items-center gap-3 border rounded-4 p-3 bg-light transition-all hover-shadow-sm">
+                                        <img src="@(hero.HinhAnh ?? "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=150")" class="rounded-4" style="width: 70px; height: 70px; object-fit: cover;" alt="@hero.TenSanPham">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1 fw-bold text-dark text-sm">@hero.TenSanPham</h6>
+                                            <p class="text-secondary mb-0 text-xxs">@hero.ThuongHieu?.TenThuongHieu ?? "NovaTech"</p>
+                                        </div>
+                                        <div class="text-end">
+                                            <span class="text-primary fw-bold text-sm">@hero.GiaBan.ToString("N0") đ</span>
                                         </div>
                                     </div>
                                 </div>
@@ -190,22 +253,23 @@
             </div>
         </div>
 
-        <div class="col-lg-3">
-            <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100">
-                <div class="card-body p-0">
-                    <div id="rightAdCarousel" class="carousel slide" data-bs-ride="carousel">
-                        <div class="carousel-inner">
+        <!-- Right Banner Carousel -->
+        <div class="col-lg-3 d-flex">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden w-100 h-100">
+                <div class="card-body p-0 h-100">
+                    <div id="rightAdCarousel" class="carousel slide h-100" data-bs-ride="carousel">
+                        <div class="carousel-inner h-100">
                             @if (ViewBag.RightCarouselProducts is List<DATN64.Models.SanPham> rightAds && rightAds.Any())
                             {
                                 var index = 0;
                                 foreach (var ad in rightAds)
                                 {
-                                    <div class="carousel-item @(index == 0 ? "active" : "")">
-                                        <img src="@(ad.HinhAnh ?? "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=400")" class="d-block w-100" style="height: 260px; object-fit: cover;" alt="@ad.TenSanPham">
-                                        <div class="carousel-caption d-none d-md-block text-start">
-                                            <span class="badge bg-warning text-dark">Hot</span>
-                                            <h6 class="fw-bold text-white mt-2">@ad.TenSanPham</h6>
-                                            <p class="mb-0 text-white">@ad.GiaBan.ToString("N0") đ</p>
+                                    <div class="carousel-item h-100 @(index == 0 ? "active" : "")">
+                                        <img src="@(ad.HinhAnh ?? "https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?q=80&w=500")" class="d-block w-100 h-100" style="height: 535px !important; object-fit: cover;" alt="@ad.TenSanPham">
+                                        <div class="carousel-caption d-block text-start p-3 rounded-4" style="background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); left: 15px; right: 15px; bottom: 15px; border: 1px solid rgba(255,255,255,0.1);">
+                                            <span class="badge bg-warning text-dark text-xxs fw-bold px-2.5 py-1 mb-2">KHUYẾN MÃI</span>
+                                            <h6 class="fw-bold text-white mb-1">@ad.TenSanPham</h6>
+                                            <p class="mb-0 text-warning fw-bold">@ad.GiaBan.ToString("N0") đ</p>
                                         </div>
                                     </div>
                                     index++;
@@ -213,12 +277,31 @@
                             }
                             else
                             {
-                                <div class="carousel-item active">
-                                    <img src="https://images.unsplash.com/photo-1519337265831-281ec6cc8514?q=80&w=400" class="d-block w-100" style="height: 260px; object-fit: cover;" alt="Quảng cáo">
-                                    <div class="carousel-caption d-none d-md-block text-start">
-                                        <span class="badge bg-warning text-dark">Khuyến mãi</span>
-                                        <h6 class="fw-bold text-white mt-2">Free Ship toàn quốc</h6>
-                                        <p class="mb-0 text-white">Áp dụng đơn hàng từ 1.000.000 đ</p>
+                                <!-- Slide 1 (Macbook) -->
+                                <div class="carousel-item active h-100">
+                                    <img src="https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?q=80&w=500" class="d-block w-100 h-100" style="height: 535px !important; object-fit: cover;" alt="Macbook Pro">
+                                    <div class="carousel-caption d-block text-start p-3 rounded-4" style="background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); left: 15px; right: 15px; bottom: 15px; border: 1px solid rgba(255,255,255,0.1);">
+                                        <span class="badge bg-warning text-dark text-xxs fw-bold px-2.5 py-1 mb-2">KHUYẾN MÃI</span>
+                                        <h6 class="fw-bold text-white mb-1">MacBook Pro M3 Max</h6>
+                                        <p class="mb-0 text-warning fw-bold">59,990,000 đ</p>
+                                    </div>
+                                </div>
+                                <!-- Slide 2 (Gaming Keyboard) -->
+                                <div class="carousel-item h-100">
+                                    <img src="https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=500" class="d-block w-100 h-100" style="height: 535px !important; object-fit: cover;" alt="Gaming Keyboard">
+                                    <div class="carousel-caption d-block text-start p-3 rounded-4" style="background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); left: 15px; right: 15px; bottom: 15px; border: 1px solid rgba(255,255,255,0.1);">
+                                        <span class="badge bg-warning text-dark text-xxs fw-bold px-2.5 py-1 mb-2">GAMING</span>
+                                        <h6 class="fw-bold text-white mb-1">ASUS ROG G16</h6>
+                                        <p class="mb-0 text-warning fw-bold">48,990,000 đ</p>
+                                    </div>
+                                </div>
+                                <!-- Slide 3 (Monitor) -->
+                                <div class="carousel-item h-100">
+                                    <img src="https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?q=80&w=500" class="d-block w-100 h-100" style="height: 535px !important; object-fit: cover;" alt="Monitor">
+                                    <div class="carousel-caption d-block text-start p-3 rounded-4" style="background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); left: 15px; right: 15px; bottom: 15px; border: 1px solid rgba(255,255,255,0.1);">
+                                        <span class="badge bg-warning text-dark text-xxs fw-bold px-2.5 py-1 mb-2">WORKSTATION</span>
+                                        <h6 class="fw-bold text-white mb-1">Dell UltraSharp 34"</h6>
+                                        <p class="mb-0 text-warning fw-bold">18,490,000 đ</p>
                                     </div>
                                 </div>
                             }
@@ -311,5 +394,26 @@
                 }
             });
         }
+
+        // Category arrow expand toggle logic
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggleBtn = document.getElementById('toggleCategoryBtn');
+            const container = document.getElementById('categoryContainer');
+            const toggleIcon = document.getElementById('toggleIcon');
+            const toggleText = document.getElementById('toggleText');
+
+            if (toggleBtn && container && toggleIcon && toggleText) {
+                toggleBtn.addEventListener('click', () => {
+                    container.classList.toggle('expanded');
+                    if (container.classList.contains('expanded')) {
+                        toggleIcon.className = 'fa-solid fa-chevron-up';
+                        toggleText.innerText = 'Thu gọn';
+                    } else {
+                        toggleIcon.className = 'fa-solid fa-chevron-down';
+                        toggleText.innerText = 'Xem tất cả';
+                    }
+                });
+            }
+        });
     </script>
 }
