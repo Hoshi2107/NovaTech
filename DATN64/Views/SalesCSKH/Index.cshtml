@@ -162,7 +162,7 @@
         <div class="text-muted small">Quản lý hội thoại khách hàng từ website NovaTech Store.</div>
     </div>
 
-    <button class="btn btn-outline-primary rounded-pill" onclick="loadInbox()">
+    <button class="btn btn-outline-primary rounded-pill" onclick="loadInbox(true)">
         <i class="fa-solid fa-rotate me-2"></i>Làm mới
     </button>
 </div>
@@ -209,9 +209,15 @@
     <script>
         let selectedThreadId = null;
         let currentThreads = [];
+        let inboxLoadedOnce = false;
+        let inboxRequestRunning = false;
+        let threadRequestToken = 0;
+
+        const CSKH_REFRESH_INTERVAL = 60 * 1000;
 
         const formatTime = (value) => {
             if (!value) return '';
+
             return new Date(value).toLocaleString('vi-VN', {
                 hour: '2-digit',
                 minute: '2-digit',
@@ -227,6 +233,10 @@
                 .replaceAll('>', '&gt;')
                 .replaceAll('"', '&quot;')
                 .replaceAll("'", '&#039;');
+        };
+
+        const sameId = (a, b) => {
+            return String(a) === String(b);
         };
 
         const postJson = async (url, body) => {
@@ -247,32 +257,89 @@
             return data;
         };
 
-        const loadInbox = async () => {
+        const renderInbox = () => {
             const list = document.getElementById('threadList');
-            list.innerHTML = '<div class="p-4 text-center text-muted">Đang tải hội thoại...</div>';
+
+            if (!currentThreads.length) {
+                list.innerHTML = '<div class="p-4 text-center text-muted">Chưa có hội thoại nào.</div>';
+                return;
+            }
+
+            list.innerHTML = currentThreads.map(thread => `
+                <div class="thread-item ${sameId(selectedThreadId, thread.id) ? 'active' : ''}" onclick="selectThread(${thread.id})">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <div class="thread-name">${escapeHtml(thread.customerName || 'Khách vãng lai')}</div>
+                        ${thread.unreadCount > 0 ? `<span class="badge-unread">${thread.unreadCount}</span>` : ''}
+                    </div>
+                    <div class="thread-subject">${escapeHtml(thread.subject || '')}</div>
+                    <div class="thread-last">${escapeHtml(thread.lastMessage || '')}</div>
+                    <div class="small text-muted mt-1">${formatTime(thread.updatedAt)}</div>
+                </div>
+            `).join('');
+        };
+
+        const mergeThreadsKeepingOrder = (incomingThreads) => {
+            const incoming = Array.isArray(incomingThreads) ? incomingThreads : [];
+
+            if (!inboxLoadedOnce || !currentThreads.length) {
+                currentThreads = incoming;
+                inboxLoadedOnce = true;
+                return;
+            }
+
+            const incomingMap = new Map(
+                incoming.map(thread => [String(thread.id), thread])
+            );
+
+            const existingIds = new Set(
+                currentThreads.map(thread => String(thread.id))
+            );
+
+            currentThreads = currentThreads
+                .filter(thread => incomingMap.has(String(thread.id)))
+                .map(thread => {
+                    const newData = incomingMap.get(String(thread.id));
+                    return {
+                        ...thread,
+                        ...newData
+                    };
+                });
+
+            const newThreads = incoming.filter(thread => !existingIds.has(String(thread.id)));
+
+            if (newThreads.length) {
+                currentThreads = currentThreads.concat(newThreads);
+            }
+        };
+
+        const loadInbox = async (showLoading = false) => {
+            const list = document.getElementById('threadList');
+
+            if (inboxRequestRunning) {
+                return;
+            }
+
+            inboxRequestRunning = true;
+
+            if (showLoading && !inboxLoadedOnce) {
+                list.innerHTML = '<div class="p-4 text-center text-muted">Đang tải hội thoại...</div>';
+            }
 
             try {
                 const response = await fetch('/SalesCSKH/GetCustomerInbox');
-                currentThreads = await response.json();
 
-                if (!currentThreads.length) {
-                    list.innerHTML = '<div class="p-4 text-center text-muted">Chưa có hội thoại nào.</div>';
-                    return;
+                if (!response.ok) {
+                    throw new Error('Không tải được danh sách hội thoại.');
                 }
 
-                list.innerHTML = currentThreads.map(thread => `
-                    <div class="thread-item ${selectedThreadId === thread.id ? 'active' : ''}" onclick="selectThread(${thread.id})">
-                        <div class="d-flex justify-content-between align-items-start gap-2">
-                            <div class="thread-name">${escapeHtml(thread.customerName || 'Khách vãng lai')}</div>
-                            ${thread.unreadCount > 0 ? `<span class="badge-unread">${thread.unreadCount}</span>` : ''}
-                        </div>
-                        <div class="thread-subject">${escapeHtml(thread.subject || '')}</div>
-                        <div class="thread-last">${escapeHtml(thread.lastMessage || '')}</div>
-                        <div class="small text-muted mt-1">${formatTime(thread.updatedAt)}</div>
-                    </div>
-                `).join('');
+                const incomingThreads = await response.json();
+
+                mergeThreadsKeepingOrder(incomingThreads);
+                renderInbox();
             } catch (err) {
                 list.innerHTML = `<div class="p-4 text-danger text-center">${escapeHtml(err.message)}</div>`;
+            } finally {
+                inboxRequestRunning = false;
             }
         };
 
@@ -282,20 +349,53 @@
             document.getElementById('replyStatus').textContent = '';
             document.getElementById('replyText').value = '';
 
-            await loadThread(id);
-            await postJson('/SalesCSKH/MarkCustomerThreadRead', { threadId: id });
-            await loadInbox();
+            renderInbox();
+
+            await loadThread(id, false);
+
+            try {
+                await postJson('/SalesCSKH/MarkCustomerThreadRead', {
+                    threadId: id
+                });
+
+                const thread = currentThreads.find(t => sameId(t.id, id));
+
+                if (thread) {
+                    thread.unreadCount = 0;
+
+                    if (thread.status === 'Unread') {
+                        thread.status = 'Processing';
+                    }
+                }
+
+                renderInbox();
+            } catch (err) {
+                console.error(err);
+            }
         };
 
-        const loadThread = async (id) => {
+        const loadThread = async (id, silent = false) => {
             const header = document.getElementById('chatHeader');
             const messagesBox = document.getElementById('chatMessages');
 
-            messagesBox.innerHTML = '<div class="p-4 text-center text-muted">Đang tải nội dung...</div>';
+            const requestToken = ++threadRequestToken;
+
+            if (!silent) {
+                messagesBox.innerHTML = '<div class="p-4 text-center text-muted">Đang tải nội dung...</div>';
+            }
 
             try {
                 const response = await fetch(`/SalesCSKH/GetCustomerThread?id=${id}`);
+
+                if (!response.ok) {
+                    throw new Error('Không tải được nội dung hội thoại.');
+                }
+
                 const thread = await response.json();
+
+                if (requestToken !== threadRequestToken || !sameId(selectedThreadId, id)) {
+                    return;
+                }
 
                 header.innerHTML = `
                     <div class="fw-bold text-dark">${escapeHtml(thread.customerName || 'Khách vãng lai')}</div>
@@ -324,7 +424,9 @@
 
                 messagesBox.scrollTop = messagesBox.scrollHeight;
             } catch (err) {
-                messagesBox.innerHTML = `<div class="p-4 text-danger text-center">${escapeHtml(err.message)}</div>`;
+                if (!silent) {
+                    messagesBox.innerHTML = `<div class="p-4 text-danger text-center">${escapeHtml(err.message)}</div>`;
+                }
             }
         };
 
@@ -361,21 +463,33 @@
                 status.textContent = 'Đã gửi phản hồi.';
                 status.className = 'small text-success';
 
-                await loadThread(selectedThreadId);
-                await loadInbox();
+                const thread = currentThreads.find(t => sameId(t.id, selectedThreadId));
+
+                if (thread) {
+                    thread.lastMessage = message;
+                    thread.updatedAt = new Date().toISOString();
+                    thread.status = 'Replied';
+                    thread.unreadCount = 0;
+                }
+
+                renderInbox();
+
+                await loadThread(selectedThreadId, false);
+                await loadInbox(false);
             } catch (err) {
                 status.textContent = err.message;
                 status.className = 'small text-danger';
             }
         };
 
-        loadInbox();
+        loadInbox(true);
 
-        setInterval(() => {
-            loadInbox();
+        setInterval(async () => {
+            await loadInbox(false);
+
             if (selectedThreadId) {
-                loadThread(selectedThreadId);
+                await loadThread(selectedThreadId, true);
             }
-        }, 3000);
+        }, CSKH_REFRESH_INTERVAL);
     </script>
 }

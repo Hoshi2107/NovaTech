@@ -1,14 +1,16 @@
-(function() {
+(function () {
     const root = document.getElementById('customerMessenger');
     if (!root) return;
 
     const THREAD_KEY_PREFIX = 'novatech_customer_thread_id';
-
+    const GUEST_ID_KEY = 'novatech_customer_guest_id';
+    const LAST_THREAD_KEY = 'novatech_customer_last_thread_id';
+    const CUSTOMER_REFRESH_INTERVAL = 60 * 1000;
 
     const oldKeys = [
-   'novatech_customer_thread_id',
-   'novatech_customer_thread_id_guest',
-   'novatech_customer_profile'
+        'novatech_customer_thread_id',
+        'novatech_customer_thread_id_guest',
+        'novatech_customer_profile'
     ];
 
     let isOpen = false;
@@ -28,26 +30,29 @@
     const statusBox = document.getElementById('customerChatStatus');
     const badge = document.getElementById('customerChatBadge');
 
+    if (!toggleButton || !closeButton || !box || !messagesBox || !input || !sendButton || !statusBox || !badge) {
+        return;
+    }
+
     const userEmail = root.dataset.userEmail || '';
     const userName = root.dataset.userName || '';
-    const isCustomer = root.dataset.isCustomer === 'true';
 
     const escapeHtml = (value) => {
         return String(value || '')
-   .replaceAll('&', '&amp;')
-   .replaceAll('<', '&lt;')
-   .replaceAll('>', '&gt;')
-   .replaceAll('"', '&quot;')
-   .replaceAll("'", '&#039;');
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
     };
 
     const formatTime = (value) => {
         if (!value) return '';
 
         return new Date(value).toLocaleTimeString('vi-VN', {
-       hour: '2-digit',
-       minute: '2-digit'
-   });
+            hour: '2-digit',
+            minute: '2-digit'
+        });
     };
 
     const showStatus = (message, ok) => {
@@ -63,8 +68,24 @@
         statusBox.classList.toggle('error', !ok);
     };
 
+    const getGuestId = () => {
+        let guestId = localStorage.getItem(GUEST_ID_KEY);
+
+        if (!guestId) {
+            if (window.crypto && window.crypto.randomUUID) {
+                guestId = window.crypto.randomUUID();
+            } else {
+                guestId = `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+            }
+
+            localStorage.setItem(GUEST_ID_KEY, guestId);
+        }
+
+        return guestId;
+    };
+
     const getThreadStorageKey = () => {
-        if (userEmail && isCustomer) {
+        if (userEmail) {
             return `${THREAD_KEY_PREFIX}_email_${userEmail}`;
         }
 
@@ -72,11 +93,13 @@
     };
 
     const getCustomerName = () => {
-    if (userName) return userName;
-    if (userEmail) return userEmail;
+        if (userName) return userName;
+        if (userEmail) return userEmail;
 
-    return 'Khách hàng NovaTech';
-};
+        const guestId = getGuestId();
+        return `Khách vãng lai #${guestId.slice(-6)}`;
+    };
+
     const cleanupOldStorage = () => {
         oldKeys.forEach(key => localStorage.removeItem(key));
 
@@ -94,9 +117,7 @@
     };
 
     const syncThreadIdFromStorage = () => {
-    const getThreadStorageKey = () => {
-    return `${THREAD_KEY_PREFIX}_email_${userEmail}`;
-};
+        const storageKey = getThreadStorageKey();
 
         if (activeStorageKey !== storageKey) {
             activeStorageKey = storageKey;
@@ -110,7 +131,16 @@
                 return;
             }
 
-         
+            if (!userEmail) {
+                const lastThreadId = Number(localStorage.getItem(LAST_THREAD_KEY)) || null;
+
+                if (lastThreadId) {
+                    threadId = lastThreadId;
+                    thread = null;
+                    lastStaffMessageCount = 0;
+                    return;
+                }
+            }
 
             threadId = null;
             thread = null;
@@ -133,7 +163,8 @@
         const storageKey = getThreadStorageKey();
 
         localStorage.setItem(storageKey, String(id));
-        
+        localStorage.setItem(LAST_THREAD_KEY, String(id));
+
         threadId = id;
     };
 
@@ -141,12 +172,16 @@
         const storageKey = getThreadStorageKey();
 
         localStorage.removeItem(storageKey);
+
+        if (String(localStorage.getItem(LAST_THREAD_KEY)) === String(threadId)) {
+            localStorage.removeItem(LAST_THREAD_KEY);
+        }
     };
 
     const scrollToBottom = () => {
         requestAnimationFrame(() => {
-       messagesBox.scrollTop = messagesBox.scrollHeight;
-   });
+            messagesBox.scrollTop = messagesBox.scrollHeight;
+        });
     };
 
     const markStaffMessagesSeen = () => {
@@ -196,15 +231,37 @@
         scrollToBottom();
     };
 
+    const postJson = async (url, body) => {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Có lỗi xảy ra.');
+        }
+
+        return data;
+    };
+
     const loadThread = async () => {
         syncThreadIdFromStorage();
 
-        if (!threadId) return;
+        if (!threadId) {
+            thread = null;
+            renderMessages();
+            return;
+        }
 
         try {
             const oldMessageCount = thread && Array.isArray(thread.messages)
-   ? thread.messages.length
-   : 0;
+                ? thread.messages.length
+                : 0;
 
             const response = await fetch(`/SalesCSKH/GetCustomerThread?id=${threadId}`);
 
@@ -232,31 +289,13 @@
         }
     };
 
-    const postJson = async (url, body) => {
-        const response = await fetch(url, {
-       method: 'POST',
-       headers: {
-           'Content-Type': 'application/json'
-       },
-       body: JSON.stringify(body)
-   });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.message || 'Có lỗi xảy ra.');
-        }
-
-        return data;
-    };
-
     const createNewThread = async (messageText) => {
         const data = await postJson('/SalesCSKH/CreateCustomerInquiry', {
-       customerName: getCustomerName(),
-       customerPhone: '',
-       subject: 'Chat hỗ trợ NovaTech',
-       message: messageText
-   });
+            customerName: getCustomerName(),
+            customerPhone: '',
+            subject: 'Chat hỗ trợ NovaTech',
+            message: messageText
+        });
 
         if (data.thread && data.thread.id) {
             thread = data.thread;
@@ -265,18 +304,27 @@
             saveThreadIdToStorage(thread.id);
             renderMessages();
             markStaffMessagesSeen();
+
             showStatus('Đã gửi tin nhắn. NovaTech sẽ trả lời tại đây.', true);
         }
     };
 
     const sendMessageToExistingThread = async (messageText) => {
-        await postJson('/SalesCSKH/AddCustomerInquiryMessage', {
-       threadId: threadId,
-       message: messageText
-   });
+        const data = await postJson('/SalesCSKH/AddCustomerInquiryMessage', {
+            threadId: threadId,
+            message: messageText
+        });
+
+        if (data.thread) {
+            thread = data.thread;
+            thread.messages = Array.isArray(thread.messages) ? thread.messages : [];
+            renderMessages();
+            markStaffMessagesSeen();
+        } else {
+            await loadThread();
+        }
 
         showStatus('Đã gửi tin nhắn.', true);
-        await loadThread();
         scrollToBottom();
     };
 
@@ -290,12 +338,14 @@
             return;
         }
 
+        if (sending) return;
+
         try {
             sending = true;
             sendButton.disabled = true;
             sendButton.textContent = 'Đang gửi...';
 
-            await loadThread();
+            syncThreadIdFromStorage();
 
             if (threadId) {
                 await sendMessageToExistingThread(messageText);
@@ -341,23 +391,23 @@
     closeButton.addEventListener('click', closeChat);
     sendButton.addEventListener('click', sendMessage);
 
-    input.addEventListener('keydown', function(event) {
-       if (event.key === 'Enter' && !event.shiftKey) {
-           event.preventDefault();
-           sendMessage();
-       }
-   });
+    input.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            sendMessage();
+        }
+    });
 
     cleanupOldStorage();
     loadThread();
 
     pollingTimer = setInterval(() => {
-       loadThread();
-   }, 1500);
+        loadThread();
+    }, CUSTOMER_REFRESH_INTERVAL);
 
-    window.addEventListener('beforeunload', function() {
-       if (pollingTimer) {
-           clearInterval(pollingTimer);
-       }
-   });
+    window.addEventListener('beforeunload', function () {
+        if (pollingTimer) {
+            clearInterval(pollingTimer);
+        }
+    });
 })();

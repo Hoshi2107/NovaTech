@@ -33,10 +33,47 @@
         return $"ORD-{date:yyMMdd}{item.MaDonHang:D2}";
     }
 
+    string GetOrderChannel(DATN64.Models.DonHang item)
+    {
+        var note = item.GhiChu ?? "";
+        var payment = item.PhuongThucThanhToan ?? "";
+
+        // Đơn từ website thường có địa chỉ giao hàng, voucher, chờ duyệt...
+        if (
+            note.Contains("Địa chỉ giao hàng", StringComparison.OrdinalIgnoreCase) ||
+            note.Contains("Voucher sử dụng", StringComparison.OrdinalIgnoreCase) ||
+            note.Contains("giao hàng", StringComparison.OrdinalIgnoreCase)
+        )
+        {
+            return "Website";
+        }
+
+        // Đơn POS / bán tại quầy
+        if (
+            note.Contains("POS", StringComparison.OrdinalIgnoreCase) ||
+            note.Contains("tại quầy", StringComparison.OrdinalIgnoreCase) ||
+            note.Contains("Cửa hàng", StringComparison.OrdinalIgnoreCase)
+        )
+        {
+            return "Cửa hàng";
+        }
+
+        // Nếu thanh toán hoặc ghi chú có TikTok thì vẫn xem là đơn online/website
+        if (
+            payment.Contains("TikTok", StringComparison.OrdinalIgnoreCase) ||
+            note.Contains("TikTok", StringComparison.OrdinalIgnoreCase)
+        )
+        {
+            return "Website";
+        }
+
+        // Mặc định không xác định thì để Cửa hàng
+        return "Cửa hàng";
+    }
+
     string GetChannelIcon(string channel)
     {
         if (channel == "Website") return "fa-globe text-primary";
-        if (channel == "TikTok Shop") return "fa-brands fa-tiktok text-dark";
         return "fa-store text-warning";
     }
 
@@ -45,10 +82,12 @@
         return status switch
         {
             "Đơn mới" => "bg-info text-dark",
+            "Chờ duyệt" => "bg-warning text-dark",
             "Đã xác nhận" => "bg-primary text-white",
             "Đang đóng gói" => "bg-warning text-dark",
             "Đang giao" => "bg-info text-white",
             "Hoàn thành" => "bg-success text-white",
+            "Đã hủy" => "bg-danger text-white",
             _ => "bg-success text-white"
         };
     }
@@ -75,6 +114,7 @@
                     <th class="text-end">Hành động</th>
                 </tr>
             </thead>
+
             <tbody>
                 @if (Model == null || !Model.Any())
                 {
@@ -88,7 +128,7 @@
                 {
                     foreach (var item in Model)
                     {
-                        var channel = GetStringProp(item, "KenhBan", "Cửa hàng");
+                        var channel = GetOrderChannel(item);
                         var status = item.TrangThai ?? "Hoàn thành";
 
                         <tr>
@@ -134,4 +174,4 @@
             </tbody>
         </table>
     </div>
-</div> 
+</div>

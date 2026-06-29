@@ -351,7 +351,7 @@ onMounted(() => {
 
   pollingTimer = setInterval(() => {
     loadThread()
-  }, 1500)
+  }, 60000)
 })
 
 onBeforeUnmount(() => {
