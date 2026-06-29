@@ -77,7 +77,22 @@ namespace DATN64.Controllers
             {
                 order.TrangThai = "Đã hủy";
                 order.GhiChu = (order.GhiChu ?? "") + $"\n[Từ chối] {lyDo}";
-                TempData["ToastMessage"] = $"Đã từ chối đơn hàng #{id}.";
+
+                // ✅ Hoàn lại hàng vào kho khi hủy/từ chối đơn
+                var orderDetails = _context.ChiTietDonHangs
+                    .Where(ct => ct.MaDonHang == id)
+                    .ToList();
+
+                foreach (var detail in orderDetails)
+                {
+                    var product = _context.SanPhams.FirstOrDefault(p => p.MaSanPham == detail.MaSanPham);
+                    if (product != null)
+                    {
+                        product.SoLuongTon += detail.SoLuong;
+                    }
+                }
+
+                TempData["ToastMessage"] = $"Đã từ chối đơn hàng #{id}. Hàng đã được hoàn về kho.";
                 TempData["ToastType"] = "warning";
             }
 

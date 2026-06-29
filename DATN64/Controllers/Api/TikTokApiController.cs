@@ -40,6 +40,25 @@ namespace DATN64.Controllers.Api
 
             if (existingOrder != null)
             {
+                var oldStatus = existingOrder.TrangThai ?? "";
+
+                // ✅ Hoàn kho khi TikTok báo hủy đơn (chỉ hoàn 1 lần, khi chưa ở trạng thái hủy)
+                if (mappedStatus == "Đã hủy" && oldStatus != "Đã hủy")
+                {
+                    var orderDetails = await _context.ChiTietDonHangs
+                        .Where(ct => ct.MaDonHang == existingOrder.MaDonHang)
+                        .ToListAsync();
+
+                    foreach (var detail in orderDetails)
+                    {
+                        var product = await _context.SanPhams.FirstOrDefaultAsync(p => p.MaSanPham == detail.MaSanPham);
+                        if (product != null)
+                        {
+                            product.SoLuongTon += detail.SoLuong;
+                        }
+                    }
+                }
+
                 // Update status
                 existingOrder.TrangThai = mappedStatus;
 
@@ -47,7 +66,8 @@ namespace DATN64.Controllers.Api
                 var log = new TikTokSyncLog
                 {
                     Type = "Cập nhật đơn hàng",
-                    Message = $"Đồng bộ cập nhật trạng thái đơn hàng TikTok Shop #{data.OrderId} sang '{mappedStatus}'.",
+                    Message = $"Đồng bộ cập nhật trạng thái đơn hàng TikTok Shop #{data.OrderId} sang '{mappedStatus}'." +
+                              (mappedStatus == "Đã hủy" && oldStatus != "Đã hủy" ? " Hàng đã hoàn về kho." : ""),
                     Status = "Thành công",
                     Timestamp = DateTime.Now
                 };

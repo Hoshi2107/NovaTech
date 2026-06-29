@@ -89,11 +89,36 @@ public IActionResult UpdateStatus(int id, string trangThai)
         return RedirectToAction(nameof(Detail), new { id });
     }
 
-    order.TrangThai = trangThai.Trim();
-    _context.SaveChanges();
+    var oldStatus = order.TrangThai ?? "";
+    var newStatus = trangThai.Trim();
 
-    TempData["ToastMessage"] = "Cập nhật trạng thái đơn hàng thành công.";
-    TempData["ToastType"] = "success";
+    // ✅ Hoàn kho khi chuyển sang "Đã hủy" (chỉ hoàn nếu trước đó chưa hủy)
+    if (newStatus == "Đã hủy" && oldStatus != "Đã hủy")
+    {
+        var orderDetails = _context.ChiTietDonHangs
+            .Where(ct => ct.MaDonHang == id)
+            .ToList();
+
+        foreach (var detail in orderDetails)
+        {
+            var product = _context.SanPhams.FirstOrDefault(p => p.MaSanPham == detail.MaSanPham);
+            if (product != null)
+            {
+                product.SoLuongTon += detail.SoLuong;
+            }
+        }
+
+        TempData["ToastMessage"] = "Đã hủy đơn hàng. Hàng đã được hoàn về kho.";
+        TempData["ToastType"] = "warning";
+    }
+    else
+    {
+        TempData["ToastMessage"] = "Cập nhật trạng thái đơn hàng thành công.";
+        TempData["ToastType"] = "success";
+    }
+
+    order.TrangThai = newStatus;
+    _context.SaveChanges();
 
     return RedirectToAction(nameof(Detail), new { id });
 }
