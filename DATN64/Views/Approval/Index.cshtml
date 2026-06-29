@@ -1,0 +1,296 @@
+@{
+    ViewData["Title"] = "Trung tâm duyệt phiếu";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+
+    var pendingOrders    = ViewBag.PendingOrders    as List<DATN64.Models.DonHang>   ?? new();
+    var pendingInventory = ViewBag.PendingInventory as List<DATN64.Models.InventoryTransaction> ?? new();
+    bool canApproveOrder = ViewBag.CanApproveOrder  == true;
+    bool canApproveInv   = ViewBag.CanApproveInv    == true;
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h1 class="h4 fw-bold mb-1">Trung tâm duyệt phiếu</h1>
+        <p class="text-muted small mb-0">Quản lý và phê duyệt các yêu cầu đang chờ xử lý</p>
+    </div>
+    <div class="d-flex gap-2">
+        @if (canApproveOrder)
+        {
+            <span class="badge bg-warning text-dark fs-6 px-3 py-2">
+                <i class="fa-solid fa-clock me-1"></i>
+                @pendingOrders.Count đơn hàng chờ
+            </span>
+        }
+        @if (canApproveInv)
+        {
+            <span class="badge bg-info text-dark fs-6 px-3 py-2">
+                <i class="fa-solid fa-boxes-stacked me-1"></i>
+                @pendingInventory.Count phiếu kho chờ
+            </span>
+        }
+    </div>
+</div>
+
+<!-- Nav Tabs -->
+<ul class="nav nav-tabs border-0 mb-4" id="approvalTabs" role="tablist">
+    @if (canApproveOrder)
+    {
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active fw-semibold" id="orders-tab" data-bs-toggle="tab" data-bs-target="#orders-panel" type="button" role="tab">
+                <i class="fa-solid fa-file-invoice-dollar me-2"></i>
+                Đơn hàng
+                @if (pendingOrders.Count > 0)
+                {
+                    <span class="badge bg-danger rounded-pill ms-1">@pendingOrders.Count</span>
+                }
+            </button>
+        </li>
+    }
+    @if (canApproveInv)
+    {
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(!canApproveOrder ? "active" : "") fw-semibold" id="inventory-tab" data-bs-toggle="tab" data-bs-target="#inventory-panel" type="button" role="tab">
+                <i class="fa-solid fa-warehouse me-2"></i>
+                Phiếu kho
+                @if (pendingInventory.Count > 0)
+                {
+                    <span class="badge bg-danger rounded-pill ms-1">@pendingInventory.Count</span>
+                }
+            </button>
+        </li>
+    }
+</ul>
+
+<div class="tab-content" id="approvalTabContent">
+
+    
+    @if (canApproveOrder)
+    {
+        <div class="tab-pane fade show active" id="orders-panel" role="tabpanel">
+            @if (!pendingOrders.Any())
+            {
+                <div class="text-center py-5 text-muted">
+                    <i class="fa-solid fa-circle-check fa-3x mb-3 text-success opacity-50"></i>
+                    <p class="fs-5 fw-semibold">Không có đơn hàng nào chờ duyệt</p>
+                    <p class="small">Tất cả đơn hàng đã được xử lý!</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Khách hàng</th>
+                                <th>Ngày đặt</th>
+                                <th>Tổng tiền</th>
+                                <th>Phương thức TT</th>
+                                <th>Ghi chú</th>
+                                <th class="text-center">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var order in pendingOrders)
+                            {
+                                <tr>
+                                    <td><span class="badge bg-secondary">#@order.MaDonHang</span></td>
+                                    <td>
+                                        <div class="fw-semibold">@(order.KhachHang?.HoTen ?? "Khách vãng lai")</div>
+                                        <div class="text-muted small">@(order.KhachHang?.SoDienThoai ?? "")</div>
+                                    </td>
+                                    <td class="text-muted small">@order.NgayDat?.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td class="fw-bold text-success">@order.TongTien?.ToString("N0") VNĐ</td>
+                                    <td><span class="badge bg-light text-dark border">@(order.PhuongThucThanhToan ?? "—")</span></td>
+                                    <td class="text-muted small" style="max-width:180px;">
+                                        <span class="text-truncate d-inline-block" style="max-width:180px;">@(order.GhiChu ?? "—")</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-flex gap-2 justify-content-center">
+                                            <form method="post" asp-action="ApproveOrder" asp-route-id="@order.MaDonHang" asp-route-action="approve" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Duyệt đơn hàng #@order.MaDonHang?')">
+                                                    <i class="fa-solid fa-check me-1"></i>Duyệt
+                                                </button>
+                                            </form>
+                                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                                    data-bs-toggle="modal" data-bs-target="#rejectOrderModal"
+                                                    data-order-id="@order.MaDonHang">
+                                                <i class="fa-solid fa-xmark me-1"></i>Từ chối
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    }
+
+    
+    @if (canApproveInv)
+    {
+        <div class="tab-pane fade @(!canApproveOrder ? "show active" : "")" id="inventory-panel" role="tabpanel">
+            @if (!pendingInventory.Any())
+            {
+                <div class="text-center py-5 text-muted">
+                    <i class="fa-solid fa-circle-check fa-3x mb-3 text-success opacity-50"></i>
+                    <p class="fs-5 fw-semibold">Không có phiếu kho nào chờ duyệt</p>
+                    <p class="small">Tất cả phiếu kho đã được xử lý!</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Mã phiếu</th>
+                                <th>Loại</th>
+                                <th>Sản phẩm</th>
+                                <th>Số lượng</th>
+                                <th>Người tạo</th>
+                                <th>Ngày tạo</th>
+                                <th>Ghi chú</th>
+                                <th class="text-center">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var txn in pendingInventory)
+                            {
+                                <tr>
+                                    <td><span class="badge bg-secondary">@txn.Code</span></td>
+                                    <td>
+                                        @if (txn.Type == "Nhập kho")
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                <i class="fa-solid fa-circle-down me-1"></i>Nhập kho
+                                            </span>
+                                        }
+                                        else if (txn.Type == "Xuất kho")
+                                        {
+                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                                                <i class="fa-solid fa-circle-up me-1"></i>Xuất kho
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-info-subtle text-info border border-info-subtle">@txn.Type</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold">@txn.ProductName</div>
+                                        <div class="text-muted small">SKU: @txn.ProductSKU</div>
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold @(txn.QuantityChange > 0 ? "text-success" : "text-danger")">
+                                            @(txn.QuantityChange > 0 ? "+" : "")@txn.QuantityChange
+                                        </span>
+                                    </td>
+                                    <td class="text-muted small">@txn.Creator</td>
+                                    <td class="text-muted small">@txn.Date.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td class="text-muted small" style="max-width:150px;">
+                                        <span class="text-truncate d-inline-block" style="max-width:150px;">@(txn.Note ?? "—")</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-flex gap-2 justify-content-center">
+                                            <form method="post" asp-action="ApproveInventory" asp-route-id="@txn.Id" asp-route-action="approve" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Duyệt phiếu @txn.Code?')">
+                                                    <i class="fa-solid fa-check me-1"></i>Duyệt
+                                                </button>
+                                            </form>
+                                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                                    data-bs-toggle="modal" data-bs-target="#rejectInvModal"
+                                                    data-txn-id="@txn.Id"
+                                                    data-txn-code="@txn.Code">
+                                                <i class="fa-solid fa-xmark me-1"></i>Từ chối
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    }
+
+</div>
+
+@section Modals {
+    
+    <div class="modal fade" id="rejectOrderModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <form method="post" asp-action="ApproveOrder">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="action" value="reject" />
+                    <input type="hidden" name="id" id="rejectOrderId" />
+                    <div class="modal-header border-0 bg-danger text-white rounded-top">
+                        <h5 class="modal-title"><i class="fa-solid fa-ban me-2"></i>Từ chối đơn hàng</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <label class="form-label fw-semibold">Lý do từ chối <span class="text-danger">*</span></label>
+                        <textarea name="lyDo" class="form-control" rows="3" placeholder="Nhập lý do từ chối..." required></textarea>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-danger"><i class="fa-solid fa-ban me-1"></i>Xác nhận từ chối</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    
+    <div class="modal fade" id="rejectInvModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <form method="post" asp-action="ApproveInventory">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="action" value="reject" />
+                    <input type="hidden" name="id" id="rejectInvId" />
+                    <div class="modal-header border-0 bg-danger text-white rounded-top">
+                        <h5 class="modal-title"><i class="fa-solid fa-ban me-2"></i>Từ chối phiếu kho <span id="rejectInvCode"></span></h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <label class="form-label fw-semibold">Lý do từ chối <span class="text-danger">*</span></label>
+                        <textarea name="lyDo" class="form-control" rows="3" placeholder="Nhập lý do từ chối..." required></textarea>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-danger"><i class="fa-solid fa-ban me-1"></i>Xác nhận từ chối</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+<script>
+    // Truyền id vào modal từ chối đơn hàng
+    document.addEventListener('DOMContentLoaded', function () {
+        var rejectOrderModal = document.getElementById('rejectOrderModal');
+        if (rejectOrderModal) {
+            rejectOrderModal.addEventListener('show.bs.modal', function (e) {
+                var btn = e.relatedTarget;
+                document.getElementById('rejectOrderId').value = btn.getAttribute('data-order-id');
+            });
+        }
+
+        var rejectInvModal = document.getElementById('rejectInvModal');
+        if (rejectInvModal) {
+            rejectInvModal.addEventListener('show.bs.modal', function (e) {
+                var btn = e.relatedTarget;
+                document.getElementById('rejectInvId').value = btn.getAttribute('data-txn-id');
+                document.getElementById('rejectInvCode').textContent = '#' + btn.getAttribute('data-txn-code');
+            });
+        }
+    });
+</script>

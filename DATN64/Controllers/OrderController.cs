@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using DATN64.ViewModels;
 using DATN64.Models;
 using DATN64.Helpers;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace DATN64.Controllers
@@ -23,56 +25,62 @@ namespace DATN64.Controllers
                 .Include(o => o.KhachHang)
                 .OrderByDescending(o => o.NgayDat)
                 .ToList();
+
             return View(orders);
         }
 
-     public IActionResult Detail(int id)
-{
-    var order = _context.DonHangs
-        .Include(d => d.KhachHang)
-        .Include(d => d.NhanVien)
-        .Include(d => d.ChiTietDonHangs)
-            .ThenInclude(ct => ct.SanPham)
-        .FirstOrDefault(d => d.MaDonHang == id);
-
-    if (order == null)
-    {
-        TempData["ToastMessage"] = "Không tìm thấy đơn hàng.";
-        TempData["ToastType"] = "danger";
-        return RedirectToAction(nameof(Index));
-    }
-
-    var vm = new OrderDetailViewModel
-    {
-        MaDonHang = order.MaDonHang,
-        NgayDat = order.NgayDat ?? DateTime.Now,
-        TongTien = order.TongTien ?? 0,
-        TrangThai = order.TrangThai ?? "Đơn mới",
-        PhuongThucThanhToan = order.PhuongThucThanhToan ?? "Chưa cập nhật",
-        KenhBan = "Cửa hàng",
-        TenKhachHang = order.KhachHang?.HoTen ?? "Khách vãng lai",
-        SoDienThoaiKhachHang = order.KhachHang?.SoDienThoai,
-        EmailKhachHang = order.KhachHang?.Email,
-        DiaChiKhachHang = order.KhachHang?.DiaChi,
-        TenNhanVien = order.NhanVien?.HoTen,
-       Items = (order.ChiTietDonHangs ?? new List<ChiTietDonHang>()).Select(ct => new OrderDetailItemViewModel
+        public IActionResult Detail(int id)
         {
-            MaSanPham = ct.MaSanPham,
-            TenSanPham = ct.SanPham != null ? ct.SanPham.TenSanPham : "Sản phẩm",
-            HinhAnh = ct.SanPham != null ? ct.SanPham.HinhAnh : null,
-            SoLuong = ct.SoLuong,
-            DonGia = ct.DonGia
-        }).ToList()
-    };
+            var order = _context.DonHangs
+                .Include(d => d.KhachHang)
+                .Include(d => d.NhanVien)
+                .Include(d => d.ChiTietDonHangs)
+                    .ThenInclude(ct => ct.SanPham)
+                .FirstOrDefault(d => d.MaDonHang == id);
 
-    return View(vm);
-}
+            if (order == null)
+            {
+                TempData["ToastMessage"] = "Không tìm thấy đơn hàng.";
+                TempData["ToastType"] = "danger";
+                return RedirectToAction(nameof(Index));
+            }
 
-       [HttpPost]
+            var vm = new OrderDetailViewModel
+            {
+                MaDonHang = order.MaDonHang,
+                NgayDat = order.NgayDat ?? DateTime.Now,
+                TongTien = order.TongTien ?? 0,
+                TrangThai = order.TrangThai ?? "Đơn mới",
+                PhuongThucThanhToan = order.PhuongThucThanhToan ?? "Chưa cập nhật",
+                KenhBan = GetOrderChannel(order),
+
+                TenKhachHang = order.KhachHang?.HoTen ?? "Khách vãng lai",
+                SoDienThoaiKhachHang = order.KhachHang?.SoDienThoai,
+                EmailKhachHang = order.KhachHang?.Email,
+                DiaChiKhachHang = order.KhachHang?.DiaChi,
+                TenNhanVien = order.NhanVien?.HoTen,
+
+                Items = (order.ChiTietDonHangs ?? new List<ChiTietDonHang>())
+                    .Select(ct => new OrderDetailItemViewModel
+                    {
+                        MaSanPham = ct.MaSanPham,
+                        TenSanPham = ct.SanPham != null ? ct.SanPham.TenSanPham : "Sản phẩm",
+                        HinhAnh = ct.SanPham != null ? ct.SanPham.HinhAnh : null,
+                        SoLuong = ct.SoLuong,
+                        DonGia = ct.DonGia
+                    })
+                    .ToList()
+            };
+
+            return View(vm);
+        }
+
+     [HttpPost]
 [ValidateAntiForgeryToken]
 public IActionResult UpdateStatus(int id, string trangThai)
 {
     var order = _context.DonHangs
+        .Include(d => d.KhachHang)
         .FirstOrDefault(d => d.MaDonHang == id);
 
     if (order == null)
@@ -89,7 +97,84 @@ public IActionResult UpdateStatus(int id, string trangThai)
         return RedirectToAction(nameof(Detail), new { id });
     }
 
-    order.TrangThai = trangThai.Trim();
+    var oldStatus = order.TrangThai ?? "";
+    var newStatus = trangThai.Trim();
+    
+if (oldStatus == "Hoàn thành")
+{
+    TempData["ToastMessage"] = "Đơn hàng đã hoàn thành nên không thể cập nhật trạng thái nữa.";
+    TempData["ToastType"] = "info";
+    return RedirectToAction(nameof(Detail), new { id });
+}
+    order.TrangThai = newStatus;
+
+    if (newStatus == "Đã hủy" && oldStatus != "Đã hủy")
+    {
+        var orderDetails = _context.ChiTietDonHangs
+            .Where(ct => ct.MaDonHang == id)
+            .ToList();
+
+        foreach (var detail in orderDetails)
+        {
+            var product = _context.SanPhams
+                .FirstOrDefault(p => p.MaSanPham == detail.MaSanPham);
+
+            if (product != null)
+            {
+                product.SoLuongTon += detail.SoLuong;
+            }
+        }
+
+        TempData["ToastMessage"] = "Đã hủy đơn hàng. Hàng đã được hoàn về kho.";
+        TempData["ToastType"] = "warning";
+
+        _context.SaveChanges();
+        return RedirectToAction(nameof(Detail), new { id });
+    }
+
+    if (newStatus == "Hoàn thành")
+    {
+        if (HasAddedLoyaltyPoint(order))
+        {
+            TempData["ToastMessage"] = "Đơn hàng đã được cộng điểm trước đó.";
+            TempData["ToastType"] = "info";
+
+            _context.SaveChanges();
+            return RedirectToAction(nameof(Detail), new { id });
+        }
+
+        if (order.KhachHang == null)
+        {
+            TempData["ToastMessage"] = "Đơn đã hoàn thành nhưng không có khách hàng thật nên không cộng điểm.";
+            TempData["ToastType"] = "warning";
+
+            _context.SaveChanges();
+            return RedirectToAction(nameof(Detail), new { id });
+        }
+
+        var tongTien = order.TongTien ?? 0;
+        var diemCong = (int)(tongTien / 10000);
+
+        if (diemCong <= 0)
+        {
+            TempData["ToastMessage"] = "Đơn đã hoàn thành nhưng tổng tiền chưa đủ để cộng điểm.";
+            TempData["ToastType"] = "warning";
+
+            _context.SaveChanges();
+            return RedirectToAction(nameof(Detail), new { id });
+        }
+
+        order.KhachHang.DiemTichLuy += diemCong;
+        order.GhiChu = AppendLoyaltyPointMarker(order.GhiChu);
+
+        _context.SaveChanges();
+
+        TempData["ToastMessage"] = $"Đơn đã hoàn thành. Đã cộng {diemCong:N0} điểm cho khách hàng.";
+        TempData["ToastType"] = "success";
+
+        return RedirectToAction(nameof(Detail), new { id });
+    }
+
     _context.SaveChanges();
 
     TempData["ToastMessage"] = "Cập nhật trạng thái đơn hàng thành công.";
@@ -97,5 +182,57 @@ public IActionResult UpdateStatus(int id, string trangThai)
 
     return RedirectToAction(nameof(Detail), new { id });
 }
+
+private bool HasAddedLoyaltyPoint(DonHang order)
+{
+    return !string.IsNullOrWhiteSpace(order.GhiChu)
+        && order.GhiChu.Contains("[DA_CONG_DIEM]", StringComparison.OrdinalIgnoreCase);
+}
+
+private string AppendLoyaltyPointMarker(string? ghiChu)
+{
+    if (string.IsNullOrWhiteSpace(ghiChu))
+    {
+        return "[DA_CONG_DIEM]";
+    }
+
+    if (ghiChu.Contains("[DA_CONG_DIEM]", StringComparison.OrdinalIgnoreCase))
+    {
+        return ghiChu;
+    }
+
+    return ghiChu + " [DA_CONG_DIEM]";
+}
+
+        private string GetOrderChannel(DonHang order)
+        {
+            var note = order.GhiChu ?? "";
+            var payment = order.PhuongThucThanhToan ?? "";
+
+            if (
+                note.Contains("Địa chỉ giao hàng", StringComparison.OrdinalIgnoreCase) ||
+                note.Contains("Voucher sử dụng", StringComparison.OrdinalIgnoreCase) ||
+                note.Contains("giao hàng", StringComparison.OrdinalIgnoreCase) ||
+                note.Contains("website", StringComparison.OrdinalIgnoreCase) ||
+                note.Contains("online", StringComparison.OrdinalIgnoreCase) ||
+                payment.Contains("online", StringComparison.OrdinalIgnoreCase) ||
+                payment.Contains("website", StringComparison.OrdinalIgnoreCase) ||
+                payment.Contains("TikTok", StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                return "Website";
+            }
+
+            if (
+                note.Contains("POS", StringComparison.OrdinalIgnoreCase) ||
+                note.Contains("tại quầy", StringComparison.OrdinalIgnoreCase) ||
+                note.Contains("cửa hàng", StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                return "Cửa hàng";
+            }
+
+            return "Cửa hàng";
+        }
     }
 }

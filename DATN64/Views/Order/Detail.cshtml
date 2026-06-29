@@ -4,6 +4,8 @@
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
     ViewData["Title"] = "Chi tiết đơn hàng";
     ViewData["BreadcrumbActive"] = "Chi tiết đơn hàng";
+
+    var isCompletedOrder = Model.TrangThai == "Hoàn thành";
 }
 
 @functions {
@@ -13,7 +15,9 @@
         {
             "Đơn mới" => "bg-info text-dark",
             "Chờ duyệt" => "bg-warning text-dark",
+            "Đã xác nhận" => "bg-primary text-white",
             "Đã thanh toán" => "bg-primary text-white",
+            "Đang đóng gói" => "bg-warning text-dark",
             "Đang giao" => "bg-secondary text-white",
             "Hoàn thành" => "bg-success text-white",
             "Đã hủy" => "bg-danger text-white",
@@ -31,9 +35,11 @@
                         <h3 class="fw-bold mb-2">
                             Đơn hàng #@Model.MaDonHang
                         </h3>
+
                         <div class="text-muted small mb-2">
                             Ngày đặt: @Model.NgayDat.ToString("HH:mm - dd/MM/yyyy")
                         </div>
+
                         <span class="badge rounded-pill px-3 py-2 @GetStatusClass(Model.TrangThai)">
                             @Model.TrangThai
                         </span>
@@ -116,6 +122,7 @@
                                     <th class="text-end">Thành tiền</th>
                                 </tr>
                             </thead>
+
                             <tbody>
                                 @foreach (var item in Model.Items)
                                 {
@@ -147,6 +154,7 @@
                                     </tr>
                                 }
                             </tbody>
+
                             <tfoot>
                                 <tr>
                                     <td colspan="3" class="text-end fw-bold">Tổng thanh toán</td>
@@ -186,19 +194,42 @@
 
                     <div class="mb-4">
                         <label class="form-label fw-semibold">Trạng thái đơn hàng</label>
-                        <select name="trangThai" class="form-select">
+
+                        <select name="trangThai"
+                                class="form-select @(isCompletedOrder ? "bg-light text-muted" : "")"
+                                disabled="@isCompletedOrder">
                             <option value="Đơn mới" selected="@(Model.TrangThai == "Đơn mới")">Đơn mới</option>
                             <option value="Chờ duyệt" selected="@(Model.TrangThai == "Chờ duyệt")">Chờ duyệt</option>
+                            <option value="Đã xác nhận" selected="@(Model.TrangThai == "Đã xác nhận")">Đã xác nhận</option>
                             <option value="Đã thanh toán" selected="@(Model.TrangThai == "Đã thanh toán")">Đã thanh toán</option>
+                            <option value="Đang đóng gói" selected="@(Model.TrangThai == "Đang đóng gói")">Đang đóng gói</option>
                             <option value="Đang giao" selected="@(Model.TrangThai == "Đang giao")">Đang giao</option>
                             <option value="Hoàn thành" selected="@(Model.TrangThai == "Hoàn thành")">Hoàn thành</option>
                             <option value="Đã hủy" selected="@(Model.TrangThai == "Đã hủy")">Đã hủy</option>
                         </select>
                     </div>
 
-                    <button type="submit" class="btn btn-info text-white w-100 rounded-pill fw-bold">
-                        Cập nhật trạng thái
-                    </button>
+                    @if (isCompletedOrder)
+                    {
+                        <div class="alert alert-success rounded-4 small mb-3">
+                            <i class="fa-solid fa-lock me-1"></i>
+                            Đơn hàng đã hoàn thành nên trạng thái đã bị khóa.
+                        </div>
+
+                        <button type="button"
+                                class="btn btn-secondary text-white w-100 rounded-pill fw-bold"
+                                disabled>
+                            <i class="fa-solid fa-lock me-2"></i>
+                            Đã khóa trạng thái
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="submit"
+                                class="btn btn-info text-white w-100 rounded-pill fw-bold">
+                            Cập nhật trạng thái
+                        </button>
+                    }
                 </form>
             </div>
         </div>
@@ -212,8 +243,8 @@
 
                 <ul class="text-muted small ps-3 mb-0">
                     <li>Chỉ nên cập nhật trạng thái, không sửa trực tiếp nội dung đơn hàng.</li>
-                    <li>Khi đơn hàng chuyển sang Hoàn thành, có thể cộng điểm tích lũy cho khách hàng.</li>
-                    <li>Nếu cần, bước sau mình sẽ làm luôn phần cộng điểm tự động.</li>
+                    <li>Khi đơn hàng chuyển sang Hoàn thành, hệ thống có thể cộng điểm tích lũy cho khách hàng.</li>
+                    <li>Khi đơn đã Hoàn thành, trạng thái sẽ bị khóa và không thể cập nhật tiếp.</li>
                 </ul>
             </div>
         </div>

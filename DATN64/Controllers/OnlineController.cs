@@ -93,7 +93,29 @@ namespace DATN64.Controllers
             ViewBag.IsFavorite = favorites.Contains(id);
             return View(p);
         }
+private string GetLoginName()
+{
+    var userName = HttpContext.Session.GetString("UserName");
 
+    if (!string.IsNullOrWhiteSpace(userName))
+    {
+        return userName.Trim();
+    }
+
+    return "Khách hàng";
+}
+
+private string GetLoginEmail()
+{
+    var userEmail = HttpContext.Session.GetString("UserEmail");
+
+    if (!string.IsNullOrWhiteSpace(userEmail) && userEmail.Contains("@"))
+    {
+        return userEmail.Trim();
+    }
+
+    return "";
+}
         // ----------------- CART MANAGEMENT -----------------
         private List<CartItem> GetCartFromSession()
         {
@@ -119,39 +141,74 @@ namespace DATN64.Controllers
             HttpContext.Session.SetString("Favorites", JsonSerializer.Serialize(favorites));
         }
 
-        private int? GetCurrentCustomerId()
+       private int? GetCurrentCustomerId()
+{
+    var loginName = GetLoginName();
+    var loginEmail = GetLoginEmail();
+
+    KhachHang? customer = null;
+
+    if (int.TryParse(HttpContext.Session.GetString("CustomerId"), out var customerId))
+    {
+        customer = _context.KhachHangs
+            .FirstOrDefault(k => k.MaKhachHang == customerId);
+    }
+
+    if (customer == null && !string.IsNullOrWhiteSpace(loginEmail))
+    {
+        var lowerEmail = loginEmail.ToLower();
+
+        customer = _context.KhachHangs
+            .FirstOrDefault(k => k.Email != null && k.Email.ToLower() == lowerEmail);
+    }
+
+    if (customer == null)
+    {
+        if (string.IsNullOrWhiteSpace(loginEmail))
         {
-            if (int.TryParse(HttpContext.Session.GetString("CustomerId"), out var customerId))
-            {
-                return customerId;
-            }
-
-            var email = HttpContext.Session.GetString("UserEmail");
-            if (!string.IsNullOrEmpty(email))
-            {
-                var lowerEmail = email.ToLower();
-                var customer = _context.KhachHangs.FirstOrDefault(k => k.Email != null && k.Email.ToLower() == lowerEmail);
-                if (customer == null)
-                {
-                    // Create a customer record on the fly for this logged-in account to ensure they can checkout
-                    var userName = HttpContext.Session.GetString("UserName") ?? "Khách Hàng";
-                    customer = new KhachHang
-                    {
-                        HoTen = userName,
-                        Email = email,
-                        SoDienThoai = "0900000000",
-                        DiaChi = "Chưa cập nhật",
-                        DiemTichLuy = 0
-                    };
-                    _context.KhachHangs.Add(customer);
-                    _context.SaveChanges();
-                }
-                HttpContext.Session.SetString("CustomerId", customer.MaKhachHang.ToString());
-                return customer.MaKhachHang;
-            }
-
             return null;
         }
+
+        customer = new KhachHang
+        {
+            HoTen = loginName,
+            Email = loginEmail,
+            SoDienThoai = "0900000000",
+            DiaChi = "Chưa cập nhật",
+            DiemTichLuy = 0,
+            TrangThai = "Hoạt động",
+            NgayTao = DateTime.Now
+        };
+
+        _context.KhachHangs.Add(customer);
+        _context.SaveChanges();
+    }
+    else
+    {
+        var changed = false;
+
+        if (!string.IsNullOrWhiteSpace(loginName) && customer.HoTen != loginName)
+        {
+            customer.HoTen = loginName;
+            changed = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(loginEmail) && customer.Email != loginEmail)
+        {
+            customer.Email = loginEmail;
+            changed = true;
+        }
+
+        if (changed)
+        {
+            _context.SaveChanges();
+        }
+    }
+
+    HttpContext.Session.SetString("CustomerId", customer.MaKhachHang.ToString());
+
+    return customer.MaKhachHang;
+}
 
         private bool IsCustomerLoggedIn()
         {
@@ -171,19 +228,35 @@ namespace DATN64.Controllers
             }
         }
 
-        public IActionResult Cart()
-        {
-            var cart = GetCartFromSession();
-            // Chỉ hiển thị voucher còn hạn và còn số lượng
-            ViewBag.Vouchers = _context.Vouchers
-                .Where(v => v.NgayKetThuc > DateTime.Now
-                         && (v.SoLuong == null || v.SoLuong > 0)
-                         && (v.NgayBatDau == null || v.NgayBatDau <= DateTime.Now))
-                .OrderBy(v => v.GiaTri)
-                .ToList();
-            ViewBag.CanCheckout = IsCustomerLoggedIn();
-            return View(cart);
-        }
+     public IActionResult Cart()
+{
+    var cart = GetCartFromSession();
+
+    var customerId = GetCurrentCustomerId();
+    KhachHang? customer = null;
+
+    if (customerId != null)
+    {
+        customer = _context.KhachHangs
+            .FirstOrDefault(k => k.MaKhachHang == customerId.Value);
+    }
+
+    ViewBag.Vouchers = _context.Vouchers
+        .Where(v => v.NgayKetThuc > DateTime.Now
+                 && (v.SoLuong == null || v.SoLuong > 0)
+                 && (v.NgayBatDau == null || v.NgayBatDau <= DateTime.Now))
+        .OrderBy(v => v.GiaTri)
+        .ToList();
+
+    ViewBag.CanCheckout = customerId != null;
+
+    ViewBag.CustomerName = GetLoginName();
+    ViewBag.CustomerEmail = GetLoginEmail();
+    ViewBag.CustomerPhone = customer?.SoDienThoai ?? "";
+    ViewBag.CustomerAddress = customer?.DiaChi ?? "";
+
+    return View(cart);
+}
 
         public IActionResult Support(string tab = "warranty", string query = "")
         {
@@ -456,197 +529,200 @@ namespace DATN64.Controllers
 
 
         [HttpPost]
-        public IActionResult Checkout(string customerName, string customerPhone, string customerAddress, string paymentMethod, string voucherCode, decimal discountVal)
+public IActionResult Checkout(string customerName, string customerPhone, string customerAddress, string paymentMethod, string voucherCode, decimal discountVal)
+{
+    var customerId = GetCurrentCustomerId();
+
+    if (customerId == null)
+    {
+        TempData["ToastMessage"] = "Bạn cần đăng nhập bằng tài khoản khách hàng để đặt hàng.";
+        TempData["ToastType"] = "info";
+        return RedirectToAction("Login", "Account");
+    }
+
+    var loginName = GetLoginName();
+    var loginEmail = GetLoginEmail();
+
+    customerName = loginName;
+
+    var cart = GetCartFromSession();
+
+    if (cart.Count == 0)
+    {
+        TempData["ToastMessage"] = "Giỏ hàng rỗng!";
+        TempData["ToastType"] = "danger";
+        return RedirectToAction("Cart");
+    }
+
+    if (string.IsNullOrWhiteSpace(customerPhone) || string.IsNullOrWhiteSpace(customerAddress))
+    {
+        TempData["ToastMessage"] = "Vui lòng điền đầy đủ số điện thoại và địa chỉ giao hàng.";
+        TempData["ToastType"] = "danger";
+        return RedirectToAction("Cart");
+    }
+
+    if (!Regex.IsMatch(customerPhone, "^(0|\\+84)\\d{9,10}$"))
+    {
+        TempData["ToastMessage"] = "Số điện thoại không hợp lệ. Vui lòng nhập số bắt đầu bằng 0 hoặc +84 và đủ 10-12 chữ số.";
+        TempData["ToastType"] = "danger";
+        return RedirectToAction("Cart");
+    }
+
+    var sessionEmail = HttpContext.Session.GetString("UserEmail");
+
+    var seller = !string.IsNullOrEmpty(sessionEmail)
+        ? _context.NhanViens.FirstOrDefault(e => e.Email == sessionEmail)
+        : null;
+
+    var customer = _context.KhachHangs
+        .FirstOrDefault(k => k.MaKhachHang == customerId.Value);
+
+    if (customer == null)
+    {
+        customer = new KhachHang
         {
-            var customerId = GetCurrentCustomerId();
-            if (customerId == null)
-            {
-                TempData["ToastMessage"] = "Bạn cần đăng nhập bằng tài khoản khách hàng để đặt hàng.";
-                TempData["ToastType"] = "info";
-                return RedirectToAction("Login", "Account");
-            }
+            HoTen = loginName,
+            Email = loginEmail,
+            SoDienThoai = customerPhone,
+            DiaChi = customerAddress,
+            DiemTichLuy = 0,
+            TrangThai = "Hoạt động",
+            NgayTao = DateTime.Now
+        };
 
-            var cart = GetCartFromSession();
-            if (cart.Count == 0)
-            {
-                TempData["ToastMessage"] = "Giỏ hàng rỗng!";
-                TempData["ToastType"] = "danger";
-                return RedirectToAction("Cart");
-            }
+        _context.KhachHangs.Add(customer);
+        _context.SaveChanges();
 
-            if (string.IsNullOrWhiteSpace(customerName) || string.IsNullOrWhiteSpace(customerPhone) || string.IsNullOrWhiteSpace(customerAddress))
-            {
-                TempData["ToastMessage"] = "Vui lòng điền đầy đủ họ tên, số điện thoại và địa chỉ giao hàng.";
-                TempData["ToastType"] = "danger";
-                return RedirectToAction("Cart");
-            }
+        HttpContext.Session.SetString("CustomerId", customer.MaKhachHang.ToString());
+    }
+    else
+    {
+        customer.HoTen = loginName;
 
-            if (!Regex.IsMatch(customerPhone, "^(0|\\+84)\\d{9,10}$"))
-            {
-                TempData["ToastMessage"] = "Số điện thoại không hợp lệ. Vui lòng nhập số bắt đầu bằng 0 hoặc +84 và đủ 10-12 chữ số.";
-                TempData["ToastType"] = "danger";
-                return RedirectToAction("Cart");
-            }
-
-            var userEmail = HttpContext.Session.GetString("UserEmail");
-            var seller = !string.IsNullOrEmpty(userEmail)
-                ? _context.NhanViens.FirstOrDefault(e => e.Email == userEmail)
-                : null;
-
-            KhachHang? customer = null;
-            var loggedInCustomerId = GetCurrentCustomerId();
-            if (loggedInCustomerId != null)
-            {
-                customer = _context.KhachHangs.FirstOrDefault(k => k.MaKhachHang == loggedInCustomerId);
-            }
-
-            if (customer == null)
-            {
-                customer = _context.KhachHangs.FirstOrDefault(k => k.SoDienThoai == customerPhone);
-            }
-
-            if (customer == null)
-            {
-                customer = new KhachHang
-                {
-                    HoTen = customerName,
-                    SoDienThoai = customerPhone,
-                    DiaChi = customerAddress,
-                    Email = userEmail,
-                    DiemTichLuy = 0
-                };
-                _context.KhachHangs.Add(customer);
-                _context.SaveChanges();
-            }
-            else
-            {
-                if (string.IsNullOrWhiteSpace(customer.DiaChi) && !string.IsNullOrWhiteSpace(customerAddress))
-                {
-                    customer.DiaChi = customerAddress;
-                }
-                if (string.IsNullOrWhiteSpace(customer.HoTen) && !string.IsNullOrWhiteSpace(customerName))
-                {
-                    customer.HoTen = customerName;
-                }
-                if (string.IsNullOrWhiteSpace(customer.SoDienThoai) && !string.IsNullOrWhiteSpace(customerPhone))
-                {
-                    customer.SoDienThoai = customerPhone;
-                }
-                if (string.IsNullOrWhiteSpace(customer.Email) && !string.IsNullOrEmpty(userEmail))
-                {
-                    customer.Email = userEmail;
-                }
-                _context.SaveChanges();
-            }
-
-            SetCurrentCustomerSession(customer);
-
-            decimal subtotal = cart.Sum(i => i.Total);
-            decimal total = Math.Max(0, subtotal - discountVal);
-
-            var order = new DonHang
-            {
-                MaKhachHang = customer.MaKhachHang,
-                MaNhanVien = seller?.MaNhanVien,
-                NgayDat = DateTime.Now,
-                TongTien = total,
-                TrangThai = "Chờ duyệt",
-                PhuongThucThanhToan = paymentMethod,
-                GhiChu = $"Địa chỉ giao hàng: {customerAddress}. Voucher sử dụng: {voucherCode}. Giảm giá: {discountVal:N0}đ"
-            };
-
-            _context.DonHangs.Add(order);
-            _context.SaveChanges();
-
-            foreach (var item in cart)
-            {
-                var product = _context.SanPhams.FirstOrDefault(p => p.MaSanPham == item.ProductId);
-                if (product != null)
-                {
-                    product.SoLuongTon = Math.Max(0, product.SoLuongTon - item.Quantity);
-                }
-
-                var detail = new ChiTietDonHang
-                {
-                    MaDonHang = order.MaDonHang,
-                    MaSanPham = item.ProductId,
-                    SoLuong = item.Quantity,
-                    DonGia = item.Price
-                };
-                _context.ChiTietDonHangs.Add(detail);
-            }
-
-            if (!string.IsNullOrEmpty(voucherCode))
-            {
-                var voucher = _context.Vouchers.FirstOrDefault(v => v.MaCode == voucherCode);
-                if (voucher != null)
-                {
-                    var orderVoucher = new DonHang_Voucher
-                    {
-                        MaDonHang = order.MaDonHang,
-                        MaVoucher = voucher.MaVoucher
-                    };
-                    _context.DonHang_Vouchers.Add(orderVoucher);
-                    
-                    if (voucher.SoLuong.HasValue && voucher.SoLuong.Value > 0)
-                    {
-                        voucher.SoLuong--;
-                    }
-                }
-            }
-
-            var notification = new SystemNotification
-            {
-                Title = "Đơn hàng Website mới",
-                Message = $"Khách hàng {customerName} vừa đặt đơn hàng #{order.MaDonHang} trị giá {total.ToString("N0")} đ.",
-                Type = "Đơn mới",
-                Timestamp = DateTime.Now,
-                IsRead = false
-            };
-            _context.SystemNotifications.Add(notification);
-
-            _context.SaveChanges();
-
-            HttpContext.Session.Remove("Cart");
-
-            TempData["ToastMessage"] = $"Đặt hàng thành công! Mã đơn hàng của bạn: #{order.MaDonHang}";
-            TempData["ToastType"] = "success";
-
-            if (paymentMethod == "Chuyển khoản")
-            {
-                return RedirectToAction("OrderPaymentQR", new { id = order.MaDonHang });
-            }
-
-            return RedirectToAction("Index");
+        if (!string.IsNullOrWhiteSpace(loginEmail))
+        {
+            customer.Email = loginEmail;
         }
 
-        public IActionResult OrderPaymentQR(int id)
+        customer.SoDienThoai = customerPhone;
+        customer.DiaChi = customerAddress;
+
+        _context.SaveChanges();
+    }
+
+    SetCurrentCustomerSession(customer);
+
+    decimal subtotal = cart.Sum(i => i.Total);
+    decimal total = Math.Max(0, subtotal - discountVal);
+
+    var order = new DonHang
+    {
+        MaKhachHang = customer.MaKhachHang,
+        MaNhanVien = seller?.MaNhanVien,
+        NgayDat = DateTime.Now,
+        TongTien = total,
+        TrangThai = "Chờ duyệt",
+        PhuongThucThanhToan = paymentMethod,
+        GhiChu = $"Địa chỉ giao hàng: {customerAddress}. Voucher sử dụng: {voucherCode}. Giảm giá: {discountVal:N0}đ"
+    };
+
+    _context.DonHangs.Add(order);
+    _context.SaveChanges();
+
+    foreach (var item in cart)
+    {
+        var product = _context.SanPhams
+            .FirstOrDefault(p => p.MaSanPham == item.ProductId);
+
+        if (product != null)
         {
-            var order = _context.DonHangs
-                .Include(o => o.KhachHang)
-                .Include(o => o.ChiTietDonHangs)
-                    .ThenInclude(c => c.SanPham)
-                .FirstOrDefault(o => o.MaDonHang == id);
-
-            if (order == null) return NotFound();
-
-            string bankId = "vietinbank";
-            string accountNo = "108602210708";
-            string accountName = "CONG TY TNHH NOVATECH";
-            string amount = ((long)order.TongTien).ToString();
-            string addInfo = Uri.EscapeDataString($"NovaTech thanh toan don hang {order.MaDonHang}");
-            string formattedAccountName = Uri.EscapeDataString(accountName);
-
-            string qrUrl = $"https://img.vietqr.io/image/{bankId}-{accountNo}-compact2.png?amount={amount}&addInfo={addInfo}&accountName={formattedAccountName}";
-
-            ViewBag.QRUrl = qrUrl;
-            ViewBag.AccountNo = accountNo;
-            ViewBag.AccountName = accountName;
-            ViewBag.BankName = "Ngân hàng TMCP Công Thương Việt Nam (VietinBank)";
-
-            return View(order);
+            product.SoLuongTon = Math.Max(0, product.SoLuongTon - item.Quantity);
         }
 
+        var detail = new ChiTietDonHang
+        {
+            MaDonHang = order.MaDonHang,
+            MaSanPham = item.ProductId,
+            SoLuong = item.Quantity,
+            DonGia = item.Price
+        };
+
+        _context.ChiTietDonHangs.Add(detail);
+    }
+
+    if (!string.IsNullOrEmpty(voucherCode))
+    {
+        var voucher = _context.Vouchers.FirstOrDefault(v => v.MaCode == voucherCode);
+
+        if (voucher != null)
+        {
+            var orderVoucher = new DonHang_Voucher
+            {
+                MaDonHang = order.MaDonHang,
+                MaVoucher = voucher.MaVoucher
+            };
+
+            _context.DonHang_Vouchers.Add(orderVoucher);
+
+            if (voucher.SoLuong.HasValue && voucher.SoLuong.Value > 0)
+            {
+                voucher.SoLuong--;
+            }
+        }
+    }
+
+    var notification = new SystemNotification
+    {
+        Title = "Đơn hàng Website mới",
+        Message = $"Khách hàng {customerName} vừa đặt đơn hàng #{order.MaDonHang} trị giá {total.ToString("N0")} đ.",
+        Type = "Đơn mới",
+        Timestamp = DateTime.Now,
+        IsRead = false
+    };
+
+    _context.SystemNotifications.Add(notification);
+
+    _context.SaveChanges();
+
+    HttpContext.Session.Remove("Cart");
+
+    TempData["ToastMessage"] = $"Đặt hàng thành công! Mã đơn hàng của bạn: #{order.MaDonHang}";
+    TempData["ToastType"] = "success";
+
+    if (paymentMethod == "Chuyển khoản")
+    {
+        return RedirectToAction("OrderPaymentQR", new { id = order.MaDonHang });
+    }
+
+    return RedirectToAction("Index");
+}
+
+public IActionResult OrderPaymentQR(int id)
+{
+    var order = _context.DonHangs
+        .Include(o => o.KhachHang)
+        .Include(o => o.ChiTietDonHangs)
+            .ThenInclude(c => c.SanPham)
+        .FirstOrDefault(o => o.MaDonHang == id);
+
+    if (order == null) return NotFound();
+
+    string bankId = "vietinbank";
+    string accountNo = "108602210708";
+    string accountName = "CONG TY TNHH NOVATECH";
+    string amount = ((long)order.TongTien).ToString();
+    string addInfo = Uri.EscapeDataString($"NovaTech thanh toan don hang {order.MaDonHang}");
+    string formattedAccountName = Uri.EscapeDataString(accountName);
+
+    string qrUrl = $"https://img.vietqr.io/image/{bankId}-{accountNo}-compact2.png?amount={amount}&addInfo={addInfo}&accountName={formattedAccountName}";
+
+    ViewBag.QRUrl = qrUrl;
+    ViewBag.AccountNo = accountNo;
+    ViewBag.AccountName = accountName;
+    ViewBag.BankName = "Ngân hàng TMCP Công Thương Việt Nam (VietinBank)";
+
+    return View(order);
+}
         public IActionResult Favorites()
         {
             var favoriteIds = GetFavoritesFromSession();

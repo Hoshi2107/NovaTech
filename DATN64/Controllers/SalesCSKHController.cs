@@ -73,41 +73,43 @@ namespace DATN64.Controllers
             return Json(ToThreadDto(thread));
         }
 
-        [HttpPost]
-        [HasPermission("View_Order")]
-        public IActionResult MarkCustomerThreadRead([FromBody] ThreadIdRequest request)
+      [HttpPost]
+[HasPermission("View_Order")]
+public IActionResult MarkCustomerThreadRead([FromBody] ThreadIdRequest request)
+{
+    var thread = _context.CustomerInboxThreads
+        .Include(t => t.Messages)
+        .FirstOrDefault(t => t.Id == request.ThreadId);
+
+    if (thread == null)
+    {
+        return NotFound(new { message = "Không tìm thấy hội thoại." });
+    }
+
+    foreach (var message in thread.Messages)
+    {
+        if (message.Sender == "customer")
         {
-            var thread = _context.CustomerInboxThreads
-                .Include(t => t.Messages)
-                .FirstOrDefault(t => t.Id == request.ThreadId);
-
-            if (thread == null)
-            {
-                return NotFound(new { message = "Không tìm thấy hội thoại." });
-            }
-
-            foreach (var message in thread.Messages)
-            {
-                if (message.Sender == "customer")
-                {
-                    message.IsRead = true;
-                }
-            }
-
-            if (thread.Status == "Unread")
-            {
-                thread.Status = "Processing";
-            }
-
-            thread.UpdatedAt = DateTime.Now;
-            _context.SaveChanges();
-
-            return Json(new
-            {
-                message = "Đã đánh dấu đã đọc.",
-                thread = ToThreadDto(thread)
-            });
+            message.IsRead = true;
         }
+    }
+
+    if (thread.Status == "Unread")
+    {
+        thread.Status = "Processing";
+    }
+
+    // Không cập nhật UpdatedAt ở đây.
+    // Nếu cập nhật UpdatedAt khi chỉ bấm xem chat,
+    // danh sách hộp thư sẽ bị đảo vị trí.
+    _context.SaveChanges();
+
+    return Json(new
+    {
+        message = "Đã đánh dấu đã đọc.",
+        thread = ToThreadDto(thread)
+    });
+}
 
         [HttpPost]
         [HasPermission("View_Order")]
@@ -146,7 +148,7 @@ namespace DATN64.Controllers
             }
 
             thread.Status = string.IsNullOrWhiteSpace(request.Status) ? "Replied" : request.Status;
-            thread.UpdatedAt = DateTime.Now;
+           
 
             _context.SaveChanges();
 
@@ -156,7 +158,37 @@ namespace DATN64.Controllers
                 thread = ToThreadDto(thread)
             });
         }
+[HttpPost]
+[HasPermission("View_Order")]
+public IActionResult DeleteCustomerThread([FromBody] ThreadIdRequest request)
+{
+    if (request == null || request.ThreadId <= 0)
+    {
+        return BadRequest(new { message = "Hội thoại không hợp lệ." });
+    }
 
+    var thread = _context.CustomerInboxThreads
+        .Include(t => t.Messages)
+        .FirstOrDefault(t => t.Id == request.ThreadId);
+
+    if (thread == null)
+    {
+        return NotFound(new { message = "Không tìm thấy hội thoại." });
+    }
+
+    if (thread.Messages != null && thread.Messages.Any())
+    {
+        _context.RemoveRange(thread.Messages);
+    }
+
+    _context.CustomerInboxThreads.Remove(thread);
+    _context.SaveChanges();
+
+    return Json(new
+    {
+        message = "Đã xóa hội thoại."
+    });
+}
         [HttpPost]
         public IActionResult CreateCustomerInquiry([FromBody] CreateInquiryRequest request)
         {
