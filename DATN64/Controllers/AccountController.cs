@@ -192,6 +192,27 @@ namespace DATN64.Controllers
                     _context.SaveChanges();
                 }
 
+                // Merge guest/other orders matching this customer's email or phone
+                var otherCustomers = _context.KhachHangs
+                    .Where(k => k.MaKhachHang != customer.MaKhachHang && 
+                               ((!string.IsNullOrEmpty(k.Email) && !string.IsNullOrEmpty(customer.Email) && k.Email.ToLower() == customer.Email.ToLower()) || 
+                                (!string.IsNullOrEmpty(k.SoDienThoai) && !string.IsNullOrEmpty(customer.SoDienThoai) && k.SoDienThoai == customer.SoDienThoai)))
+                    .ToList();
+
+                if (otherCustomers.Any())
+                {
+                    var otherIds = otherCustomers.Select(o => o.MaKhachHang).ToList();
+                    var ordersToMerge = _context.DonHangs
+                        .Where(o => o.MaKhachHang.HasValue && otherIds.Contains(o.MaKhachHang.Value))
+                        .ToList();
+
+                    foreach (var o in ordersToMerge)
+                    {
+                        o.MaKhachHang = customer.MaKhachHang;
+                    }
+                    _context.SaveChanges();
+                }
+
                 HttpContext.Session.SetString("UserEmail", customer.Email ?? "");
                 HttpContext.Session.SetString("UserName", customer.HoTen);
                 HttpContext.Session.SetString("UserRoles", "Khách hàng");
@@ -223,6 +244,27 @@ namespace DATN64.Controllers
                         DiemTichLuy = 0
                     };
                     _context.KhachHangs.Add(demoCustomer);
+                    _context.SaveChanges();
+                }
+
+                // Merge guest/other orders matching this customer's email or phone
+                var otherCustomers = _context.KhachHangs
+                    .Where(k => k.MaKhachHang != demoCustomer.MaKhachHang && 
+                               ((!string.IsNullOrEmpty(k.Email) && !string.IsNullOrEmpty(demoCustomer.Email) && k.Email.ToLower() == demoCustomer.Email.ToLower()) || 
+                                (!string.IsNullOrEmpty(k.SoDienThoai) && !string.IsNullOrEmpty(demoCustomer.SoDienThoai) && k.SoDienThoai == demoCustomer.SoDienThoai)))
+                    .ToList();
+
+                if (otherCustomers.Any())
+                {
+                    var otherIds = otherCustomers.Select(o => o.MaKhachHang).ToList();
+                    var ordersToMerge = _context.DonHangs
+                        .Where(o => o.MaKhachHang.HasValue && otherIds.Contains(o.MaKhachHang.Value))
+                        .ToList();
+
+                    foreach (var o in ordersToMerge)
+                    {
+                        o.MaKhachHang = demoCustomer.MaKhachHang;
+                    }
                     _context.SaveChanges();
                 }
 

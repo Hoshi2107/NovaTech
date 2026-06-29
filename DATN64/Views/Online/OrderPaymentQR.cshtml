@@ -1,0 +1,333 @@
+@model DATN64.Models.DonHang
+@{
+    Layout = "~/Views/Shared/_OnlineLayout.cshtml";
+    ViewData["Title"] = "Thanh toán đơn hàng bằng VietQR";
+}
+
+<div class="container py-5 animate-fade-in">
+    <div class="row justify-content-center">
+        <div class="col-lg-10 col-xl-8">
+            
+            <!-- Success Status Header -->
+            <div class="text-center mb-5">
+                <div class="qr-success-icon bg-success-subtle text-success mx-auto rounded-circle d-flex align-items-center justify-content-center mb-3 shadow-sm" style="width: 72px; height: 72px;">
+                    <i class="fa-solid fa-check fs-2 animate-bounce"></i>
+                </div>
+                <h3 class="fw-extrabold text-dark mb-2">Đặt hàng thành công!</h3>
+                <p class="text-muted-custom mx-auto mb-1" style="max-width: 500px;">
+                    Cảm ơn bạn đã lựa chọn NovaTech Store. Đơn hàng của bạn đã được ghi nhận trên hệ thống với mã đơn hàng <strong class="text-primary">#@Model.MaDonHang</strong>.
+                </p>
+                <span class="badge bg-warning-subtle text-warning px-3 py-2 rounded-pill fw-bold text-xs">
+                    <i class="fa-regular fa-clock me-1"></i> Chờ thanh toán chuyển khoản để hoàn tất giao dịch
+                </span>
+            </div>
+
+            <!-- Main Payment Dashboard Card -->
+            <div class="card-qr-payment p-4 p-md-5 rounded-4 shadow-sm border border-light bg-white mb-4">
+                <div class="row g-4 align-items-center">
+                    
+                    <!-- Left: QR Code Display -->
+                    <div class="col-md-6 text-center border-end-md">
+                        <div class="qr-wrapper p-3 rounded-4 bg-light d-inline-block position-relative mb-3 shadow-inner">
+                            <!-- Premium frame decorative borders -->
+                            <div class="qr-border-corner qr-top-left"></div>
+                            <div class="qr-border-corner qr-top-right"></div>
+                            <div class="qr-border-corner qr-bottom-left"></div>
+                            <div class="qr-border-corner qr-bottom-right"></div>
+                            
+                            <img src="@ViewBag.QRUrl" alt="Mã thanh toán VietQR" class="img-fluid rounded-3" style="max-height: 280px; width: auto; object-fit: contain;">
+                        </div>
+                        <p class="text-xxs text-muted mb-0 px-3" style="line-height: 1.4;">
+                            <i class="fa-solid fa-qrcode me-1 text-primary"></i> Quét mã QR bằng ứng dụng ngân hàng hoặc ví điện tử (MoMo, ZaloPay, Viettel Money...) để chuyển khoản chính xác và nhanh chóng nhất.
+                        </p>
+                    </div>
+
+                    <!-- Right: Bank Details and Copy buttons -->
+                    <div class="col-md-6 ps-md-4">
+                        <h5 class="fw-bold text-dark mb-4">Thông tin chuyển khoản</h5>
+                        
+                        <div class="d-flex flex-column gap-3">
+                            <!-- Bank name -->
+                            <div class="detail-row">
+                                <span class="label">Ngân hàng</span>
+                                <div class="value-wrapper">
+                                    <span class="value font-sans fw-bold">@ViewBag.BankName</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Account number -->
+                            <div class="detail-row">
+                                <span class="label">Số tài khoản</span>
+                                <div class="value-wrapper">
+                                    <span class="value font-mono fw-extrabold text-primary text-base" id="copyAcc">@ViewBag.AccountNo</span>
+                                    <button class="btn-copy" onclick="copyToClipboard('copyAcc', 'Số tài khoản')">
+                                        <i class="fa-regular fa-copy"></i> Sao chép
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Account name -->
+                            <div class="detail-row">
+                                <span class="label">Chủ tài khoản</span>
+                                <div class="value-wrapper">
+                                    <span class="value font-sans fw-bold text-uppercase">@ViewBag.AccountName</span>
+                                </div>
+                            </div>
+
+                            <!-- Amount -->
+                            <div class="detail-row">
+                                <span class="label">Số tiền cần thanh toán</span>
+                                <div class="value-wrapper">
+                                    <span class="value font-mono fw-extrabold text-danger text-base" id="copyAmount">@(Model.TongTien?.ToString("N0") ?? "0") đ</span>
+                                    <button class="btn-copy" onclick="copyToClipboardRaw('@((long)(Model.TongTien ?? 0))', 'Số tiền')">
+                                        <i class="fa-regular fa-copy"></i> Sao chép
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Content/Description -->
+                            <div class="detail-row">
+                                <span class="label">Nội dung chuyển khoản</span>
+                                <div class="value-wrapper">
+                                    <span class="value font-mono fw-bold bg-warning-subtle text-warning-custom px-2 py-1 rounded" id="copyContent">NovaTech thanh toan don hang @Model.MaDonHang</span>
+                                    <button class="btn-copy" onclick="copyToClipboard('copyContent', 'Nội dung chuyển khoản')">
+                                        <i class="fa-regular fa-copy"></i> Sao chép
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Important Warn block -->
+                        <div class="alert alert-danger-subtle border-0 rounded-3 mt-4 p-3 text-xxs mb-0">
+                            <div class="d-flex gap-2">
+                                <i class="fa-solid fa-triangle-exclamation text-danger mt-0.5"></i>
+                                <span>
+                                    <strong>Quan trọng:</strong> Vui lòng giữ nguyên nội dung chuyển khoản để hệ thống tự động xác nhận hóa đơn. Nhập sai nội dung hoặc số tiền có thể dẫn đến việc xử lý đơn hàng bị chậm trễ.
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Transaction Status & Simulation verification -->
+            <div class="card border border-light shadow-sm rounded-4 bg-white p-4 mb-4">
+                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="spinner-border text-primary spinner-border-sm" role="status" id="paymentSpinner"></div>
+                        <div>
+                            <h6 class="fw-bold text-dark mb-0" id="paymentStatusTitle">Hệ thống đang kiểm tra giao dịch chuyển khoản...</h6>
+                            <p class="text-xxs text-muted mb-0">Hóa đơn sẽ tự động duyệt sau khi nhận được thông báo biến động số dư.</p>
+                        </div>
+                    </div>
+                    <div>
+                        <button class="btn btn-outline-success btn-sm rounded-pill fw-bold px-4 py-2 text-xs" onclick="simulatePaymentApproval()">
+                            <i class="fa-solid fa-circle-check me-1"></i> Giả lập thanh toán thành công
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="text-center gap-3 d-flex justify-content-center">
+                <a href="@Url.Action("OrderHistory", "Online")" class="btn btn-outline-primary rounded-pill px-4 py-2.5 text-xs fw-bold">
+                    <i class="fa-solid fa-clock-rotate-left me-1"></i> Xem lịch sử đơn hàng
+                </a>
+                <a href="@Url.Action("Index", "Online")" class="btn btn-primary rounded-pill px-5 py-2.5 text-xs fw-bold">
+                    <i class="fa-solid fa-house me-1"></i> Quay về Trang chủ
+                </a>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .qr-success-icon {
+            animation: pulse-ring 2s infinite;
+        }
+
+        @@keyframes pulse-ring {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.4); }
+            70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(25, 135, 84, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); }
+        }
+
+        .card-qr-payment {
+            background-color: var(--nt-card);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .border-end-md {
+            border-right: 1px solid rgba(0,0,0,0.06);
+        }
+        @@media (max-width: 767.98px) {
+            .border-end-md {
+                border-right: none;
+                border-bottom: 1px solid rgba(0,0,0,0.06);
+                padding-bottom: 24px;
+            }
+        }
+
+        /* VietQR frame styles */
+        .qr-wrapper {
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            background: #ffffff !important;
+        }
+        .qr-border-corner {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            border: 3px solid var(--nt-primary);
+        }
+        .qr-top-left { top: 6px; left: 6px; border-right: none; border-bottom: none; }
+        .qr-top-right { top: 6px; right: 6px; border-left: none; border-bottom: none; }
+        .qr-bottom-left { bottom: 6px; left: 6px; border-right: none; border-top: none; }
+        .qr-bottom-right { bottom: 6px; right: 6px; border-left: none; border-top: none; }
+
+        /* Detail Rows for bank fields */
+        .detail-row {
+            display: flex;
+            flex-direction: column;
+            border-bottom: 1px dashed rgba(0,0,0,0.05);
+            padding-bottom: 10px;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+        .detail-row .label {
+            font-size: 0.7rem;
+            color: var(--nt-muted);
+            margin-bottom: 2px;
+            font-weight: 550;
+        }
+        .detail-row .value-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .detail-row .value {
+            font-size: 0.85rem;
+            color: var(--nt-text);
+        }
+        
+        .btn-copy {
+            background: transparent;
+            border: none;
+            color: var(--nt-primary);
+            font-size: 0.75rem;
+            font-weight: 650;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+        .btn-copy:hover {
+            background-color: rgba(2, 132, 199, 0.08);
+        }
+
+        .text-warning-custom {
+            color: #d97706;
+        }
+
+        /* Alert warning styling overrides */
+        .alert-danger-subtle {
+            background-color: #fef2f2;
+            color: #991b1b;
+        }
+
+        /* Dark Mode support overrides */
+        body[data-theme="dark"] .card-qr-payment {
+            background-color: var(--nt-card);
+            border-color: rgba(255,255,255,0.08);
+        }
+        body[data-theme="dark"] .border-end-md {
+            border-right-color: rgba(255,255,255,0.08);
+        }
+        body[data-theme="dark"] .detail-row {
+            border-bottom-color: rgba(255,255,255,0.08);
+        }
+        body[data-theme="dark"] .qr-wrapper {
+            background: #1e293b !important;
+            border-color: rgba(255,255,255,0.05);
+        }
+        body[data-theme="dark"] .alert-danger-subtle {
+            background-color: rgba(239, 68, 68, 0.08);
+            color: #fca5a5;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        function copyToClipboard(elementId, labelName) {
+            const el = document.getElementById(elementId);
+            const textToCopy = el.innerText || el.textContent;
+            
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                showToastNotification(labelName + ' đã được sao chép vào bộ nhớ tạm!', 'success');
+            }).catch(err => {
+                console.error('Không thể sao chép: ', err);
+            });
+        }
+
+        function copyToClipboardRaw(value, labelName) {
+            navigator.clipboard.writeText(value).then(() => {
+                showToastNotification(labelName + ' đã được sao chép vào bộ nhớ tạm!', 'success');
+            }).catch(err => {
+                console.error('Không thể sao chép: ', err);
+            });
+        }
+
+        function showToastNotification(message, type = 'success') {
+            // Check if standard toast notification trigger is available, else do standard alert or console log
+            if (window.showToast) {
+                window.showToast(message, type);
+            } else {
+                // Find bootstrap toast or custom toast if exists
+                let toastContainer = document.querySelector('.toast-container');
+                if (!toastContainer) {
+                    toastContainer = document.createElement('div');
+                    toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+                    toastContainer.style.zIndex = '9999';
+                    document.body.appendChild(toastContainer);
+                }
+                
+                const toastId = 'toast-' + Date.now();
+                const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+                const toastHtml = `
+                    <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0 show" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="d-flex">
+                            <div class="toast-body text-xs fw-bold">
+                                <i class="fa-solid fa-circle-check me-2"></i> ${message}
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                    </div>
+                `;
+                toastContainer.innerHTML = toastHtml;
+                setTimeout(() => {
+                    const t = document.getElementById(toastId);
+                    if (t) t.remove();
+                }, 4000);
+            }
+        }
+
+        function simulatePaymentApproval() {
+            const title = document.getElementById('paymentStatusTitle');
+            const spinner = document.getElementById('paymentSpinner');
+            
+            title.innerText = "Đang xác thực giao dịch chuyển khoản...";
+            spinner.className = "spinner-border text-warning spinner-border-sm";
+            
+            setTimeout(() => {
+                title.innerText = "Thanh toán thành công! Đơn hàng của bạn đã được chuyển sang trạng thái Đã Duyệt.";
+                spinner.className = "fa-solid fa-circle-check text-success fs-5 animate-pulse";
+                showToastNotification("Giao dịch chuyển khoản thành công!", "success");
+            }, 2500);
+        }
+    </script>
+}

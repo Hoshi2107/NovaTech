@@ -1,6 +1,654 @@
-﻿@{
-    ViewData["Title"] = "Privacy Policy";
+@{
+    Layout = "~/Views/Shared/_OnlineLayout.cshtml";
+    ViewData["Title"] = "Trung tâm Chính sách & Điều khoản dịch vụ";
 }
-<h1>@ViewData["Title"]</h1>
 
-<p>Use this page to detail your site's privacy policy.</p>
+<div class="container py-5">
+    <!-- Hero Section -->
+    <div class="policy-hero text-center mb-5 p-5 rounded-4 position-relative overflow-hidden">
+        <div class="policy-hero-bg"></div>
+        <div class="position-relative z-index-1">
+            <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill mb-3 fw-bold text-uppercase tracking-wider">
+                <i class="fa-solid fa-shield-halved me-1"></i> Trung tâm Hỗ trợ Pháp lý & Dịch vụ
+            </span>
+            <h1 class="display-5 fw-extrabold text-gradient-policy mb-3">Chính sách & Điều khoản NovaTech</h1>
+            <p class="text-muted-custom mx-auto fs-5" style="max-width: 700px;">
+                Chúng tôi luôn nỗ lực mang lại dịch vụ hoàn hảo, minh bạch và an toàn tuyệt đối cho mọi khách hàng khi trải nghiệm tại hệ thống bán lẻ công nghệ NovaTech.
+            </p>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="row g-4">
+        <!-- Left Sidebar Navigation -->
+        <div class="col-lg-3">
+            <div class="card-policy-menu sticky-lg-top p-3 rounded-4 shadow-sm" style="top: 100px; z-index: 100;">
+                <h5 class="fw-bold px-3 mb-3 text-secondary-custom">
+                    <i class="fa-solid fa-list-ul me-2 text-primary"></i>Danh mục chính sách
+                </h5>
+                <div class="nav flex-column nav-pills policy-tabs" id="policy-tab" role="tablist">
+                    <button class="nav-link-policy active" id="tab-privacy" data-bs-toggle="pill" data-bs-target="#content-privacy" type="button" role="tab">
+                        <i class="fa-solid fa-user-lock me-3"></i><span>Chính sách bảo mật</span>
+                    </button>
+                    <button class="nav-link-policy" id="tab-warranty" data-bs-toggle="pill" data-bs-target="#content-warranty" type="button" role="tab">
+                        <i class="fa-solid fa-arrows-rotate me-3"></i><span>Bảo hành & Đổi trả</span>
+                    </button>
+                    <button class="nav-link-policy" id="tab-shipping" data-bs-toggle="pill" data-bs-target="#content-shipping" type="button" role="tab">
+                        <i class="fa-solid fa-truck-fast me-3"></i><span>Vận chuyển & Giao nhận</span>
+                    </button>
+                    <button class="nav-link-policy" id="tab-terms" data-bs-toggle="pill" data-bs-target="#content-terms" type="button" role="tab">
+                        <i class="fa-solid fa-scale-balanced me-3"></i><span>Điều khoản sử dụng</span>
+                    </button>
+                    <button class="nav-link-policy" id="tab-payment" data-bs-toggle="pill" data-bs-target="#content-payment" type="button" role="tab">
+                        <i class="fa-solid fa-credit-card me-3"></i><span>Chính sách thanh toán</span>
+                    </button>
+                </div>
+
+                <hr class="my-4 border-light-custom">
+
+                <!-- Support Box Widget -->
+                <div class="support-widget p-3 rounded-3 text-center">
+                    <i class="fa-solid fa-headset fs-2 text-primary mb-2 animate-bounce"></i>
+                    <h6 class="fw-bold mb-1">Cần hỗ trợ thêm?</h6>
+                    <p class="text-xxs text-muted-custom mb-3">Đội ngũ CSKH NovaTech luôn sẵn sàng trả lời 24/7 các thắc mắc của bạn.</p>
+                    <a href="tel:19008198" class="btn btn-primary btn-sm w-100 rounded-pill fw-bold py-2">
+                        <i class="fa-solid fa-phone me-1"></i> 1900 8198
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Content Details -->
+        <div class="col-lg-9">
+            <div class="tab-content" id="policy-tabContent">
+                
+                <!-- 1. CHÍNH SÁCH BẢO MẬT THÔNG TIN -->
+                <div class="tab-pane fade show active animate-fade-in-policy" id="content-privacy" role="tabpanel">
+                    <div class="card-policy-content p-4 p-md-5 rounded-4 shadow-sm">
+                        <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom-custom">
+                            <div class="icon-shape bg-primary-subtle text-primary rounded-3 fs-3">
+                                <i class="fa-solid fa-user-lock"></i>
+                            </div>
+                            <div>
+                                <h2 class="fw-extrabold mb-1">Chính sách bảo mật thông tin</h2>
+                                <span class="text-xs text-muted-custom">Cập nhật lần cuối: Ngày 29/06/2026</span>
+                            </div>
+                        </div>
+
+                        <div class="policy-body">
+                            <p class="lead text-secondary-custom">
+                                NovaTech Store cam kết bảo vệ tối đa quyền riêng tư và thông tin cá nhân của bạn. Chính sách bảo mật này giải thích cách chúng tôi thu thập, sử dụng, lưu trữ và bảo mật dữ liệu của bạn khi bạn truy cập website hoặc mua sắm trực tuyến.
+                            </p>
+
+                            <h4 class="fw-bold mt-4 mb-3 text-primary-custom"><i class="fa-solid fa-circle-check me-2"></i>1. Dữ liệu chúng tôi thu thập</h4>
+                            <p>Khi bạn tạo tài khoản, mua hàng hoặc tương tác trên NovaTech Store, chúng tôi có thể thu thập các loại dữ liệu sau:</p>
+                            <ul>
+                                <li><strong>Thông tin cá nhân:</strong> Họ và tên, email, số điện thoại, địa chỉ nhận hàng và địa chỉ thanh toán.</li>
+                                <li><strong>Thông tin tài khoản:</strong> Tên đăng nhập, mật khẩu được mã hóa và lịch sử đơn hàng của bạn.</li>
+                                <li><strong>Thông tin kỹ thuật:</strong> Địa chỉ IP, loại trình duyệt, hệ điều hành và lịch sử xem sản phẩm trên hệ thống.</li>
+                            </ul>
+
+                            <h4 class="fw-bold mt-4 mb-3 text-primary-custom"><i class="fa-solid fa-gear me-2"></i>2. Mục đích sử dụng dữ liệu</h4>
+                            <p>Chúng tôi chỉ sử dụng thông tin của bạn vào các mục đích hợp pháp và minh bạch:</p>
+                            <div class="row g-3 my-2">
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light-custom rounded-3 border-light-custom">
+                                        <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-cart-flatbed me-2"></i>Xử lý đơn hàng</h6>
+                                        <p class="mb-0 text-xs">Xác nhận giao dịch, đóng gói, giao hàng, bảo hành sản phẩm và gửi các hóa đơn tài chính liên quan.</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light-custom rounded-3 border-light-custom">
+                                        <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-comments me-2"></i>Hỗ trợ khách hàng</h6>
+                                        <p class="mb-0 text-xs">Giải quyết mọi khiếu nại, sự cố kỹ thuật và tư vấn giải pháp thiết bị công nghệ phù hợp nhất.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h4 class="fw-bold mt-4 mb-3 text-primary-custom"><i class="fa-solid fa-lock me-2"></i>3. Cam kết an toàn & Bảo mật tuyệt đối</h4>
+                            <div class="alert-policy alert-info-custom p-4 rounded-3 mb-4">
+                                <div class="d-flex gap-3">
+                                    <i class="fa-solid fa-shield-halved fs-3 text-info mt-1"></i>
+                                    <div>
+                                        <h6 class="fw-bold mb-1">Mã hóa chuẩn công nghiệp SSL/TLS</h6>
+                                        <p class="mb-0 text-xs text-secondary-custom">
+                                            Mọi dữ liệu thanh toán và thông tin khách hàng truyền gửi đều được mã hóa bằng chuẩn mã hóa cao nhất. NovaTech cam kết tuyệt đối không bán, chuyển giao hay chia sẻ dữ liệu của bạn cho bất kỳ bên thứ ba nào khi chưa được bạn đồng ý.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h4 class="fw-bold mt-4 mb-3 text-primary-custom"><i class="fa-solid fa-user-pen me-2"></i>4. Quyền lợi của khách hàng</h4>
+                            <p>Khách hàng có toàn quyền yêu cầu chúng tôi cung cấp quyền truy cập, chỉnh sửa hoặc xóa vĩnh viễn các thông tin cá nhân được lưu trữ trên máy chủ của NovaTech. Bạn có thể dễ dàng quản lý thông tin trong trang <a href="/Online/Profile" class="text-primary fw-bold text-decoration-none hover-underline">Trang cá nhân</a> của mình.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. CHÍNH SÁCH BẢO HÀNH & ĐỔI TRẢ -->
+                <div class="tab-pane fade animate-fade-in-policy" id="content-warranty" role="tabpanel">
+                    <div class="card-policy-content p-4 p-md-5 rounded-4 shadow-sm">
+                        <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom-custom">
+                            <div class="icon-shape bg-primary-subtle text-primary rounded-3 fs-3">
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                            </div>
+                            <div>
+                                <h2 class="fw-extrabold mb-1">Chính sách bảo hành & Đổi trả</h2>
+                                <span class="text-xs text-muted-custom">Cập nhật lần cuối: Ngày 29/06/2026</span>
+                            </div>
+                        </div>
+
+                        <div class="policy-body">
+                            <p class="lead text-secondary-custom">
+                                Nhằm mang lại sự an tâm tuyệt đối khi mua sắm tại NovaTech Store, chúng tôi áp dụng chính sách bảo hành chính hãng chuẩn quốc tế và chương trình đổi trả đặc biệt dài tới 30 ngày.
+                            </p>
+
+                            <!-- Timeline Đổi trả bảo hành -->
+                            <h4 class="fw-bold mt-4 mb-4 text-primary-custom"><i class="fa-solid fa-circle-nodes me-2"></i>Quy trình đổi trả hàng trong 30 ngày đầu</h4>
+                            <div class="timeline-policy mb-4 ps-3">
+                                <div class="timeline-item-policy position-relative pb-4">
+                                    <div class="timeline-marker bg-primary text-white"><i class="fa-solid fa-1"></i></div>
+                                    <h6 class="fw-bold mb-1">Kiểm tra điều kiện đổi trả</h6>
+                                    <p class="mb-0 text-xs">Sản phẩm bị lỗi phần cứng từ nhà sản xuất, hoặc còn nguyên vẹn chưa qua sử dụng nếu khách hàng muốn đổi mẫu khác.</p>
+                                </div>
+                                <div class="timeline-item-policy position-relative pb-4">
+                                    <div class="timeline-marker bg-primary text-white"><i class="fa-solid fa-2"></i></div>
+                                    <h6 class="fw-bold mb-1">Liên hệ bộ phận CSKH</h6>
+                                    <p class="mb-0 text-xs">Mang máy trực tiếp đến cửa hàng NovaTech gần nhất hoặc gọi tới hotline 1900 8198 để bộ phận kỹ thuật kiểm định.</p>
+                                </div>
+                                <div class="timeline-item-policy position-relative">
+                                    <div class="timeline-marker bg-primary text-white"><i class="fa-solid fa-3"></i></div>
+                                    <h6 class="fw-bold mb-1">Nhận sản phẩm thay thế hoặc Hoàn tiền</h6>
+                                    <p class="mb-0 text-xs">Sau khi kiểm tra đúng lỗi, NovaTech sẽ cấp ngay một sản phẩm mới tương đương hoặc hoàn 100% số tiền giao dịch ban đầu.</p>
+                                </div>
+                            </div>
+
+                            <h4 class="fw-bold mt-4 mb-3 text-primary-custom"><i class="fa-solid fa-list-check me-2"></i>Điều khoản bảo hành chính hãng</h4>
+                            <div class="table-responsive">
+                                <table class="table table-bordered border-light-custom text-xs">
+                                    <thead>
+                                        <tr class="table-light-custom">
+                                            <th>Nhóm sản phẩm</th>
+                                            <th>Thời hạn bảo hành</th>
+                                            <th>Chính sách đổi mới</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="fw-bold">Điện thoại di động & Máy tính bảng</td>
+                                            <td>12 Tháng chính hãng</td>
+                                            <td>1 đổi 1 trong vòng 30 ngày đầu nếu có lỗi phần cứng</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-bold">Laptop & Linh kiện PC cao cấp</td>
+                                            <td>24 Tháng chính hãng</td>
+                                            <td>Đổi mới trong 15 ngày đầu, sửa chữa miễn phí trọn gói sau đó</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-bold">Phụ kiện & Thiết bị âm thanh</td>
+                                            <td>6 - 12 Tháng</td>
+                                            <td>1 đổi 1 ngay lập tức trong suốt thời gian bảo hành</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="alert-policy alert-warning-custom p-4 rounded-3 mt-4">
+                                <div class="d-flex gap-3">
+                                    <i class="fa-solid fa-triangle-exclamation fs-3 text-warning mt-1"></i>
+                                    <div>
+                                        <h6 class="fw-bold mb-1">Các trường hợp từ chối bảo hành</h6>
+                                        <p class="mb-0 text-xs text-secondary-custom">
+                                            Sản phẩm bị ngấm nước, rơi vỡ, biến dạng cơ học, cháy nổ nguồn điện do lỗi người dùng, hoặc thiết bị đã bị can thiệp/sửa chữa tại các đại lý không thuộc ủy quyền của NovaTech Store.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. CHÍNH SÁCH VẬN CHUYỂN & GIAO NHẬN -->
+                <div class="tab-pane fade animate-fade-in-policy" id="content-shipping" role="tabpanel">
+                    <div class="card-policy-content p-4 p-md-5 rounded-4 shadow-sm">
+                        <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom-custom">
+                            <div class="icon-shape bg-primary-subtle text-primary rounded-3 fs-3">
+                                <i class="fa-solid fa-truck-fast"></i>
+                            </div>
+                            <div>
+                                <h2 class="fw-extrabold mb-1">Chính sách vận chuyển & Giao nhận</h2>
+                                <span class="text-xs text-muted-custom">Cập nhật lần cuối: Ngày 29/06/2026</span>
+                            </div>
+                        </div>
+
+                        <div class="policy-body">
+                            <p class="lead text-secondary-custom">
+                                NovaTech Store tự hào hợp tác với các đơn vị vận chuyển hàng đầu Việt Nam để mang đến dịch vụ giao hàng nhanh chóng, an toàn và chuyên nghiệp nhất tới tận cửa nhà khách hàng.
+                            </p>
+
+                            <h4 class="fw-bold mt-4 mb-3 text-primary-custom"><i class="fa-solid fa-truck-ramp-box me-2"></i>1. Các phương thức giao nhận</h4>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <div class="p-3 border-light-custom rounded-3 h-100 bg-light-custom">
+                                        <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-rocket me-2"></i>Giao hàng hỏa tốc (2H)</h6>
+                                        <p class="mb-0 text-xs text-secondary-custom">Áp dụng cho khu vực nội thành Hà Nội & TP. Hồ Chí Minh với thời gian giao trong 2 tiếng sau khi xác nhận đơn hàng thành công.</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-3 border-light-custom rounded-3 h-100 bg-light-custom">
+                                        <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-box-open me-2"></i>Giao hàng tiêu chuẩn</h6>
+                                        <p class="mb-0 text-xs text-secondary-custom">Áp dụng cho mọi tỉnh thành khác trên toàn quốc. Đóng gói bảo mật bong bóng khí dày 3 lớp, có bảo hiểm sản phẩm kèm theo.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h4 class="fw-bold mt-4 mb-3 text-primary-custom"><i class="fa-solid fa-calculator me-2"></i>2. Biểu phí & Thời gian dự kiến</h4>
+                            <div class="table-responsive">
+                                <table class="table table-bordered border-light-custom text-xs text-center align-middle">
+                                    <thead>
+                                        <tr class="table-light-custom">
+                                            <th>Địa chỉ nhận hàng</th>
+                                            <th>Phương thức</th>
+                                            <th>Thời gian dự kiến</th>
+                                            <th>Phí vận chuyển</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="fw-bold text-start">Nội thành TP.HCM & Hà Nội</td>
+                                            <td>Hỏa tốc 2H</td>
+                                            <td>1 - 2 tiếng</td>
+                                            <td class="text-danger fw-bold">30.000 đ <span class="text-muted fw-normal">(Freeship đơn > 2.000.000đ)</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-bold text-start">Miền Trung, Miền Tây, Tây Nguyên</td>
+                                            <td>Tiêu chuẩn</td>
+                                            <td>2 - 3 ngày</td>
+                                            <td class="text-danger fw-bold">Miễn phí toàn bộ</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-bold text-start">Các huyện xã xa trung tâm</td>
+                                            <td>Tiêu chuẩn</td>
+                                            <td>3 - 5 ngày</td>
+                                            <td class="text-danger fw-bold">Miễn phí toàn bộ</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <h4 class="fw-bold mt-4 mb-3 text-primary-custom"><i class="fa-solid fa-eye me-2"></i>3. Đồng kiểm & Kiểm tra hàng hóa</h4>
+                            <p>Khi nhận hàng, quý khách có quyền yêu cầu nhân viên giao hàng mở hộp để đồng kiểm chất lượng bên ngoài. Khách hàng vui lòng kiểm tra kĩ:</p>
+                            <ul>
+                                <li>Vỏ hộp còn nguyên niêm phong (seal) của hãng hoặc tem niêm phong của NovaTech Store.</li>
+                                <li>Hóa đơn bán hàng, phiếu bảo hành đi kèm trong kiện hàng.</li>
+                                <li>Thiết bị nguyên vẹn, không có dấu hiệu móp méo, trầy xước bên ngoài.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. ĐIỀU KHOẢN SỬ DỤNG DỊCH VỤ -->
+                <div class="tab-pane fade animate-fade-in-policy" id="content-terms" role="tabpanel">
+                    <div class="card-policy-content p-4 p-md-5 rounded-4 shadow-sm">
+                        <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom-custom">
+                            <div class="icon-shape bg-primary-subtle text-primary rounded-3 fs-3">
+                                <i class="fa-solid fa-scale-balanced"></i>
+                            </div>
+                            <div>
+                                <h2 class="fw-extrabold mb-1">Điều khoản dịch vụ & Sử dụng</h2>
+                                <span class="text-xs text-muted-custom">Cập nhật lần cuối: Ngày 29/06/2026</span>
+                            </div>
+                        </div>
+
+                        <div class="policy-body">
+                            <p class="lead text-secondary-custom">
+                                Chào mừng bạn đến với NovaTech Store. Khi bạn sử dụng website của chúng tôi để tìm kiếm thông tin hoặc thực hiện giao dịch mua bán, bạn đã tự nguyện đồng ý tuân thủ các điều khoản dưới đây.
+                            </p>
+
+                            <h4 class="fw-bold mt-4 mb-3 text-primary-custom"><i class="fa-solid fa-user-shield me-2"></i>1. Sử dụng tài khoản cá nhân</h4>
+                            <p>Khi tạo tài khoản trên hệ thống, bạn có trách nhiệm tự bảo mật thông tin đăng nhập và mật khẩu của mình. Mọi giao dịch được thực hiện bằng tài khoản của bạn sẽ được xem là do bạn thực hiện hoặc có sự đồng ý của bạn.</p>
+
+                            <h4 class="fw-bold mt-4 mb-3 text-primary-custom"><i class="fa-solid fa-tags me-2"></i>2. Thông tin giá cả & Hình ảnh sản phẩm</h4>
+                            <p>NovaTech luôn cố gắng cung cấp thông tin chính xác nhất về sản phẩm và giá cả. Tuy nhiên, trong một số trường hợp hiếm gặp lỗi kỹ thuật hệ thống, giá sản phẩm có thể hiển thị sai lệch. Chúng tôi có quyền liên hệ hủy đơn hàng hoặc đề xuất điều chỉnh giá đối với những trường hợp lỗi kỹ thuật rõ ràng này.</p>
+
+                            <h4 class="fw-bold mt-4 mb-3 text-primary-custom"><i class="fa-solid fa-hand-holding-hand me-2"></i>3. Quyền sở hữu trí tuệ</h4>
+                            <p>Toàn bộ tài nguyên, bài viết, hình ảnh, mã nguồn và giao diện thiết kế trên hệ thống đều thuộc quyền sở hữu trí tuệ của NovaTech. Mọi hành vi sao chép trái phép không trích nguồn đều được coi là vi phạm pháp luật hiện hành.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. CHÍNH SÁCH THANH TOÁN -->
+                <div class="tab-pane fade animate-fade-in-policy" id="content-payment" role="tabpanel">
+                    <div class="card-policy-content p-4 p-md-5 rounded-4 shadow-sm">
+                        <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom-custom">
+                            <div class="icon-shape bg-primary-subtle text-primary rounded-3 fs-3">
+                                <i class="fa-solid fa-credit-card"></i>
+                            </div>
+                            <div>
+                                <h2 class="fw-extrabold mb-1">Chính sách thanh toán toán trực tuyến</h2>
+                                <span class="text-xs text-muted-custom">Cập nhật lần cuối: Ngày 29/06/2026</span>
+                            </div>
+                        </div>
+
+                        <div class="policy-body">
+                            <p class="lead text-secondary-custom">
+                                NovaTech Store cung cấp nhiều giải pháp thanh toán linh hoạt, tiện lợi và an toàn tuyệt đối giúp bạn nhanh chóng sở hữu sản phẩm công nghệ yêu thích của mình.
+                            </p>
+
+                            <h4 class="fw-bold mt-4 mb-3 text-primary-custom"><i class="fa-solid fa-money-bill-wave me-2"></i>1. Các hình thức thanh toán được hỗ trợ</h4>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-4">
+                                    <div class="p-3 text-center border-light-custom rounded-3 h-100 bg-light-custom">
+                                        <i class="fa-solid fa-hand-holding-dollar fs-3 text-primary mb-2"></i>
+                                        <h6 class="fw-bold mb-1">Thanh toán COD</h6>
+                                        <p class="mb-0 text-xxs text-muted-custom">Nhận sản phẩm công nghệ và trả tiền mặt trực tiếp cho shipper tại nhà.</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="p-3 text-center border-light-custom rounded-3 h-100 bg-light-custom">
+                                        <i class="fa-solid fa-money-check-dollar fs-3 text-primary mb-2"></i>
+                                        <h6 class="fw-bold mb-1">Chuyển khoản Ngân hàng</h6>
+                                        <p class="mb-0 text-xxs text-muted-custom">Hỗ trợ quét mã VietQR chuyển khoản nhanh 24/7 vô cùng tiện lợi.</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="p-3 text-center border-light-custom rounded-3 h-100 bg-light-custom">
+                                        <i class="fa-solid fa-wallet fs-3 text-primary mb-2"></i>
+                                        <h6 class="fw-bold mb-1">Thanh toán Ví điện tử</h6>
+                                        <p class="mb-0 text-xxs text-muted-custom">Hỗ trợ các ví điện tử phổ biến nhất như MoMo, ZaloPay, VNPAY-QR.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h4 class="fw-bold mt-4 mb-3 text-primary-custom"><i class="fa-solid fa-shield-cat me-2"></i>2. Bảo mật dữ liệu giao dịch</h4>
+                            <div class="alert-policy alert-success-custom p-4 rounded-3">
+                                <div class="d-flex gap-3">
+                                    <i class="fa-solid fa-circle-check fs-3 text-success mt-1"></i>
+                                    <div>
+                                        <h6 class="fw-bold mb-1">Chứng chỉ PCI-DSS bảo mật quốc tế</h6>
+                                        <p class="mb-0 text-xs text-secondary-custom">
+                                            Hệ thống thanh toán trực tuyến của chúng tôi liên kết trực tiếp với cổng thanh toán cổng được cấp chứng chỉ bảo mật quốc tế PCI-DSS cấp độ cao nhất. NovaTech tuyệt đối không lưu giữ thông tin thẻ ngân hàng hoặc thông tin mật khẩu tài khoản ví điện tử của khách hàng.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        /* Modern Premium Style Design overrides */
+        .text-gradient-policy {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .policy-hero {
+            background-color: var(--nt-card);
+            border: 1px solid rgba(2, 132, 199, 0.08);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+            transition: all 0.3s ease;
+        }
+
+        .policy-hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: radial-gradient(circle at 100% 0%, rgba(2, 132, 199, 0.08) 0%, transparent 60%);
+            z-index: 0;
+        }
+
+        .card-policy-menu {
+            background-color: var(--nt-card);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            border-radius: 16px;
+        }
+
+        .card-policy-content {
+            background-color: var(--nt-card);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            border-radius: 16px;
+            color: var(--nt-text);
+        }
+
+        /* Tabs Menu Navigation */
+        .nav-link-policy {
+            background: transparent;
+            border: none;
+            color: var(--nt-muted);
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 12px 18px;
+            border-radius: 12px;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            width: 100%;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-bottom: 6px;
+        }
+
+        .nav-link-policy:hover {
+            background-color: rgba(2, 132, 199, 0.05);
+            color: var(--nt-primary);
+            padding-left: 22px;
+        }
+
+        .nav-link-policy.active {
+            background-color: var(--nt-primary) !important;
+            color: #ffffff !important;
+            box-shadow: 0 8px 16px -4px rgba(2, 132, 199, 0.35);
+        }
+
+        .nav-link-policy i {
+            font-size: 1.1rem;
+            transition: transform 0.25s ease;
+        }
+
+        .nav-link-policy:hover i {
+            transform: scale(1.1);
+        }
+
+        /* Light/Dark dynamic theme components */
+        .border-bottom-custom {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        }
+        .border-light-custom {
+            border-color: rgba(0, 0, 0, 0.08) !important;
+        }
+        .bg-light-custom {
+            background-color: #f8fafc;
+        }
+        .table-light-custom {
+            background-color: #f1f5f9;
+        }
+        .text-secondary-custom {
+            color: #334155;
+        }
+        .text-primary-custom {
+            color: #0284c7;
+        }
+        .text-muted-custom {
+            color: #64748b;
+        }
+
+        /* Alert blocks */
+        .alert-policy {
+            border: 1px solid transparent;
+        }
+        .alert-info-custom {
+            background-color: #f0f9ff;
+            border-color: #bae6fd;
+            color: #0369a1;
+        }
+        .alert-warning-custom {
+            background-color: #fffbeb;
+            border-color: #fde68a;
+            color: #b45309;
+        }
+        .alert-success-custom {
+            background-color: #f0fdf4;
+            border-color: #bbf7d0;
+            color: #15803d;
+        }
+
+        .icon-shape {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+            flex-shrink: 0;
+        }
+        .bg-primary-subtle {
+            background-color: #e0f2fe !important;
+        }
+
+        /* Support Box Widget */
+        .support-widget {
+            background: linear-gradient(135deg, rgba(2, 132, 199, 0.03) 0%, rgba(3, 105, 161, 0.03) 100%);
+            border: 1px dashed rgba(2, 132, 199, 0.25);
+        }
+
+        /* Animation */
+        .animate-fade-in-policy {
+            animation: fadeInPolicy 0.3s ease-out forwards;
+        }
+        @@keyframes fadeInPolicy {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Policy list items style */
+        .policy-body ul {
+            padding-left: 20px;
+            margin-bottom: 24px;
+        }
+        .policy-body li {
+            margin-bottom: 8px;
+            position: relative;
+            list-style-type: none;
+            padding-left: 5px;
+        }
+        .policy-body li::before {
+            content: "•";
+            color: var(--nt-primary);
+            font-weight: bold;
+            display: inline-block;
+            width: 1em;
+            margin-left: -1em;
+        }
+
+        /* Timeline Policy */
+        .timeline-policy {
+            border-left: 2px solid rgba(2, 132, 199, 0.15);
+        }
+        .timeline-item-policy {
+            padding-left: 30px;
+        }
+        .timeline-marker {
+            position: absolute;
+            left: -11px;
+            top: 2px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: bold;
+        }
+
+        /* Dark Mode support overrides */
+        body[data-theme="dark"] .policy-hero {
+            background-color: var(--nt-card);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+        body[data-theme="dark"] .card-policy-menu,
+        body[data-theme="dark"] .card-policy-content {
+            background-color: var(--nt-card);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+        body[data-theme="dark"] .bg-light-custom {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+        body[data-theme="dark"] .border-light-custom {
+            border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        body[data-theme="dark"] .border-bottom-custom {
+            border-bottom-color: rgba(255, 255, 255, 0.08);
+        }
+        body[data-theme="dark"] .table-light-custom {
+            background-color: rgba(255, 255, 255, 0.04);
+            color: var(--nt-text);
+        }
+        body[data-theme="dark"] .text-secondary-custom {
+            color: #cbd5e1;
+        }
+        body[data-theme="dark"] .text-primary-custom {
+            color: #38bdf8;
+        }
+        body[data-theme="dark"] .text-muted-custom {
+            color: #94a3b8;
+        }
+        body[data-theme="dark"] .nav-link-policy {
+            color: #94a3b8;
+        }
+        body[data-theme="dark"] .nav-link-policy:hover {
+            background-color: rgba(56, 189, 248, 0.08);
+            color: #38bdf8;
+        }
+        body[data-theme="dark"] .nav-link-policy.active {
+            background-color: #0284c7 !important;
+            color: #ffffff !important;
+        }
+        body[data-theme="dark"] .bg-primary-subtle {
+            background-color: rgba(2, 132, 199, 0.15) !important;
+            color: #38bdf8 !important;
+        }
+        body[data-theme="dark"] .alert-info-custom {
+            background-color: rgba(2, 132, 199, 0.05);
+            border-color: rgba(2, 132, 199, 0.2);
+            color: #38bdf8;
+        }
+        body[data-theme="dark"] .alert-warning-custom {
+            background-color: rgba(217, 119, 6, 0.05);
+            border-color: rgba(217, 119, 6, 0.2);
+            color: #fbbf24;
+        }
+        body[data-theme="dark"] .alert-success-custom {
+            background-color: rgba(22, 163, 74, 0.05);
+            border-color: rgba(22, 163, 74, 0.2);
+            color: #4ade80;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Add custom animation trigger on tab click
+            const tabButtons = document.querySelectorAll('.nav-link-policy');
+            tabButtons.forEach(button => {
+                button.addEventListener('shown.bs.tab', function (event) {
+                    const targetPane = document.querySelector(event.target.getAttribute('data-bs-target'));
+                    if (targetPane) {
+                        targetPane.classList.remove('animate-fade-in-policy');
+                        // Trigger reflow to restart animation
+                        void targetPane.offsetWidth;
+                        targetPane.classList.add('animate-fade-in-policy');
+                    }
+                });
+            });
+        });
+    </script>
+}

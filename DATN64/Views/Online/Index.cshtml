@@ -170,31 +170,22 @@
                             }
                             else
                             {
-                                <!-- Slide 1 (Phone) -->
+                                <!-- Slide 1 (iPhone 15) -->
                                 <div class="carousel-item active h-100">
-                                    <img src="https://images.unsplash.com/photo-1598327105666-5b89351aff97?q=80&w=500" class="d-block w-100 h-100" style="height: 535px !important; object-fit: cover;" alt="Smartphone">
+                                    <img src="https://images.unsplash.com/photo-1510557880182-3f8ed9f4a7b6?q=80&w=800" class="d-block w-100 h-100" style="height: 535px !important; object-fit: cover;" alt="iPhone 15">
                                     <div class="carousel-caption d-block text-start p-3 rounded-4" style="background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); left: 15px; right: 15px; bottom: 15px; border: 1px solid rgba(255,255,255,0.1);">
                                         <span class="badge bg-info text-dark text-xxs fw-bold px-2.5 py-1 mb-2">HOT DEAL</span>
-                                        <h6 class="fw-bold text-white mb-1">Galaxy S24 Ultra</h6>
-                                        <p class="mb-0 text-warning fw-bold">29,990,000 đ</p>
+                                        <h6 class="fw-bold text-white mb-1">iPhone 15</h6>
+                                        <p class="mb-0 text-warning fw-bold">22,000,000 đ</p>
                                     </div>
                                 </div>
-                                <!-- Slide 2 (Smartwatch) -->
+                                <!-- Slide 2 (Asus Vivobook 15) -->
                                 <div class="carousel-item h-100">
-                                    <img src="https://images.unsplash.com/photo-1546868871-7041f2a55e12?q=80&w=500" class="d-block w-100 h-100" style="height: 535px !important; object-fit: cover;" alt="Smartwatch">
+                                    <img src="https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?q=80&w=800" class="d-block w-100 h-100" style="height: 535px !important; object-fit: cover;" alt="Asus Vivobook 15">
                                     <div class="carousel-caption d-block text-start p-3 rounded-4" style="background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); left: 15px; right: 15px; bottom: 15px; border: 1px solid rgba(255,255,255,0.1);">
                                         <span class="badge bg-info text-dark text-xxs fw-bold px-2.5 py-1 mb-2">MỚI VỀ</span>
-                                        <h6 class="fw-bold text-white mb-1">Apple Watch S9</h6>
-                                        <p class="mb-0 text-warning fw-bold">10,490,000 đ</p>
-                                    </div>
-                                </div>
-                                <!-- Slide 3 (Earbuds) -->
-                                <div class="carousel-item h-100">
-                                    <img src="https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?q=80&w=500" class="d-block w-100 h-100" style="height: 535px !important; object-fit: cover;" alt="Earbuds">
-                                    <div class="carousel-caption d-block text-start p-3 rounded-4" style="background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); left: 15px; right: 15px; bottom: 15px; border: 1px solid rgba(255,255,255,0.1);">
-                                        <span class="badge bg-info text-dark text-xxs fw-bold px-2.5 py-1 mb-2">BEST SELLER</span>
-                                        <h6 class="fw-bold text-white mb-1">Sony WF-1000XM5</h6>
-                                        <p class="mb-0 text-warning fw-bold">6,490,000 đ</p>
+                                        <h6 class="fw-bold text-white mb-1">Asus Vivobook 15</h6>
+                                        <p class="mb-0 text-warning fw-bold">15,000,000 đ</p>
                                     </div>
                                 </div>
                             }
@@ -230,7 +221,9 @@
                                         <img src="@(hero.HinhAnh ?? "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=150")" class="rounded-4" style="width: 70px; height: 70px; object-fit: cover;" alt="@hero.TenSanPham">
                                         <div class="flex-grow-1">
                                             <h6 class="mb-1 fw-bold text-dark text-sm">@hero.TenSanPham</h6>
-                                            <p class="text-secondary mb-0 text-xxs">@hero.ThuongHieu?.TenThuongHieu ?? "NovaTech"</p>
+                                            <p class="text-secondary mb-0 text-xxs text-truncate" style="max-width: 250px;" title="@(hero.MoTa ?? "")">
+                                                <strong class="text-info">@(hero.ThuongHieu?.TenThuongHieu ?? "NovaTech")</strong> • @(string.IsNullOrEmpty(hero.MoTa) ? "Sản phẩm chính hãng chất lượng cao" : hero.MoTa)
+                                            </p>
                                         </div>
                                         <div class="text-end">
                                             <span class="text-primary fw-bold text-sm">@hero.GiaBan.ToString("N0") đ</span>
@@ -277,31 +270,22 @@
                             }
                             else
                             {
-                                <!-- Slide 1 (Macbook) -->
+                                <!-- Slide 1 (Samsung Galaxy S24) -->
                                 <div class="carousel-item active h-100">
-                                    <img src="https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?q=80&w=500" class="d-block w-100 h-100" style="height: 535px !important; object-fit: cover;" alt="Macbook Pro">
+                                    <img src="https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?q=80&w=800" class="d-block w-100 h-100" style="height: 535px !important; object-fit: cover;" alt="Samsung Galaxy S24">
                                     <div class="carousel-caption d-block text-start p-3 rounded-4" style="background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); left: 15px; right: 15px; bottom: 15px; border: 1px solid rgba(255,255,255,0.1);">
                                         <span class="badge bg-warning text-dark text-xxs fw-bold px-2.5 py-1 mb-2">KHUYẾN MÃI</span>
-                                        <h6 class="fw-bold text-white mb-1">MacBook Pro M3 Max</h6>
-                                        <p class="mb-0 text-warning fw-bold">59,990,000 đ</p>
+                                        <h6 class="fw-bold text-white mb-1">Samsung Galaxy S24</h6>
+                                        <p class="mb-0 text-warning fw-bold">19,000,000 đ</p>
                                     </div>
                                 </div>
-                                <!-- Slide 2 (Gaming Keyboard) -->
+                                <!-- Slide 2 (Chuột Logitech G102) -->
                                 <div class="carousel-item h-100">
-                                    <img src="https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=500" class="d-block w-100 h-100" style="height: 535px !important; object-fit: cover;" alt="Gaming Keyboard">
+                                    <img src="https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?q=80&w=800" class="d-block w-100 h-100" style="height: 535px !important; object-fit: cover;" alt="Chuột Logitech G102">
                                     <div class="carousel-caption d-block text-start p-3 rounded-4" style="background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); left: 15px; right: 15px; bottom: 15px; border: 1px solid rgba(255,255,255,0.1);">
-                                        <span class="badge bg-warning text-dark text-xxs fw-bold px-2.5 py-1 mb-2">GAMING</span>
-                                        <h6 class="fw-bold text-white mb-1">ASUS ROG G16</h6>
-                                        <p class="mb-0 text-warning fw-bold">48,990,000 đ</p>
-                                    </div>
-                                </div>
-                                <!-- Slide 3 (Monitor) -->
-                                <div class="carousel-item h-100">
-                                    <img src="https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?q=80&w=500" class="d-block w-100 h-100" style="height: 535px !important; object-fit: cover;" alt="Monitor">
-                                    <div class="carousel-caption d-block text-start p-3 rounded-4" style="background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); left: 15px; right: 15px; bottom: 15px; border: 1px solid rgba(255,255,255,0.1);">
-                                        <span class="badge bg-warning text-dark text-xxs fw-bold px-2.5 py-1 mb-2">WORKSTATION</span>
-                                        <h6 class="fw-bold text-white mb-1">Dell UltraSharp 34"</h6>
-                                        <p class="mb-0 text-warning fw-bold">18,490,000 đ</p>
+                                        <span class="badge bg-warning text-dark text-xxs fw-bold px-2.5 py-1 mb-2">BEST SELLER</span>
+                                        <h6 class="fw-bold text-white mb-1">Chuột Logitech G102</h6>
+                                        <p class="mb-0 text-warning fw-bold">350,000 đ</p>
                                     </div>
                                 </div>
                             }
@@ -350,9 +334,18 @@
                             <a href="@Url.Action("Detail", "Online", new { id = p.MaSanPham })" class="btn btn-outline-danger rounded-pill text-xs py-2 fw-semibold">
                                 Xem Chi Tiết
                             </a>
-                            <button class="btn btn-danger rounded-pill text-xs py-2 fw-semibold text-white shadow-sm" type="button" onclick="addToCart(@p.MaSanPham)">
-                                <i class="fa-solid fa-cart-plus me-1"></i>Thêm Vào Giỏ
-                            </button>
+                            @if (p.SoLuongTon <= 0)
+                            {
+                                <button class="btn btn-secondary rounded-pill text-xs py-2 fw-semibold text-white shadow-sm" type="button" disabled>
+                                    <i class="fa-solid fa-ban me-1"></i>Hết Hàng
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-danger rounded-pill text-xs py-2 fw-semibold text-white shadow-sm" type="button" onclick="addToCart(@p.MaSanPham)">
+                                    <i class="fa-solid fa-cart-plus me-1"></i>Thêm Vào Giỏ
+                                </button>
+                            }
                         </div>
                     </div>
                 </div>
@@ -377,6 +370,8 @@
                         badge.innerText = data.cartCount;
                     }
                     alert('Đã thêm sản phẩm vào giỏ hàng!');
+                } else {
+                    alert(data.message || 'Không thể thêm sản phẩm vào giỏ hàng!');
                 }
             });
         }

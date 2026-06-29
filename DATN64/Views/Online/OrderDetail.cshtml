@@ -10,7 +10,15 @@
             <h3 class="fw-bold text-dark">Chi tiết đơn hàng #@Model.MaDonHang</h3>
             <p class="text-muted-custom text-sm mb-0">Thông tin đơn hàng và danh sách sản phẩm.</p>
         </div>
-        <a href="@Url.Action("OrderHistory", "Online")" class="btn btn-outline-primary rounded-pill px-4">Quay lại lịch sử</a>
+        <div class="d-flex gap-2">
+            @if (Model.TrangThai == "Chờ duyệt" || Model.TrangThai == "Đơn mới" || Model.TrangThai == "Chờ thanh toán" || string.IsNullOrEmpty(Model.TrangThai))
+            {
+                <button type="button" class="btn btn-danger rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#cancelOrderModal">
+                    <i class="fa-solid fa-rectangle-xmark me-2"></i>Hủy đơn hàng
+                </button>
+            }
+            <a href="@Url.Action("OrderHistory", "Online")" class="btn btn-outline-primary rounded-pill px-4">Quay lại lịch sử</a>
+        </div>
     </div>
 
     <div class="row g-4">
@@ -47,7 +55,7 @@
                                     <div class="col">
                                         <h6 class="fw-bold mb-1">@item.SanPham?.TenSanPham</h6>
                                         <p class="text-xxs text-muted mb-2">Số lượng: @item.SoLuong - Giá: @item.DonGia.ToString("N0") đ</p>
-                                        <p class="text-sm mb-0">Tổng: @(item.DonGia * item.SoLuong).ToString("N0") đ</p>
+                                        <p class="text-sm mb-0">Tổng: @((item.DonGia * item.SoLuong).ToString("N0")) đ</p>
                                     </div>
                                 </div>
                             </div>
@@ -86,11 +94,24 @@
                     @{
                         var status = Model.TrangThai?.Trim() ?? "Chờ duyệt";
                         var steps = new[] { "Chờ duyệt", "Đã duyệt", "Đang vận chuyển", "Hoàn tất" };
+                        int currentStepIndex = 0;
+                        if (status == "Đã duyệt" || status == "Đã thanh toán")
+                        {
+                            currentStepIndex = 1;
+                        }
+                        else if (status == "Đang vận chuyển" || status == "Đang giao")
+                        {
+                            currentStepIndex = 2;
+                        }
+                        else if (status == "Hoàn tất" || status == "Hoàn thành")
+                        {
+                            currentStepIndex = 3;
+                        }
                     }
                     @for (var i = 0; i < steps.Length; i++)
                     {
                         var step = steps[i];
-                        var completed = steps.Take(i + 1).Contains(status);
+                        var completed = currentStepIndex >= i;
                         <div class="d-flex align-items-center mb-3">
                             <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 38px; height: 38px; background: @(completed ? "#0284c7" : "#e2e8f0"); color: @(completed ? "#fff" : "#64748b");">
                                 <i class="fa-solid fa-check"></i>
@@ -106,3 +127,142 @@
         </div>
     </div>
 </div>
+
+<!-- Cancel Order Modal -->
+<div class="modal fade" id="cancelOrderModal" tabindex="-1" aria-labelledby="cancelOrderModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4" style="background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(10px);">
+            <div class="modal-header border-0 bg-danger text-white rounded-top-4 py-3">
+                <h5 class="modal-title fw-bold" id="cancelOrderModalLabel">
+                    <i class="fa-solid fa-circle-exclamation me-2"></i>Hủy đơn hàng #@Model.MaDonHang
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="@Url.Action("CancelOrder", "Online", new { id = Model.MaDonHang })" method="post" id="cancelOrderForm">
+                @Html.AntiForgeryToken()
+                <div class="modal-body p-4">
+                    <p class="text-muted text-sm mb-4">
+                        Chúng tôi rất tiếc khi bạn muốn hủy đơn hàng. Vui lòng cho biết lý do hủy đơn để giúp chúng tôi phục vụ bạn tốt hơn trong tương lai (chọn ít nhất 1 lý do):
+                    </p>
+                    
+                    <div class="d-flex flex-column gap-2 mb-3">
+                        <div class="form-check custom-checkbox-item p-3 border rounded-3 d-flex align-items-center" style="cursor: pointer; transition: all 0.2s ease;">
+                            <input class="form-check-input ms-0 me-3 cancel-reason-checkbox" type="checkbox" name="reasons" value="Tôi muốn thay đổi thông tin nhận hàng (địa chỉ, số điện thoại, v.v.)" id="reason1">
+                            <label class="form-check-label text-dark fw-medium w-100 mb-0" for="reason1" style="cursor: pointer; user-select: none;">
+                                Thay đổi thông tin nhận hàng
+                            </label>
+                        </div>
+                        
+                        <div class="form-check custom-checkbox-item p-3 border rounded-3 d-flex align-items-center" style="cursor: pointer; transition: all 0.2s ease;">
+                            <input class="form-check-input ms-0 me-3 cancel-reason-checkbox" type="checkbox" name="reasons" value="Tôi muốn thay đổi sản phẩm/số lượng trong đơn hàng" id="reason2">
+                            <label class="form-check-label text-dark fw-medium w-100 mb-0" for="reason2" style="cursor: pointer; user-select: none;">
+                                Thay đổi sản phẩm / số lượng
+                            </label>
+                        </div>
+
+                        <div class="form-check custom-checkbox-item p-3 border rounded-3 d-flex align-items-center" style="cursor: pointer; transition: all 0.2s ease;">
+                            <input class="form-check-input ms-0 me-3 cancel-reason-checkbox" type="checkbox" name="reasons" value="Tôi tìm thấy sản phẩm tương tự ở nơi khác với giá tốt hơn" id="reason3">
+                            <label class="form-check-label text-dark fw-medium w-100 mb-0" for="reason3" style="cursor: pointer; user-select: none;">
+                                Tìm thấy sản phẩm khác giá tốt hơn
+                            </label>
+                        </div>
+
+                        <div class="form-check custom-checkbox-item p-3 border rounded-3 d-flex align-items-center" style="cursor: pointer; transition: all 0.2s ease;">
+                            <input class="form-check-input ms-0 me-3 cancel-reason-checkbox" type="checkbox" name="reasons" value="Không còn nhu cầu mua sản phẩm này nữa" id="reason4">
+                            <label class="form-check-label text-dark fw-medium w-100 mb-0" for="reason4" style="cursor: pointer; user-select: none;">
+                                Không còn nhu cầu mua hàng
+                            </label>
+                        </div>
+
+                        <div class="form-check custom-checkbox-item p-3 border rounded-3 d-flex align-items-center" style="cursor: pointer; transition: all 0.2s ease;">
+                            <input class="form-check-input ms-0 me-3" type="checkbox" id="reasonOtherCheckbox">
+                            <label class="form-check-label text-dark fw-medium w-100 mb-0" for="reasonOtherCheckbox" style="cursor: pointer; user-select: none;">
+                                Lý do khác
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Other reason detail text box -->
+                    <div class="mb-3 d-none" id="otherReasonContainer">
+                        <label for="otherReason" class="form-label text-xs fw-semibold text-muted mb-1">Chi tiết lý do khác:</label>
+                        <textarea class="form-control rounded-3 border-light-custom" id="otherReason" name="otherReason" rows="3" placeholder="Vui lòng nhập rõ lý do hủy đơn hàng..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0 d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4" id="confirmCancelBtn" disabled>
+                        Xác nhận hủy
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .custom-checkbox-item:hover {
+        background-color: rgba(220, 53, 69, 0.03);
+        border-color: rgba(220, 53, 69, 0.3) !important;
+    }
+    .custom-checkbox-item input[type="checkbox"]:checked + label {
+        color: #dc3545 !important;
+        font-weight: 600 !important;
+    }
+    .border-light-custom {
+        border-color: #e2e8f0;
+    }
+    .border-light-custom:focus {
+        border-color: #dc3545;
+        box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+    }
+</style>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Move modal to body to avoid z-index/stacking context issues with main container
+        const modalElement = document.getElementById("cancelOrderModal");
+        if (modalElement) {
+            document.body.appendChild(modalElement);
+        }
+
+        const checkBoxes = document.querySelectorAll(".cancel-reason-checkbox");
+        const reasonOtherCheckbox = document.getElementById("reasonOtherCheckbox");
+        const otherReasonContainer = document.getElementById("otherReasonContainer");
+        const otherReasonInput = document.getElementById("otherReason");
+        const confirmCancelBtn = document.getElementById("confirmCancelBtn");
+
+        // Custom checkbox item click triggers actual checkbox select when clicking the container
+        document.querySelectorAll(".custom-checkbox-item").forEach(item => {
+            item.addEventListener("click", function(e) {
+                if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') {
+                    const checkbox = this.querySelector('input[type="checkbox"]');
+                    checkbox.checked = !checkbox.checked;
+                    checkbox.dispatchEvent(new Event('change'));
+                }
+            });
+        });
+
+        function validateReasons() {
+            let anyChecked = Array.from(checkBoxes).some(cb => cb.checked);
+            
+            if (reasonOtherCheckbox.checked) {
+                otherReasonContainer.classList.remove("d-none");
+                if (otherReasonInput.value.trim().length > 0) {
+                    anyChecked = true;
+                }
+            } else {
+                otherReasonContainer.classList.add("d-none");
+            }
+
+            confirmCancelBtn.disabled = !anyChecked;
+        }
+
+        checkBoxes.forEach(cb => {
+            cb.addEventListener("change", validateReasons);
+        });
+
+        reasonOtherCheckbox.addEventListener("change", validateReasons);
+        otherReasonInput.addEventListener("input", validateReasons);
+    });
+</script>
+

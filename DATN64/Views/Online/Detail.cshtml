@@ -89,10 +89,20 @@
 
             <!-- Actions -->
             <div class="mb-4">
-                <button class="btn btn-danger w-100 py-3 fw-bold fs-5 text-white rounded-3 shadow-sm" style="background: #D70018;" onclick="addToCart(@Model.MaSanPham)">
-                    MUA NGAY
-                    <div class="fw-normal" style="font-size: 0.85rem;">Giao tận nơi hoặc nhận tại cửa hàng</div>
-                </button>
+                @if (Model.SoLuongTon <= 0)
+                {
+                    <button class="btn btn-secondary w-100 py-3 fw-bold fs-5 text-white rounded-3 shadow-sm" disabled style="background: #6c757d;">
+                        HẾT HÀNG
+                        <div class="fw-normal" style="font-size: 0.85rem;">Sản phẩm tạm thời hết hàng</div>
+                    </button>
+                }
+                else
+                {
+                    <button class="btn btn-danger w-100 py-3 fw-bold fs-5 text-white rounded-3 shadow-sm" style="background: #D70018;" onclick="addToCart(@Model.MaSanPham)">
+                        MUA NGAY
+                        <div class="fw-normal" style="font-size: 0.85rem;">Giao tận nơi hoặc nhận tại cửa hàng</div>
+                    </button>
+                }
             </div>
 
             <!-- Specs Info -->
@@ -121,6 +131,8 @@
                 if (data.success) {
                     alert('Đã thêm sản phẩm vào giỏ hàng!');
                     window.location.href = '@Url.Action("Cart", "Online")';
+                } else {
+                    alert(data.message || 'Không thể thêm sản phẩm vào giỏ hàng!');
                 }
             });
         }

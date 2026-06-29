@@ -39,17 +39,18 @@ namespace DATN64.Controllers
                 .Where(p => p.TrangThai == "Đang bán")
                 .ToList();
 
-            ViewBag.LeftCarouselProducts = products
-                .Where(p => p.SoLuongTon > 0)
+            var activeProducts = products.Where(p => p.SoLuongTon > 0).ToList();
+
+            ViewBag.LeftCarouselProducts = activeProducts
                 .OrderByDescending(p => p.GiaBan)
                 .Take(4)
                 .ToList();
-            ViewBag.RightCarouselProducts = products
-                .Where(p => p.SoLuongTon > 0)
-                .OrderByDescending(p => p.GiaBan)
-                .Skip(4)
+
+            ViewBag.RightCarouselProducts = activeProducts
+                .OrderBy(p => p.GiaBan)
                 .Take(4)
                 .ToList();
+
             ViewBag.HeroBannerProducts = products
                 .Where(p => !string.IsNullOrEmpty(p.HinhAnh))
                 .Take(5)
@@ -324,8 +325,19 @@ namespace DATN64.Controllers
             var p = _context.SanPhams.FirstOrDefault(prod => prod.MaSanPham == id);
             if (p == null) return NotFound();
 
+            if (p.SoLuongTon <= 0)
+            {
+                return Json(new { success = false, message = "Sản phẩm này đã hết hàng!" });
+            }
+
             var cart = GetCartFromSession();
             var item = cart.FirstOrDefault(i => i.ProductId == id);
+            int currentQtyInCart = item?.Quantity ?? 0;
+
+            if (currentQtyInCart + qty > p.SoLuongTon)
+            {
+                return Json(new { success = false, message = $"Số lượng yêu cầu vượt quá tồn kho khả dụng ({p.SoLuongTon} sản phẩm)!" });
+            }
 
             if (item == null)
             {
@@ -353,6 +365,14 @@ namespace DATN64.Controllers
         public IActionResult UpdateCart(int id, int qty)
         {
             if (qty <= 0) return RemoveFromCart(id);
+
+            var p = _context.SanPhams.FirstOrDefault(prod => prod.MaSanPham == id);
+            if (p == null) return NotFound();
+
+            if (qty > p.SoLuongTon)
+            {
+                return Json(new { success = false, message = $"Số lượng yêu cầu vượt quá tồn kho khả dụng ({p.SoLuongTon} sản phẩm)!" });
+            }
 
             var cart = GetCartFromSession();
             var item = cart.FirstOrDefault(i => i.ProductId == id);
@@ -473,7 +493,18 @@ namespace DATN64.Controllers
                 ? _context.NhanViens.FirstOrDefault(e => e.Email == userEmail)
                 : null;
 
-            var customer = _context.KhachHangs.FirstOrDefault(k => k.SoDienThoai == customerPhone);
+            KhachHang? customer = null;
+            var loggedInCustomerId = GetCurrentCustomerId();
+            if (loggedInCustomerId != null)
+            {
+                customer = _context.KhachHangs.FirstOrDefault(k => k.MaKhachHang == loggedInCustomerId);
+            }
+
+            if (customer == null)
+            {
+                customer = _context.KhachHangs.FirstOrDefault(k => k.SoDienThoai == customerPhone);
+            }
+
             if (customer == null)
             {
                 customer = new KhachHang
@@ -481,6 +512,7 @@ namespace DATN64.Controllers
                     HoTen = customerName,
                     SoDienThoai = customerPhone,
                     DiaChi = customerAddress,
+                    Email = userEmail,
                     DiemTichLuy = 0
                 };
                 _context.KhachHangs.Add(customer);
@@ -495,6 +527,14 @@ namespace DATN64.Controllers
                 if (string.IsNullOrWhiteSpace(customer.HoTen) && !string.IsNullOrWhiteSpace(customerName))
                 {
                     customer.HoTen = customerName;
+                }
+                if (string.IsNullOrWhiteSpace(customer.SoDienThoai) && !string.IsNullOrWhiteSpace(customerPhone))
+                {
+                    customer.SoDienThoai = customerPhone;
+                }
+                if (string.IsNullOrWhiteSpace(customer.Email) && !string.IsNullOrEmpty(userEmail))
+                {
+                    customer.Email = userEmail;
                 }
                 _context.SaveChanges();
             }
@@ -572,7 +612,39 @@ namespace DATN64.Controllers
             TempData["ToastMessage"] = $"Đặt hàng thành công! Mã đơn hàng của bạn: #{order.MaDonHang}";
             TempData["ToastType"] = "success";
 
+            if (paymentMethod == "Chuyển khoản")
+            {
+                return RedirectToAction("OrderPaymentQR", new { id = order.MaDonHang });
+            }
+
             return RedirectToAction("Index");
+        }
+
+        public IActionResult OrderPaymentQR(int id)
+        {
+            var order = _context.DonHangs
+                .Include(o => o.KhachHang)
+                .Include(o => o.ChiTietDonHangs)
+                    .ThenInclude(c => c.SanPham)
+                .FirstOrDefault(o => o.MaDonHang == id);
+
+            if (order == null) return NotFound();
+
+            string bankId = "vietinbank";
+            string accountNo = "108602210708";
+            string accountName = "CONG TY TNHH NOVATECH";
+            string amount = ((long)order.TongTien).ToString();
+            string addInfo = Uri.EscapeDataString($"NovaTech thanh toan don hang {order.MaDonHang}");
+            string formattedAccountName = Uri.EscapeDataString(accountName);
+
+            string qrUrl = $"https://img.vietqr.io/image/{bankId}-{accountNo}-compact2.png?amount={amount}&addInfo={addInfo}&accountName={formattedAccountName}";
+
+            ViewBag.QRUrl = qrUrl;
+            ViewBag.AccountNo = accountNo;
+            ViewBag.AccountName = accountName;
+            ViewBag.BankName = "Ngân hàng TMCP Công Thương Việt Nam (VietinBank)";
+
+            return View(order);
         }
 
         public IActionResult Favorites()
@@ -642,6 +714,91 @@ namespace DATN64.Controllers
 
             if (order == null) return NotFound();
             return View(order);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult CancelOrder(int id, string[] reasons, string otherReason)
+        {
+            var customerId = GetCurrentCustomerId();
+            if (customerId == null)
+            {
+                TempData["ToastMessage"] = "Bạn cần đăng nhập để thực hiện thao tác này.";
+                TempData["ToastType"] = "danger";
+                return RedirectToAction("Login", "Account");
+            }
+
+            var order = _context.DonHangs
+                .Include(o => o.ChiTietDonHangs)
+                    .ThenInclude(c => c.SanPham)
+                .FirstOrDefault(o => o.MaDonHang == id && o.MaKhachHang == customerId);
+
+            if (order == null)
+            {
+                TempData["ToastMessage"] = "Không tìm thấy đơn hàng.";
+                TempData["ToastType"] = "danger";
+                return RedirectToAction("OrderHistory");
+            }
+
+            var status = order.TrangThai?.Trim();
+            if (status != "Chờ duyệt" && status != "Đơn mới" && status != "Chờ thanh toán" && !string.IsNullOrEmpty(status))
+            {
+                TempData["ToastMessage"] = "Không thể hủy đơn hàng ở trạng thái hiện tại.";
+                TempData["ToastType"] = "danger";
+                return RedirectToAction("OrderDetail", new { id = id });
+            }
+
+            // Gather cancellation reasons
+            var selectedReasons = new List<string>();
+            if (reasons != null && reasons.Length > 0)
+            {
+                selectedReasons.AddRange(reasons);
+            }
+            if (!string.IsNullOrWhiteSpace(otherReason))
+            {
+                selectedReasons.Add(otherReason);
+            }
+
+            string cancelReasonText = string.Join("; ", selectedReasons);
+            if (string.IsNullOrWhiteSpace(cancelReasonText))
+            {
+                cancelReasonText = "Không có lý do cụ thể.";
+            }
+
+            // Update order status and details
+            order.TrangThai = "Đã hủy";
+            order.GhiChu = (string.IsNullOrEmpty(order.GhiChu) ? "" : order.GhiChu + "\n") + $"Lý do hủy: {cancelReasonText} (Hủy lúc {DateTime.Now:dd/MM/yyyy HH:mm})";
+
+            // Restore product stock quantities
+            if (order.ChiTietDonHangs != null)
+            {
+                foreach (var item in order.ChiTietDonHangs)
+                {
+                    if (item.SanPham != null)
+                    {
+                        item.SanPham.SoLuongTon = item.SanPham.SoLuongTon + item.SoLuong;
+                    }
+                }
+            }
+
+            // Add system notification for cancellation
+            var customerName = _context.KhachHangs.FirstOrDefault(k => k.MaKhachHang == customerId)?.HoTen ?? "Khách hàng";
+            var notification = new SystemNotification
+            {
+                Title = "Đơn hàng đã bị hủy",
+                Message = $"Khách hàng {customerName} đã hủy đơn hàng #{order.MaDonHang}. Lý do: {cancelReasonText}",
+                Type = "Đơn mới",
+                Timestamp = DateTime.Now,
+                IsRead = false
+            };
+            _context.SystemNotifications.Add(notification);
+
+            _context.SaveChanges();
+
+            TempData["ToastMessage"] = "Hủy đơn hàng thành công!";
+            TempData["ToastType"] = "success";
+
+            return RedirectToAction("OrderDetail", new { id = id });
         }
 
         // ==================== CUSTOMER PROFILE ====================
