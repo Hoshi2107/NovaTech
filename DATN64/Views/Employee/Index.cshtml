@@ -287,21 +287,21 @@
                                 }
                             </td>
                             <td class="text-end">
-                                <button class="btn btn-outline-info btn-xs rounded-circle p-2 me-1"
+                                <button class="btn btn-sm btn-light text-primary rounded-3 shadow-sm border-0 me-1 px-2"
                                         onclick="openEditModal(@emp.MaNhanVien,'@Html.Raw(emp.HoTen.Replace("'","\\'"  ))','@Html.Raw(emp.Email ?? "")','@Html.Raw(emp.SoDienThoai ?? "")','@Html.Raw(emp.TrangThai ?? "Hoạt động")',[@roleIdsStr],@(emp.LuongTheoGio.HasValue ? emp.LuongTheoGio.Value.ToString() : "0"))"
                                         title="Sửa nhân viên">
-                                    <i class="fa-solid fa-pen fa-xs"></i>
+                                    <i class="fa-solid fa-pen-to-square"></i> <span class="d-none d-xl-inline ms-1">Sửa</span>
                                 </button>
                                 @if (emp.TrangThai == "Hoạt động")
                                 {
-                                    <button class="btn btn-outline-warning btn-xs rounded-circle p-2" onclick="toggleStatus(@emp.MaNhanVien,'@Html.Raw(emp.HoTen)','Bị khóa')" title="Vô hiệu hóa">
-                                        <i class="fa-solid fa-lock fa-xs"></i>
+                                    <button class="btn btn-sm btn-light text-warning rounded-3 shadow-sm border-0 px-2" onclick="toggleStatus(@emp.MaNhanVien,'@Html.Raw(emp.HoTen)','Bị khóa')" title="Vô hiệu hóa">
+                                        <i class="fa-solid fa-lock"></i> <span class="d-none d-xl-inline ms-1">Khóa</span>
                                     </button>
                                 }
                                 else
                                 {
-                                    <button class="btn btn-outline-success btn-xs rounded-circle p-2" onclick="toggleStatus(@emp.MaNhanVien,'@Html.Raw(emp.HoTen)','Hoạt động')" title="Mở khóa">
-                                        <i class="fa-solid fa-unlock fa-xs"></i>
+                                    <button class="btn btn-sm btn-light text-success rounded-3 shadow-sm border-0 px-2" onclick="toggleStatus(@emp.MaNhanVien,'@Html.Raw(emp.HoTen)','Hoạt động')" title="Mở khóa">
+                                        <i class="fa-solid fa-lock-open"></i> <span class="d-none d-xl-inline ms-1">Mở</span>
                                     </button>
                                 }
                             </td>
@@ -309,6 +309,10 @@
                     }
                 </tbody>
             </table>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+            <div class="text-muted text-xs fw-semibold" id="paginationInfo"></div>
+            <div class="d-flex gap-1" id="paginationControls"></div>
         </div>
     </div>
 
@@ -917,14 +921,56 @@
         event.currentTarget.classList.add('active');
     }
 
-    // ─── Employee search ─────────────────────────────────────────────
-    function filterEmployees() {
-        var filter = document.getElementById('employeeSearch').value.toUpperCase();
-        var rows = document.querySelectorAll('#employeesTable tbody tr');
-        rows.forEach(function(row) {
-            var name = row.cells[1]?.textContent || '';
-            row.style.display = name.toUpperCase().includes(filter) ? '' : 'none';
+    // ─── Employee search & pagination ─────────────────────────────────────────────
+    let currentPage = 1;
+    const itemsPerPage = 10;
+
+    function renderTable() {
+        const filter = document.getElementById('employeeSearch').value.toUpperCase();
+        const rows = Array.from(document.querySelectorAll('#employeesTable tbody tr'));
+        
+        // Filter rows
+        const filteredRows = rows.filter(row => {
+            const name = row.cells[1]?.textContent || '';
+            const email = row.cells[2]?.textContent || '';
+            const phone = row.cells[3]?.textContent || '';
+            const txtValue = name + " " + email + " " + phone;
+            return txtValue.toUpperCase().includes(filter);
         });
+
+        // Calculate pagination
+        const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
+        if (currentPage > totalPages) currentPage = totalPages || 1;
+
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+
+        // Hide all, show paginated
+        rows.forEach(row => row.style.display = 'none');
+        filteredRows.slice(startIndex, endIndex).forEach(row => row.style.display = '');
+
+        // Update info & controls
+        document.getElementById('paginationInfo').textContent = `Hiển thị ${filteredRows.length > 0 ? startIndex + 1 : 0} đến ${Math.min(endIndex, filteredRows.length)} trong tổng số ${filteredRows.length} nhân viên`;
+        
+        let controlsHtml = '';
+        if (totalPages > 1) {
+            controlsHtml += `<button class="btn btn-sm btn-light border" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}><i class="fa-solid fa-chevron-left"></i></button>`;
+            for (let i = 1; i <= totalPages; i++) {
+                controlsHtml += `<button class="btn btn-sm ${i === currentPage ? 'btn-primary' : 'btn-light border'} fw-bold" onclick="changePage(${i})">${i}</button>`;
+            }
+            controlsHtml += `<button class="btn btn-sm btn-light border" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}><i class="fa-solid fa-chevron-right"></i></button>`;
+        }
+        document.getElementById('paginationControls').innerHTML = controlsHtml;
+    }
+
+    function changePage(page) {
+        currentPage = page;
+        renderTable();
+    }
+
+    function filterEmployees() {
+        currentPage = 1;
+        renderTable();
     }
 
     // ─── Open edit modal ─────────────────────────────────────────────
@@ -983,6 +1029,7 @@
 
     // ─── Init tooltips ───────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
+        renderTable();
         var tooltipEls = document.querySelectorAll('[data-bs-toggle="tooltip"]');
         tooltipEls.forEach(el => new bootstrap.Tooltip(el));
     });
