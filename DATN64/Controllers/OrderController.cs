@@ -99,7 +99,13 @@ public IActionResult UpdateStatus(int id, string trangThai)
 
     var oldStatus = order.TrangThai ?? "";
     var newStatus = trangThai.Trim();
-
+    
+if (oldStatus == "Hoàn thành")
+{
+    TempData["ToastMessage"] = "Đơn hàng đã hoàn thành nên không thể cập nhật trạng thái nữa.";
+    TempData["ToastType"] = "info";
+    return RedirectToAction(nameof(Detail), new { id });
+}
     order.TrangThai = newStatus;
 
     if (newStatus == "Đã hủy" && oldStatus != "Đã hủy")
