@@ -75,61 +75,128 @@ namespace DATN64.Controllers
             return View(vm);
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public IActionResult UpdateStatus(int id, string trangThai)
+     [HttpPost]
+[ValidateAntiForgeryToken]
+public IActionResult UpdateStatus(int id, string trangThai)
+{
+    var order = _context.DonHangs
+        .Include(d => d.KhachHang)
+        .FirstOrDefault(d => d.MaDonHang == id);
+
+    if (order == null)
+    {
+        TempData["ToastMessage"] = "Không tìm thấy đơn hàng.";
+        TempData["ToastType"] = "danger";
+        return RedirectToAction(nameof(Index));
+    }
+
+    if (string.IsNullOrWhiteSpace(trangThai))
+    {
+        TempData["ToastMessage"] = "Vui lòng chọn trạng thái.";
+        TempData["ToastType"] = "danger";
+        return RedirectToAction(nameof(Detail), new { id });
+    }
+
+    var oldStatus = order.TrangThai ?? "";
+    var newStatus = trangThai.Trim();
+
+    order.TrangThai = newStatus;
+
+    if (newStatus == "Đã hủy" && oldStatus != "Đã hủy")
+    {
+        var orderDetails = _context.ChiTietDonHangs
+            .Where(ct => ct.MaDonHang == id)
+            .ToList();
+
+        foreach (var detail in orderDetails)
         {
-            var order = _context.DonHangs
-                .FirstOrDefault(d => d.MaDonHang == id);
+            var product = _context.SanPhams
+                .FirstOrDefault(p => p.MaSanPham == detail.MaSanPham);
 
-            if (order == null)
+            if (product != null)
             {
-                TempData["ToastMessage"] = "Không tìm thấy đơn hàng.";
-                TempData["ToastType"] = "danger";
-                return RedirectToAction(nameof(Index));
+                product.SoLuongTon += detail.SoLuong;
             }
+        }
 
-            if (string.IsNullOrWhiteSpace(trangThai))
-            {
-                TempData["ToastMessage"] = "Vui lòng chọn trạng thái.";
-                TempData["ToastType"] = "danger";
-                return RedirectToAction(nameof(Detail), new { id });
-            }
+        TempData["ToastMessage"] = "Đã hủy đơn hàng. Hàng đã được hoàn về kho.";
+        TempData["ToastType"] = "warning";
 
-            var oldStatus = order.TrangThai ?? "";
-            var newStatus = trangThai.Trim();
+        _context.SaveChanges();
+        return RedirectToAction(nameof(Detail), new { id });
+    }
 
-            if (newStatus == "Đã hủy" && oldStatus != "Đã hủy")
-            {
-                var orderDetails = _context.ChiTietDonHangs
-                    .Where(ct => ct.MaDonHang == id)
-                    .ToList();
+    if (newStatus == "Hoàn thành")
+    {
+        if (HasAddedLoyaltyPoint(order))
+        {
+            TempData["ToastMessage"] = "Đơn hàng đã được cộng điểm trước đó.";
+            TempData["ToastType"] = "info";
 
-                foreach (var detail in orderDetails)
-                {
-                    var product = _context.SanPhams
-                        .FirstOrDefault(p => p.MaSanPham == detail.MaSanPham);
-
-                    if (product != null)
-                    {
-                        product.SoLuongTon += detail.SoLuong;
-                    }
-                }
-
-                TempData["ToastMessage"] = "Đã hủy đơn hàng. Hàng đã được hoàn về kho.";
-                TempData["ToastType"] = "warning";
-            }
-            else
-            {
-                TempData["ToastMessage"] = "Cập nhật trạng thái đơn hàng thành công.";
-                TempData["ToastType"] = "success";
-            }
-
-            order.TrangThai = newStatus;
             _context.SaveChanges();
-
             return RedirectToAction(nameof(Detail), new { id });
         }
+
+        if (order.KhachHang == null)
+        {
+            TempData["ToastMessage"] = "Đơn đã hoàn thành nhưng không có khách hàng thật nên không cộng điểm.";
+            TempData["ToastType"] = "warning";
+
+            _context.SaveChanges();
+            return RedirectToAction(nameof(Detail), new { id });
+        }
+
+        var tongTien = order.TongTien ?? 0;
+        var diemCong = (int)(tongTien / 10000);
+
+        if (diemCong <= 0)
+        {
+            TempData["ToastMessage"] = "Đơn đã hoàn thành nhưng tổng tiền chưa đủ để cộng điểm.";
+            TempData["ToastType"] = "warning";
+
+            _context.SaveChanges();
+            return RedirectToAction(nameof(Detail), new { id });
+        }
+
+        order.KhachHang.DiemTichLuy += diemCong;
+        order.GhiChu = AppendLoyaltyPointMarker(order.GhiChu);
+
+        _context.SaveChanges();
+
+        TempData["ToastMessage"] = $"Đơn đã hoàn thành. Đã cộng {diemCong:N0} điểm cho khách hàng.";
+        TempData["ToastType"] = "success";
+
+        return RedirectToAction(nameof(Detail), new { id });
+    }
+
+    _context.SaveChanges();
+
+    TempData["ToastMessage"] = "Cập nhật trạng thái đơn hàng thành công.";
+    TempData["ToastType"] = "success";
+
+    return RedirectToAction(nameof(Detail), new { id });
+}
+
+private bool HasAddedLoyaltyPoint(DonHang order)
+{
+    return !string.IsNullOrWhiteSpace(order.GhiChu)
+        && order.GhiChu.Contains("[DA_CONG_DIEM]", StringComparison.OrdinalIgnoreCase);
+}
+
+private string AppendLoyaltyPointMarker(string? ghiChu)
+{
+    if (string.IsNullOrWhiteSpace(ghiChu))
+    {
+        return "[DA_CONG_DIEM]";
+    }
+
+    if (ghiChu.Contains("[DA_CONG_DIEM]", StringComparison.OrdinalIgnoreCase))
+    {
+        return ghiChu;
+    }
+
+    return ghiChu + " [DA_CONG_DIEM]";
+}
 
         private string GetOrderChannel(DonHang order)
         {

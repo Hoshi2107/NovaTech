@@ -67,6 +67,31 @@
             font-weight: 800;
         }
 
+        .thread-delete-btn {
+            width: 30px;
+            height: 30px;
+            min-width: 30px;
+            border: none;
+            border-radius: 999px;
+            background: #fee2e2;
+            color: #dc2626;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: all 0.2s ease;
+        }
+
+        .thread-item:hover .thread-delete-btn,
+        .thread-item.active .thread-delete-btn {
+            opacity: 1;
+        }
+
+        .thread-delete-btn:hover {
+            background: #fecaca;
+            color: #b91c1c;
+        }
+
         .chat-main {
             display: flex;
             flex-direction: column;
@@ -268,12 +293,23 @@
             list.innerHTML = currentThreads.map(thread => `
                 <div class="thread-item ${sameId(selectedThreadId, thread.id) ? 'active' : ''}" onclick="selectThread(${thread.id})">
                     <div class="d-flex justify-content-between align-items-start gap-2">
-                        <div class="thread-name">${escapeHtml(thread.customerName || 'Khách vãng lai')}</div>
-                        ${thread.unreadCount > 0 ? `<span class="badge-unread">${thread.unreadCount}</span>` : ''}
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                <div class="thread-name">${escapeHtml(thread.customerName || 'Khách vãng lai')}</div>
+                                ${thread.unreadCount > 0 ? `<span class="badge-unread">${thread.unreadCount}</span>` : ''}
+                            </div>
+                            <div class="thread-subject">${escapeHtml(thread.subject || '')}</div>
+                            <div class="thread-last">${escapeHtml(thread.lastMessage || '')}</div>
+                            <div class="small text-muted mt-1">${formatTime(thread.updatedAt)}</div>
+                        </div>
+
+                        <button type="button"
+                                class="thread-delete-btn"
+                                title="Xóa hội thoại"
+                                onclick="deleteThread(event, ${thread.id})">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
                     </div>
-                    <div class="thread-subject">${escapeHtml(thread.subject || '')}</div>
-                    <div class="thread-last">${escapeHtml(thread.lastMessage || '')}</div>
-                    <div class="small text-muted mt-1">${formatTime(thread.updatedAt)}</div>
                 </div>
             `).join('');
         };
@@ -371,6 +407,57 @@
                 renderInbox();
             } catch (err) {
                 console.error(err);
+            }
+        };
+
+        const clearSelectedThreadView = () => {
+            selectedThreadId = null;
+
+            document.getElementById('replyStatus').textContent = '';
+            document.getElementById('replyText').value = '';
+
+            document.getElementById('chatHeader').innerHTML = `
+                <div class="fw-bold text-dark">Chưa chọn hội thoại</div>
+                <div class="text-muted small">Chọn một khách hàng bên trái để xem nội dung.</div>
+            `;
+
+            document.getElementById('chatMessages').innerHTML = `
+                <div class="empty-state">
+                    <div>
+                        <i class="fa-regular fa-comments fs-1 mb-3 text-info"></i>
+                        <div>Chọn hội thoại để bắt đầu chăm sóc khách hàng.</div>
+                    </div>
+                </div>
+            `;
+        };
+
+        const deleteThread = async (event, id) => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const thread = currentThreads.find(t => sameId(t.id, id));
+            const customerName = thread?.customerName || 'Khách vãng lai';
+
+            const ok = confirm(`Bạn có chắc muốn xóa toàn bộ hội thoại của "${customerName}" không?`);
+
+            if (!ok) {
+                return;
+            }
+
+            try {
+                await postJson('/SalesCSKH/DeleteCustomerThread', {
+                    threadId: id
+                });
+
+                currentThreads = currentThreads.filter(t => !sameId(t.id, id));
+
+                if (sameId(selectedThreadId, id)) {
+                    clearSelectedThreadView();
+                }
+
+                renderInbox();
+            } catch (err) {
+                alert(err.message || 'Xóa hội thoại thất bại.');
             }
         };
 
