@@ -5,10 +5,22 @@
     var session = HttpContextAccessor.HttpContext?.Session;
     var userRolesStr = session?.GetString("UserRoles") ?? "";
     var roles = userRolesStr.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
-    var hasDash = roles.Contains("Super Admin") || roles.Contains("Admin") || roles.Contains("Quản lý cửa hàng") || roles.Contains("Nhân viên bán hàng") || roles.Contains("Nhân viên kho") || roles.Contains("Quản lý kho") || roles.Contains("Kế toán") || roles.Contains("Marketing");
     var ctrl = ViewContext.RouteData.Values["controller"]?.ToString();
     var act = ViewContext.RouteData.Values["action"]?.ToString();
     var tab = HttpContextAccessor.HttpContext?.Request.Query["tab"].ToString() ?? "";
+
+    bool canViewProduct    = AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Product");
+    bool canViewInventory  = AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Inventory");
+    bool canViewOrder      = AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Order");
+    bool canViewCustomer   = AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Customer");
+    bool canViewPromotion  = AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Promotion");
+    bool canViewAccounting = AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Accounting");
+    bool canViewTikTok     = AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_TikTok");
+    bool canViewEmployee   = AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Employee");
+    bool canViewReport     = AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Report");
+    bool canViewSetting    = AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Setting");
+    bool canViewApproval   = AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "Approve_Order") ||
+                             AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "Import_Inventory");
 }
 <aside class="sidebar position-fixed top-0 bottom-0 start-0 z-3 p-3">
     <div class="sidebar-brand d-flex align-items-center gap-2 mb-4 pb-3 border-bottom border-secondary border-opacity-25">
@@ -23,6 +35,8 @@
 
     <div class="sidebar-menu overflow-y-auto" style="max-height: calc(100vh - 120px);">
         <ul class="nav flex-column gap-1">
+
+            
             <li class="nav-item">
                 <a href="@Url.Action("Index", "Dashboard")" class="nav-link-custom @(ctrl == "Dashboard" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
                     <i class="fa-solid fa-chart-line text-cyan fs-5"></i>
@@ -30,7 +44,8 @@
                 </a>
             </li>
 
-            @if (AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Product"))
+            
+            @if (canViewProduct)
             {
                 <li class="nav-item-header text-xs text-uppercase tracking-widest text-muted-custom mt-3 mb-2 px-3">Hàng hóa</li>
                 <li class="nav-item">
@@ -59,7 +74,8 @@
                 </li>
             }
 
-            @if (AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Inventory"))
+            
+            @if (canViewInventory)
             {
                 <li class="nav-item-header text-xs text-uppercase tracking-widest text-muted-custom mt-3 mb-2 px-3">Kho bãi</li>
                 <li class="nav-item">
@@ -82,56 +98,83 @@
                 </li>
             }
 
-           @if (AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Order"))
-{
-    <li class="nav-item-header text-xs text-uppercase tracking-widest text-muted-custom mt-3 mb-2 px-3">Bán hàng & CSKH</li>
-
-    <li class="nav-item">
-        <a href="@Url.Action("Index", "Order")" class="nav-link-custom @(ctrl == "Order" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
-            <i class="fa-solid fa-file-invoice-dollar text-cyan fs-5"></i>
-            <span>Đơn hàng</span>
-        </a>
-    </li>
-
-    <li class="nav-item">
-        <a href="@Url.Action("Index", "SalesCSKH")" class="nav-link-custom @(ctrl == "SalesCSKH" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
-            <i class="fa-solid fa-headset text-cyan fs-5"></i>
-            <span>Chăm sóc khách hàng</span>
-        </a>
-    </li>
-}
-
-            @if (AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Customer"))
+            
+            @if (canViewOrder || canViewCustomer || canViewPromotion)
             {
+                <li class="nav-item-header text-xs text-uppercase tracking-widest text-muted-custom mt-3 mb-2 px-3">Bán hàng & CSKH</li>
+                @if (canViewOrder)
+                {
+                    <li class="nav-item">
+                        <a href="@Url.Action("Index", "Order")" class="nav-link-custom @(ctrl == "Order" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                            <i class="fa-solid fa-file-invoice-dollar text-cyan fs-5"></i>
+                            <span>Đơn hàng</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="@Url.Action("Index", "SalesCSKH")" class="nav-link-custom @(ctrl == "SalesCSKH" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                            <i class="fa-solid fa-headset text-cyan fs-5"></i>
+                            <span>Chăm sóc khách hàng</span>
+                        </a>
+                    </li>
+                }
+                @if (canViewCustomer)
+                {
+                    <li class="nav-item">
+                        <a href="@Url.Action("Index", "Customer")" class="nav-link-custom @(ctrl == "Customer" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                            <i class="fa-solid fa-user-group text-cyan fs-5"></i>
+                            <span>Khách hàng</span>
+                        </a>
+                    </li>
+                }
+                @if (canViewPromotion)
+                {
+                    <li class="nav-item">
+                        <a href="@Url.Action("Index", "Promotion")" class="nav-link-custom @(ctrl == "Promotion" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                            <i class="fa-solid fa-gift text-cyan fs-5"></i>
+                            <span>Khuyến mãi</span>
+                        </a>
+                    </li>
+                }
+            }
+
+            
+            @if (canViewApproval)
+            {
+                <li class="nav-item-header text-xs text-uppercase tracking-widest text-muted-custom mt-3 mb-2 px-3">Phê duyệt</li>
                 <li class="nav-item">
-                    <a href="@Url.Action("Index", "Customer")" class="nav-link-custom @(ctrl == "Customer" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
-                        <i class="fa-solid fa-user-group text-cyan fs-5"></i>
-                        <span>Khách hàng</span>
+                    <a href="@Url.Action("Index", "Approval")" class="nav-link-custom @(ctrl == "Approval" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                        <i class="fa-solid fa-clipboard-check text-cyan fs-5"></i>
+                        <span>Trung tâm duyệt phiếu</span>
                     </a>
                 </li>
             }
 
-            @if (AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Promotion"))
+            
+            @if (canViewAccounting || canViewReport)
             {
-                <li class="nav-item">
-                    <a href="@Url.Action("Index", "Promotion")" class="nav-link-custom @(ctrl == "Promotion" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
-                        <i class="fa-solid fa-gift text-cyan fs-5"></i>
-                        <span>Khuyến mãi</span>
-                    </a>
-                </li>
+                <li class="nav-item-header text-xs text-uppercase tracking-widest text-muted-custom mt-3 mb-2 px-3">Tài chính & Báo cáo</li>
+                @if (canViewAccounting)
+                {
+                    <li class="nav-item">
+                        <a href="@Url.Action("Index", "Accounting")" class="nav-link-custom @(ctrl == "Accounting" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                            <i class="fa-solid fa-scale-balanced text-cyan fs-5"></i>
+                            <span>Kế toán & Sổ quỹ</span>
+                        </a>
+                    </li>
+                }
+                @if (canViewReport)
+                {
+                    <li class="nav-item">
+                        <a href="@Url.Action("Index", "Report")" class="nav-link-custom @(ctrl == "Report" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                            <i class="fa-solid fa-chart-pie text-cyan fs-5"></i>
+                            <span>Báo cáo</span>
+                        </a>
+                    </li>
+                }
             }
 
-            @if (AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Accounting"))
-            {
-                <li class="nav-item">
-                    <a href="@Url.Action("Index", "Accounting")" class="nav-link-custom @(ctrl == "Accounting" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
-                        <i class="fa-solid fa-scale-balanced text-cyan fs-5"></i>
-                        <span>Kế toán & Sổ quỹ</span>
-                    </a>
-                </li>
-            }
-
-            @if (AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_TikTok"))
+            
+            @if (canViewTikTok)
             {
                 <li class="nav-item-header text-xs text-uppercase tracking-widest text-muted-custom mt-3 mb-2 px-3">Tích hợp</li>
                 <li class="nav-item">
@@ -142,15 +185,9 @@
                 </li>
             }
 
-            <li class="nav-item-header text-xs text-uppercase tracking-widest text-muted-custom mt-3 mb-2 px-3">Hệ thống</li>
-            <li class="nav-item">
-                <a href="@Url.Action("Index", "Ai")" class="nav-link-custom @(ctrl == "Ai" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
-                    <i class="fa-solid fa-robot text-cyan fs-5"></i>
-                    <span>AI Assistant</span>
-                </a>
-            </li>
-
-            @if (AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Employee"))
+            
+            <li class="nav-item-header text-xs text-uppercase tracking-widest text-muted-custom mt-3 mb-2 px-3">Quản trị & Hệ thống</li>
+            @if (canViewEmployee)
             {
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "Employee")" class="nav-link-custom @(ctrl == "Employee" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
@@ -159,18 +196,13 @@
                     </a>
                 </li>
             }
-
-            @if (AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Report"))
-            {
-                <li class="nav-item">
-                    <a href="@Url.Action("Index", "Report")" class="nav-link-custom @(ctrl == "Report" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
-                        <i class="fa-solid fa-chart-pie text-cyan fs-5"></i>
-                        <span>Báo cáo</span>
-                    </a>
-                </li>
-            }
-
-            @if (AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Setting"))
+            <li class="nav-item">
+                <a href="@Url.Action("Index", "Ai")" class="nav-link-custom @(ctrl == "Ai" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                    <i class="fa-solid fa-robot text-cyan fs-5"></i>
+                    <span>AI Assistant</span>
+                </a>
+            </li>
+            @if (canViewSetting)
             {
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "Setting")" class="nav-link-custom @(ctrl == "Setting" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
@@ -179,6 +211,7 @@
                     </a>
                 </li>
             }
+
         </ul>
     </div>
 </aside>
