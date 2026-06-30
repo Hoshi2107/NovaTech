@@ -310,10 +310,7 @@
                 </tbody>
             </table>
         </div>
-        <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
-            <div class="text-muted text-xs fw-semibold" id="paginationInfo"></div>
-            <div class="d-flex gap-1" id="paginationControls"></div>
-        </div>
+        <div class="d-flex justify-content-center align-items-center mt-3 gap-1" id="paginationControls"></div>
     </div>
 
     @* ══════════════════════════════════════════════════════════════ *@
@@ -803,12 +800,15 @@
                 </div>
                 <div class="modal-footer" style="background:#f8fafc;border-top:1px solid #e2e8f0">
                     <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold">Lưu nhân viên</button>
+                    <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold">
+                        <i class="fa-solid fa-user-plus me-1"></i>Thêm nhân viên
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
 
 @* Modal sửa nhân viên *@
 <div class="modal fade" id="editEmployeeModal" tabindex="-1" aria-hidden="true">
@@ -931,16 +931,15 @@
         
         // Filter rows
         const filteredRows = rows.filter(row => {
-            const name = row.cells[1]?.textContent || '';
-            const email = row.cells[2]?.textContent || '';
-            const phone = row.cells[3]?.textContent || '';
-            const txtValue = name + " " + email + " " + phone;
+            const txtValue = (row.cells[1]?.textContent || '') + ' ' +
+                             (row.cells[2]?.textContent || '') + ' ' +
+                             (row.cells[3]?.textContent || '');
             return txtValue.toUpperCase().includes(filter);
         });
 
         // Calculate pagination
         const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
-        if (currentPage > totalPages) currentPage = totalPages || 1;
+        if (currentPage > totalPages) currentPage = Math.max(totalPages, 1);
 
         const startIndex = (currentPage - 1) * itemsPerPage;
         const endIndex = startIndex + itemsPerPage;
@@ -949,18 +948,24 @@
         rows.forEach(row => row.style.display = 'none');
         filteredRows.slice(startIndex, endIndex).forEach(row => row.style.display = '');
 
-        // Update info & controls
-        document.getElementById('paginationInfo').textContent = `Hiển thị ${filteredRows.length > 0 ? startIndex + 1 : 0} đến ${Math.min(endIndex, filteredRows.length)} trong tổng số ${filteredRows.length} nhân viên`;
-        
-        let controlsHtml = '';
-        if (totalPages > 1) {
-            controlsHtml += `<button class="btn btn-sm btn-light border" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}><i class="fa-solid fa-chevron-left"></i></button>`;
-            for (let i = 1; i <= totalPages; i++) {
-                controlsHtml += `<button class="btn btn-sm ${i === currentPage ? 'btn-primary' : 'btn-light border'} fw-bold" onclick="changePage(${i})">${i}</button>`;
-            }
-            controlsHtml += `<button class="btn btn-sm btn-light border" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}><i class="fa-solid fa-chevron-right"></i></button>`;
+        // Update info text
+        const infoEl = document.getElementById('paginationInfo');
+        if (infoEl) {
+            infoEl.textContent = `Hiển thị ${filteredRows.length > 0 ? startIndex + 1 : 0} đến ${Math.min(endIndex, filteredRows.length)} trong tổng số ${filteredRows.length} nhân viên`;
         }
-        document.getElementById('paginationControls').innerHTML = controlsHtml;
+        
+        // Update pagination buttons
+        const ctrlEl = document.getElementById('paginationControls');
+        if (!ctrlEl) return;
+        let html = '';
+        if (totalPages > 1) {
+            html += `<button class="btn btn-sm btn-light border" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}><i class="fa-solid fa-chevron-left"></i></button>`;
+            for (let i = 1; i <= totalPages; i++) {
+                html += `<button class="btn btn-sm ${i === currentPage ? 'btn-primary' : 'btn-light border'} fw-bold" onclick="changePage(${i})">${i}</button>`;
+            }
+            html += `<button class="btn btn-sm btn-light border" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}><i class="fa-solid fa-chevron-right"></i></button>`;
+        }
+        ctrlEl.innerHTML = html;
     }
 
     function changePage(page) {
@@ -1027,11 +1032,14 @@
         });
     }
 
-    // ─── Init tooltips ───────────────────────────────────────────────
+    // ─── Init tooltips & pagination ──────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
         renderTable();
-        var tooltipEls = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-        tooltipEls.forEach(el => new bootstrap.Tooltip(el));
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
     });
+    // Also run immediately in case DOMContentLoaded already fired
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        renderTable();
+    }
 </script>
 }

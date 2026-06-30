@@ -58,7 +58,7 @@
                             <p class="mb-0">Không tìm thấy dữ liệu!</p>
                         </td>
                     </tr>
-                    <tr v-else v-for="item in items" :key="item.maDanhMuc" class="group-hover">
+                    <tr v-else v-for="item in pagedItems" :key="item.maDanhMuc" class="group-hover">
                         <td class="px-4 fw-medium text-secondary">#${item.maDanhMuc}</td>
                         <td class="px-4 fw-bold">${item.tenDanhMuc}</td>
                         <td class="px-4">${item.moTa || 'Không có mô tả'}</td>
@@ -76,6 +76,26 @@
                 </tbody>
             </table>
         </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="d-flex justify-content-between align-items-center mt-3 px-1" v-if="!loading && items.length > 0">
+        <div class="text-muted text-sm">
+            Hiển thị <strong>${(currentPage - 1) * pageSize + 1}</strong> – <strong>${Math.min(currentPage * pageSize, items.length)}</strong> / <strong>${items.length}</strong> danh mục
+        </div>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item" :class="{ disabled: currentPage === 1 }">
+                    <a class="page-link rounded-start-3" href="#" @@click.prevent="currentPage--">&laquo;</a>
+                </li>
+                <li class="page-item" v-for="p in totalPages" :key="p" :class="{ active: p === currentPage }">
+                    <a class="page-link" href="#" @@click.prevent="currentPage = p">${p}</a>
+                </li>
+                <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+                    <a class="page-link rounded-end-3" href="#" @@click.prevent="currentPage++">&raquo;</a>
+                </li>
+            </ul>
+        </nav>
     </div>
 
     <!-- Modal Form -->
@@ -135,7 +155,18 @@
                 search: '',
                 modalMode: 'create',
                 currentItem: {},
-                modalInstance: null
+                modalInstance: null,
+                currentPage: 1,
+                pageSize: 10
+            },
+            computed: {
+                totalPages() {
+                    return Math.max(1, Math.ceil(this.items.length / this.pageSize));
+                },
+                pagedItems() {
+                    const start = (this.currentPage - 1) * this.pageSize;
+                    return this.items.slice(start, start + this.pageSize);
+                }
             },
             mounted() {
                 const modalEl = document.getElementById('dataModal');
@@ -146,6 +177,7 @@
             methods: {
                 async fetchData() {
                     this.loading = true;
+                    this.currentPage = 1;
                     try {
                         const params = {};
                         if (this.search) params.search = this.search;

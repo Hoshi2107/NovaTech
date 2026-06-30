@@ -182,7 +182,7 @@
             </form>
 
             <div class="table-responsive">
-                <table class="table table-hover align-middle">
+                <table class="table table-hover align-middle" id="soquyTable">
                     <thead class="table-light">
                         <tr class="text-xs text-muted-custom">
                             <th>Mã GD</th>
@@ -196,7 +196,7 @@
                             <th>Người lập</th>
                         </tr>
                     </thead>
-                    <tbody class="text-sm">
+                    <tbody class="text-sm" id="soquyTableBody">
                         @if (!Model.GiaoDichs.Any())
                         {
                             <tr>
@@ -207,7 +207,7 @@
                         {
                             @foreach (var gd in Model.GiaoDichs)
                             {
-                                <tr>
+                                <tr class="sq-row">
                                     <td class="fw-bold text-cyan">@gd.MaGiaoDich</td>
                                     <td>@gd.NgayGiaoDich.ToString("dd/MM/yyyy HH:mm")</td>
                                     <td>
@@ -230,6 +230,11 @@
                         }
                     </tbody>
                 </table>
+            </div>
+            <!-- Soquy Pagination -->
+            <div class="d-flex justify-content-between align-items-center mt-3" id="soquyPaginationWrapper">
+                <div class="text-muted small" id="soquyPageInfo"></div>
+                <nav><ul class="pagination pagination-sm mb-0" id="soquyPagination"></ul></nav>
             </div>
         </div>
 
@@ -290,7 +295,7 @@
                             <th>Thao tác</th>
                         </tr>
                     </thead>
-                    <tbody class="text-sm">
+                    <tbody class="text-sm" id="congnoTableBody">
                         @if (!Model.ChiTietCongNos.Any())
                         {
                             <tr>
@@ -302,7 +307,7 @@
                             @foreach (var cn in Model.ChiTietCongNos)
                             {
                                 var conNo = cn.TongTien - cn.DaThanhToan;
-                                <tr>
+                                <tr class="cn-row">
                                     <td>#@cn.Id</td>
                                     <td class="fw-medium">@cn.NhaCungCap?.TenNCC</td>
                                     <td><span class="badge bg-secondary bg-opacity-20 text-dark">PN-@cn.MaPhieuNhap.ToString("D5")</span></td>
@@ -338,6 +343,11 @@
                         }
                     </tbody>
                 </table>
+            </div>
+            <!-- CongNo Pagination -->
+            <div class="d-flex justify-content-between align-items-center mt-3" id="congnoPaginationWrapper">
+                <div class="text-muted small" id="congnoPageInfo"></div>
+                <nav><ul class="pagination pagination-sm mb-0" id="congnoPagination"></ul></nav>
             </div>
         </div>
 
@@ -626,6 +636,47 @@
                 }
             });
         }
+        // ====== Table Paginator ======
+        function initTablePagination(rowSelector, pageInfoId, paginationId, pageSize) {
+            const rows = Array.from(document.querySelectorAll(rowSelector));
+            const pageInfo = document.getElementById(pageInfoId);
+            const paginationEl = document.getElementById(paginationId);
+            if (!rows.length || !paginationEl) return;
+            let currentPage = 1;
+            const totalPages = Math.ceil(rows.length / pageSize);
+            function render() {
+                const start = (currentPage - 1) * pageSize;
+                const end = start + pageSize;
+                rows.forEach((row, i) => { row.style.display = (i >= start && i < end) ? '' : 'none'; });
+                if (pageInfo) {
+                    pageInfo.innerHTML = `Hiển thị <strong>${start + 1}</strong> – <strong>${Math.min(end, rows.length)}</strong> / <strong>${rows.length}</strong> mục`;
+                }
+                paginationEl.innerHTML = '';
+                const prev = document.createElement('li');
+                prev.className = 'page-item' + (currentPage === 1 ? ' disabled' : '');
+                prev.innerHTML = `<a class="page-link rounded-start-3" href="#">&laquo;</a>`;
+                prev.addEventListener('click', e => { e.preventDefault(); if (currentPage > 1) { currentPage--; render(); } });
+                paginationEl.appendChild(prev);
+                for (let p = 1; p <= totalPages; p++) {
+                    const li = document.createElement('li');
+                    li.className = 'page-item' + (p === currentPage ? ' active' : '');
+                    li.innerHTML = `<a class="page-link" href="#">${p}</a>`;
+                    const page = p;
+                    li.addEventListener('click', e => { e.preventDefault(); currentPage = page; render(); });
+                    paginationEl.appendChild(li);
+                }
+                const next = document.createElement('li');
+                next.className = 'page-item' + (currentPage === totalPages ? ' disabled' : '');
+                next.innerHTML = `<a class="page-link rounded-end-3" href="#">&raquo;</a>`;
+                next.addEventListener('click', e => { e.preventDefault(); if (currentPage < totalPages) { currentPage++; render(); } });
+                paginationEl.appendChild(next);
+            }
+            render();
+        }
+
+        // Init pagination for Sổ quỹ & Công nợ tabs
+        initTablePagination('#soquyTableBody .sq-row', 'soquyPageInfo', 'soquyPagination', 15);
+        initTablePagination('#congnoTableBody .cn-row', 'congnoPageInfo', 'congnoPagination', 10);
     });
 </script>
 }

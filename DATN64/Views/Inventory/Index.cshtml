@@ -814,7 +814,7 @@
                                         Không tìm thấy giao dịch nào phù hợp!
                                     </td>
                                 </tr>
-                                <tr v-for="tx in filteredTransactions" :key="tx.id" class="group-hover">
+                                <tr v-for="tx in paginatedTransactions" :key="tx.id" class="group-hover">
                                     <td>
                                         <span class="badge bg-dark fw-mono font-monospace text-xs">${ tx.code || 'GD-' + tx.id }</span>
                                     </td>
@@ -874,6 +874,26 @@
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="d-flex justify-content-between align-items-center mt-3 px-1" v-if="!loading && filteredTransactions.length > 0">
+                        <div class="text-muted text-sm">
+                            Hiển thị <strong>${(historyPageDisplay - 1) * historyPageSize + 1}</strong> – <strong>${Math.min(historyPageDisplay * historyPageSize, filteredTransactions.length)}</strong> / <strong>${filteredTransactions.length}</strong> giao dịch
+                        </div>
+                        <nav>
+                            <ul class="pagination pagination-sm mb-0">
+                                <li class="page-item" :class="{ disabled: historyPageDisplay === 1 }">
+                                    <a class="page-link rounded-start-3" href="#" @@click.prevent="historyPage = historyPageDisplay - 1">&laquo;</a>
+                                </li>
+                                <li class="page-item" v-for="p in visibleHistoryPages" :key="p" :class="{ active: p === historyPageDisplay, disabled: p === '...' }">
+                                    <a class="page-link" href="#" @@click.prevent="p !== '...' ? historyPage = p : null">${p}</a>
+                                </li>
+                                <li class="page-item" :class="{ disabled: historyPageDisplay === totalPagesHistory }">
+                                    <a class="page-link rounded-end-3" href="#" @@click.prevent="historyPage = historyPageDisplay + 1">&raquo;</a>
+                                </li>
+                            </ul>
+                        </nav>
                     </div>
                 </div>
             </div>
@@ -944,6 +964,8 @@
                 isManager: @(isManager ? "true" : "false"),
                 exportError: '',
                 adjustError: '',
+                historyPage: 1,
+                historyPageSize: 10,
                 filters: {
                     search: '',
                     category: '',
@@ -1023,6 +1045,31 @@
                     }
                     return list;
                 },
+                totalPagesHistory() {
+                    return Math.max(1, Math.ceil(this.filteredTransactions.length / this.historyPageSize));
+                },
+                historyPageDisplay() {
+                    return Math.min(this.historyPage, this.totalPagesHistory);
+                },
+                paginatedTransactions() {
+                    const page = this.historyPageDisplay;
+                    const start = (page - 1) * this.historyPageSize;
+                    return this.filteredTransactions.slice(start, start + this.historyPageSize);
+                },
+                visibleHistoryPages() {
+                    const total = this.totalPagesHistory;
+                    const current = this.historyPageDisplay;
+                    const range = 2;
+                    const pages = [];
+                    for (let i = 1; i <= total; i++) {
+                        if (i === 1 || i === total || (i >= current - range && i <= current + range)) {
+                            pages.push(i);
+                        } else if (pages[pages.length - 1] !== '...') {
+                            pages.push('...');
+                        }
+                    }
+                    return pages;
+                },
                 stats() {
                     const totalProducts = this.products.length;
                     const totalStock = this.products.reduce((acc, p) => acc + p.soLuongTon, 0);
@@ -1080,6 +1127,17 @@
                 },
                 pendingAdjustments() {
                     return this.transactions.filter(t => t.type === 'Điều chỉnh' && t.trangThai === 'Chờ duyệt');
+                }
+            },
+            watch: {
+                'filters.historySearch'() {
+                    this.historyPage = 1;
+                },
+                'filters.historyType'() {
+                    this.historyPage = 1;
+                },
+                'filters.historyTime'() {
+                    this.historyPage = 1;
                 }
             },
             mounted() {
