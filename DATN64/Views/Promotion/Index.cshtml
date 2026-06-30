@@ -4,6 +4,13 @@
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
     ViewData["Title"] = "Khuyến mãi";
     ViewData["BreadcrumbActive"] = "Khuyến mãi";
+
+    var keyword = ViewBag.Keyword as string ?? "";
+    var statusFilter = ViewBag.StatusFilter as string ?? "";
+    var currentPage = ViewBag.CurrentPage as int? ?? 1;
+    var pageSize = ViewBag.PageSize as int? ?? 20;
+    var totalItems = ViewBag.TotalItems as int? ?? 0;
+    var totalPages = ViewBag.TotalPages as int? ?? 1;
 }
 
 @functions {
@@ -25,9 +32,25 @@
         return null;
     }
 
+    DateTime? GetDateProp(object obj, string propName)
+    {
+        var prop = obj.GetType().GetProperty(propName);
+        var value = prop?.GetValue(obj);
+
+        if (value is DateTime date) return date;
+        if (DateTime.TryParse(value?.ToString(), out var parsed)) return parsed;
+
+        return null;
+    }
+
     string FormatMoney(decimal? value)
     {
         return value.HasValue ? value.Value.ToString("N0") + " đ" : "0 đ";
+    }
+
+    string FormatDate(DateTime? value)
+    {
+        return value.HasValue ? value.Value.ToString("dd/MM/yyyy") : "Không giới hạn";
     }
 
     string FormatDiscount(DATN64.Models.Voucher item)
@@ -35,9 +58,48 @@
         var type = GetStringProp(item, "HinhThuc", "Giảm % hóa đơn");
         var value = item.GiaTri ?? 0;
 
-        if (type.Contains("%")) return value.ToString("N0") + " %";
+        if (type.Contains("%"))
+        {
+            return value.ToString("N0") + " %";
+        }
 
         return value.ToString("N0") + " đ";
+    }
+
+    string GetVoucherStatus(DATN64.Models.Voucher item)
+    {
+        var now = DateTime.Now;
+        var startDate = GetDateProp(item, "NgayBatDau");
+        var endDate = GetDateProp(item, "NgayKetThuc");
+
+        if (item.SoLuong != null && item.SoLuong <= 0)
+        {
+            return "Hết số lượng";
+        }
+
+        if (endDate != null && endDate <= now)
+        {
+            return "Hết hạn";
+        }
+
+        if (startDate != null && startDate > now)
+        {
+            return "Sắp diễn ra";
+        }
+
+        return "Đang hiệu lực";
+    }
+
+    string GetVoucherStatusBadge(string status)
+    {
+        return status switch
+        {
+            "Đang hiệu lực" => "bg-success text-white",
+            "Sắp diễn ra" => "bg-info text-dark",
+            "Hết hạn" => "bg-danger text-white",
+            "Hết số lượng" => "bg-warning text-dark",
+            _ => "bg-secondary text-white"
+        };
     }
 }
 
@@ -45,10 +107,13 @@
     <div class="col-md-4">
         <div class="card card-glass p-4 text-dark">
             <h5 class="fw-bold mb-4 text-cyan">
+                <i class="fa-solid fa-ticket me-2"></i>
                 Tạo Voucher khuyến mãi
             </h5>
 
             <form method="post" action="@Url.Action("Create", "Promotion")">
+                @Html.AntiForgeryToken()
+
                 <div class="mb-3">
                     <label class="form-label text-xs">Mã giảm giá</label>
                     <input type="text"
@@ -72,6 +137,7 @@
                            name="GiaTri"
                            class="form-control"
                            required
+                           min="1"
                            placeholder="10 hoặc 500000">
                 </div>
 
@@ -81,6 +147,7 @@
                            name="DonHangToiThieu"
                            class="form-control"
                            required
+                           min="0"
                            value="500000"
                            placeholder="500000">
                 </div>
@@ -91,10 +158,12 @@
                            name="SoLuong"
                            class="form-control"
                            required
+                           min="1"
                            value="50">
                 </div>
 
                 <button type="submit" class="btn btn-info rounded-pill px-4 w-100 fw-bold">
+                    <i class="fa-solid fa-bolt me-1"></i>
                     Kích hoạt Voucher
                 </button>
             </form>
@@ -103,10 +172,68 @@
 
     <div class="col-md-8">
         <div class="card card-glass p-4">
-            <h5 class="fw-bold mb-4 text-cyan">
-                <i class="fa-solid fa-gift me-2"></i>
-                Chiến dịch khuyến mãi & Voucher
-            </h5>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h5 class="fw-bold mb-1 text-cyan">
+                        <i class="fa-solid fa-gift me-2"></i>
+                        Chiến dịch khuyến mãi & Voucher
+                    </h5>
+
+                    <div class="text-muted small">
+                        Quản lý voucher theo phân trang, tìm kiếm và trạng thái sử dụng.
+                    </div>
+                </div>
+
+                <a href="@Url.Action("Index", "Promotion")"
+                   class="btn btn-outline-secondary rounded-pill px-3">
+                    <i class="fa-solid fa-rotate-left me-1"></i>
+                    Đặt lại
+                </a>
+            </div>
+
+            <form method="get" class="row g-2 mb-4">
+                <div class="col-md-5">
+                    <input type="text"
+                           name="keyword"
+                           value="@keyword"
+                           class="form-control"
+                           placeholder="Tìm mã voucher...">
+                </div>
+
+                <div class="col-md-3">
+                    <select name="status" class="form-select">
+                        <option value="">Tất cả voucher</option>
+                        <option value="Đang hiệu lực" selected="@(statusFilter == "Đang hiệu lực")">Đang hiệu lực</option>
+                        <option value="Hết hạn" selected="@(statusFilter == "Hết hạn")">Hết hạn</option>
+                        <option value="Hết số lượng" selected="@(statusFilter == "Hết số lượng")">Hết số lượng</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <select name="pageSize" class="form-select" onchange="this.form.submit()">
+                        <option value="10" selected="@(pageSize == 10)">10 dòng</option>
+                        <option value="20" selected="@(pageSize == 20)">20 dòng</option>
+                        <option value="50" selected="@(pageSize == 50)">50 dòng</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2 d-grid">
+                    <button type="submit" class="btn btn-info text-white rounded-pill">
+                        <i class="fa-solid fa-magnifying-glass me-1"></i>
+                        Lọc
+                    </button>
+                </div>
+            </form>
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="text-muted small">
+                    Tổng số voucher: <strong>@totalItems</strong>
+                </div>
+
+                <div class="text-muted small">
+                    Trang <strong>@currentPage</strong> / <strong>@(totalPages <= 0 ? 1 : totalPages)</strong>
+                </div>
+            </div>
 
             <div class="table-responsive">
                 <table class="table table-hover mb-0 text-sm align-middle">
@@ -114,9 +241,10 @@
                         <tr>
                             <th>Mã Voucher</th>
                             <th>Hình thức</th>
-                            <th>Mức Giảm</th>
-                            <th>Đơn hàng tối thiểu</th>
+                            <th>Mức giảm</th>
+                            <th>Đơn tối thiểu</th>
                             <th>Số lượng</th>
+                            <th>Thời hạn</th>
                             <th>Trạng thái</th>
                         </tr>
                     </thead>
@@ -125,8 +253,8 @@
                         @if (Model == null || !Model.Any())
                         {
                             <tr>
-                                <td colspan="6" class="text-center text-muted py-4">
-                                    Chưa có voucher nào.
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    Không tìm thấy voucher phù hợp.
                                 </td>
                             </tr>
                         }
@@ -136,7 +264,9 @@
                             {
                                 var hinhThuc = GetStringProp(item, "HinhThuc", "Giảm % hóa đơn");
                                 var donToiThieu = GetDecimalProp(item, "DonHangToiThieu") ?? 0;
-                                var trangThai = GetStringProp(item, "TrangThai", "Đang diễn ra");
+                                var ngayBatDau = GetDateProp(item, "NgayBatDau");
+                                var ngayKetThuc = GetDateProp(item, "NgayKetThuc");
+                                var trangThai = GetVoucherStatus(item);
 
                                 <tr>
                                     <td>
@@ -145,16 +275,33 @@
                                         </code>
                                     </td>
 
-                                    <td>@hinhThuc</td>
+                                    <td>
+                                        @hinhThuc
+                                    </td>
 
-                                    <td>@FormatDiscount(item)</td>
-
-                                    <td>@FormatMoney(donToiThieu)</td>
-
-                                    <td>@item.SoLuong Voucher</td>
+                                    <td class="fw-bold text-danger">
+                                        @FormatDiscount(item)
+                                    </td>
 
                                     <td>
-                                        <span class="badge bg-success">
+                                        @FormatMoney(donToiThieu)
+                                    </td>
+
+                                    <td>
+                                        @(item.SoLuong ?? 0) Voucher
+                                    </td>
+
+                                    <td>
+                                        <div class="text-xs">
+                                            Từ: @FormatDate(ngayBatDau)
+                                        </div>
+                                        <div class="text-xxs text-muted">
+                                            Đến: @FormatDate(ngayKetThuc)
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <span class="badge rounded-pill px-2 @GetVoucherStatusBadge(trangThai)">
                                             @trangThai
                                         </span>
                                     </td>
@@ -164,6 +311,58 @@
                     </tbody>
                 </table>
             </div>
+
+            @if (totalPages > 1)
+            {
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <div class="text-muted small">
+                        Hiển thị @pageSize dòng / trang
+                    </div>
+
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
+                                <a class="page-link"
+                                   href="@Url.Action("Index", new {
+                                       page = currentPage - 1,
+                                       pageSize = pageSize,
+                                       keyword = keyword,
+                                       status = statusFilter
+                                   })">
+                                    Trước
+                                </a>
+                            </li>
+
+                            @for (int p = Math.Max(1, currentPage - 2); p <= Math.Min(totalPages, currentPage + 2); p++)
+                            {
+                                <li class="page-item @(p == currentPage ? "active" : "")">
+                                    <a class="page-link"
+                                       href="@Url.Action("Index", new {
+                                           page = p,
+                                           pageSize = pageSize,
+                                           keyword = keyword,
+                                           status = statusFilter
+                                       })">
+                                        @p
+                                    </a>
+                                </li>
+                            }
+
+                            <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
+                                <a class="page-link"
+                                   href="@Url.Action("Index", new {
+                                       page = currentPage + 1,
+                                       pageSize = pageSize,
+                                       keyword = keyword,
+                                       status = statusFilter
+                                   })">
+                                    Sau
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            }
         </div>
     </div>
 </div>

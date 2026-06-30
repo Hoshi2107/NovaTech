@@ -4,6 +4,14 @@
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
     ViewData["Title"] = "Đơn hàng";
     ViewData["BreadcrumbActive"] = "Đơn hàng";
+
+    var keyword = ViewBag.Keyword as string ?? "";
+    var statusFilter = ViewBag.StatusFilter as string ?? "";
+    var channelFilter = ViewBag.ChannelFilter as string ?? "";
+    var currentPage = ViewBag.CurrentPage as int? ?? 1;
+    var pageSize = ViewBag.PageSize as int? ?? 20;
+    var totalItems = ViewBag.TotalItems as int? ?? 0;
+    var totalPages = ViewBag.TotalPages as int? ?? 1;
 }
 
 @functions {
@@ -27,7 +35,11 @@
     string GetOrderCode(DATN64.Models.DonHang item)
     {
         var code = GetStringProp(item, "MaDonHangHienThi", "");
-        if (!string.IsNullOrWhiteSpace(code)) return code;
+
+        if (!string.IsNullOrWhiteSpace(code))
+        {
+            return code;
+        }
 
         var date = item.NgayDat ?? DateTime.Now;
         return $"ORD-{date:yyMMdd}{item.MaDonHang:D2}";
@@ -38,42 +50,40 @@
         var note = item.GhiChu ?? "";
         var payment = item.PhuongThucThanhToan ?? "";
 
-        // Đơn từ website thường có địa chỉ giao hàng, voucher, chờ duyệt...
         if (
             note.Contains("Địa chỉ giao hàng", StringComparison.OrdinalIgnoreCase) ||
             note.Contains("Voucher sử dụng", StringComparison.OrdinalIgnoreCase) ||
-            note.Contains("giao hàng", StringComparison.OrdinalIgnoreCase)
+            note.Contains("giao hàng", StringComparison.OrdinalIgnoreCase) ||
+            note.Contains("website", StringComparison.OrdinalIgnoreCase) ||
+            note.Contains("online", StringComparison.OrdinalIgnoreCase) ||
+            note.Contains("TikTok", StringComparison.OrdinalIgnoreCase) ||
+            payment.Contains("online", StringComparison.OrdinalIgnoreCase) ||
+            payment.Contains("website", StringComparison.OrdinalIgnoreCase) ||
+            payment.Contains("TikTok", StringComparison.OrdinalIgnoreCase)
         )
         {
             return "Website";
         }
 
-        // Đơn POS / bán tại quầy
         if (
             note.Contains("POS", StringComparison.OrdinalIgnoreCase) ||
             note.Contains("tại quầy", StringComparison.OrdinalIgnoreCase) ||
-            note.Contains("Cửa hàng", StringComparison.OrdinalIgnoreCase)
+            note.Contains("cửa hàng", StringComparison.OrdinalIgnoreCase)
         )
         {
             return "Cửa hàng";
         }
 
-        // Nếu thanh toán hoặc ghi chú có TikTok thì vẫn xem là đơn online/website
-        if (
-            payment.Contains("TikTok", StringComparison.OrdinalIgnoreCase) ||
-            note.Contains("TikTok", StringComparison.OrdinalIgnoreCase)
-        )
-        {
-            return "Website";
-        }
-
-        // Mặc định không xác định thì để Cửa hàng
         return "Cửa hàng";
     }
 
     string GetChannelIcon(string channel)
     {
-        if (channel == "Website") return "fa-globe text-primary";
+        if (channel == "Website")
+        {
+            return "fa-globe text-primary";
+        }
+
         return "fa-store text-warning";
     }
 
@@ -84,21 +94,90 @@
             "Đơn mới" => "bg-info text-dark",
             "Chờ duyệt" => "bg-warning text-dark",
             "Đã xác nhận" => "bg-primary text-white",
+            "Đã thanh toán" => "bg-primary text-white",
             "Đang đóng gói" => "bg-warning text-dark",
             "Đang giao" => "bg-info text-white",
             "Hoàn thành" => "bg-success text-white",
             "Đã hủy" => "bg-danger text-white",
-            _ => "bg-success text-white"
+            _ => "bg-secondary text-white"
         };
     }
 }
 
 <div class="card card-glass p-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="fw-bold m-0">
-            <i class="fa-solid fa-file-invoice-dollar text-cyan me-2"></i>
-            Danh sách đơn hàng đa kênh
-        </h4>
+        <div>
+            <h4 class="fw-bold m-0">
+                <i class="fa-solid fa-file-invoice-dollar text-cyan me-2"></i>
+                Danh sách đơn hàng đa kênh
+            </h4>
+
+            <div class="text-muted small mt-1">
+                Quản lý đơn hàng theo phân trang, tìm kiếm, trạng thái và kênh bán.
+            </div>
+        </div>
+
+        <a href="@Url.Action("Index", "Order")" class="btn btn-outline-secondary rounded-pill px-3">
+            <i class="fa-solid fa-rotate-left me-1"></i>
+            Đặt lại
+        </a>
+    </div>
+
+    <form method="get" class="row g-2 mb-4">
+        <div class="col-md-4">
+            <input type="text"
+                   name="keyword"
+                   value="@keyword"
+                   class="form-control"
+                   placeholder="Tìm mã đơn, tên khách, SĐT, email...">
+        </div>
+
+        <div class="col-md-2">
+            <select name="status" class="form-select">
+                <option value="">Tất cả trạng thái</option>
+                <option value="Đơn mới" selected="@(statusFilter == "Đơn mới")">Đơn mới</option>
+                <option value="Chờ duyệt" selected="@(statusFilter == "Chờ duyệt")">Chờ duyệt</option>
+                <option value="Đã xác nhận" selected="@(statusFilter == "Đã xác nhận")">Đã xác nhận</option>
+                <option value="Đã thanh toán" selected="@(statusFilter == "Đã thanh toán")">Đã thanh toán</option>
+                <option value="Đang đóng gói" selected="@(statusFilter == "Đang đóng gói")">Đang đóng gói</option>
+                <option value="Đang giao" selected="@(statusFilter == "Đang giao")">Đang giao</option>
+                <option value="Hoàn thành" selected="@(statusFilter == "Hoàn thành")">Hoàn thành</option>
+                <option value="Đã hủy" selected="@(statusFilter == "Đã hủy")">Đã hủy</option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <select name="channel" class="form-select">
+                <option value="">Tất cả kênh</option>
+                <option value="Website" selected="@(channelFilter == "Website")">Website</option>
+                <option value="Cửa hàng" selected="@(channelFilter == "Cửa hàng")">Cửa hàng</option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <select name="pageSize" class="form-select" onchange="this.form.submit()">
+                <option value="10" selected="@(pageSize == 10)">10 dòng</option>
+                <option value="20" selected="@(pageSize == 20)">20 dòng</option>
+                <option value="50" selected="@(pageSize == 50)">50 dòng</option>
+            </select>
+        </div>
+
+        <div class="col-md-2 d-grid">
+            <button type="submit" class="btn btn-info text-white rounded-pill">
+                <i class="fa-solid fa-magnifying-glass me-1"></i>
+                Lọc
+            </button>
+        </div>
+    </form>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="text-muted small">
+            Tổng số đơn hàng: <strong>@totalItems</strong>
+        </div>
+
+        <div class="text-muted small">
+            Trang <strong>@currentPage</strong> / <strong>@(totalPages <= 0 ? 1 : totalPages)</strong>
+        </div>
     </div>
 
     <div class="table-responsive">
@@ -120,7 +199,7 @@
                 {
                     <tr>
                         <td colspan="7" class="text-center text-muted py-4">
-                            Chưa có đơn hàng nào.
+                            Không tìm thấy đơn hàng phù hợp.
                         </td>
                     </tr>
                 }
@@ -129,7 +208,7 @@
                     foreach (var item in Model)
                     {
                         var channel = GetOrderChannel(item);
-                       var status = item.TrangThai ?? "Đơn mới";
+                        var status = item.TrangThai ?? "Đơn mới";
 
                         <tr>
                             <td>
@@ -140,12 +219,15 @@
                                 <div class="fw-bold text-dark">
                                     @(item.KhachHang?.HoTen ?? "Khách Hàng Vãng Lai")
                                 </div>
+
                                 <span class="text-xs text-muted">
                                     @(item.KhachHang?.SoDienThoai ?? "")
                                 </span>
                             </td>
 
-                            <td>@FormatDate(item.NgayDat)</td>
+                            <td>
+                                @FormatDate(item.NgayDat)
+                            </td>
 
                             <td>
                                 <i class="fa-solid @GetChannelIcon(channel)"></i>
@@ -165,7 +247,8 @@
                             <td class="text-end">
                                 <a href="@Url.Action("Detail", "Order", new { id = item.MaDonHang })"
                                    class="btn btn-sm btn-outline-info rounded-pill px-3 text-xs">
-                                    <i class="fa-solid fa-circle-info me-1"></i>Chi tiết
+                                    <i class="fa-solid fa-circle-info me-1"></i>
+                                    Chi tiết
                                 </a>
                             </td>
                         </tr>
@@ -174,4 +257,59 @@
             </tbody>
         </table>
     </div>
+
+    @if (totalPages > 1)
+    {
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <div class="text-muted small">
+                Hiển thị @pageSize dòng / trang
+            </div>
+
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
+                        <a class="page-link"
+                           href="@Url.Action("Index", new {
+                               page = currentPage - 1,
+                               pageSize = pageSize,
+                               keyword = keyword,
+                               status = statusFilter,
+                               channel = channelFilter
+                           })">
+                            Trước
+                        </a>
+                    </li>
+
+                    @for (int p = Math.Max(1, currentPage - 2); p <= Math.Min(totalPages, currentPage + 2); p++)
+                    {
+                        <li class="page-item @(p == currentPage ? "active" : "")">
+                            <a class="page-link"
+                               href="@Url.Action("Index", new {
+                                   page = p,
+                                   pageSize = pageSize,
+                                   keyword = keyword,
+                                   status = statusFilter,
+                                   channel = channelFilter
+                               })">
+                                @p
+                            </a>
+                        </li>
+                    }
+
+                    <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
+                        <a class="page-link"
+                           href="@Url.Action("Index", new {
+                               page = currentPage + 1,
+                               pageSize = pageSize,
+                               keyword = keyword,
+                               status = statusFilter,
+                               channel = channelFilter
+                           })">
+                            Sau
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    }
 </div>

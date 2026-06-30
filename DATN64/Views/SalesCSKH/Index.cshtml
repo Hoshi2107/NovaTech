@@ -8,7 +8,7 @@
     <style>
         .cskh-shell {
             display: grid;
-            grid-template-columns: 360px 1fr;
+            grid-template-columns: 380px 1fr;
             gap: 18px;
             min-height: 660px;
         }
@@ -22,7 +22,7 @@
         }
 
         .thread-list {
-            max-height: 610px;
+            max-height: 520px;
             overflow-y: auto;
         }
 
@@ -175,6 +175,20 @@
             color: #64748b;
             text-align: center;
         }
+
+        .inbox-filter {
+            background: #ffffff;
+        }
+
+        .inbox-pagination {
+            min-height: 56px;
+        }
+
+        .pagination-info {
+            font-size: 12px;
+            color: #64748b;
+            line-height: 1.35;
+        }
     </style>
 }
 
@@ -187,20 +201,51 @@
         <div class="text-muted small">Quản lý hội thoại khách hàng từ website NovaTech Store.</div>
     </div>
 
-    <button class="btn btn-outline-primary rounded-pill" onclick="loadInbox(true)">
+    <button class="btn btn-outline-primary rounded-pill" onclick="loadInbox(true, inboxPage)">
         <i class="fa-solid fa-rotate me-2"></i>Làm mới
     </button>
 </div>
 
 <div class="cskh-shell">
     <div class="cskh-panel">
-        <div class="p-3 border-bottom bg-white">
-            <h6 class="fw-bold mb-0">Hộp thư khách hàng</h6>
+        <div class="p-3 border-bottom inbox-filter">
+            <h6 class="fw-bold mb-3">Hộp thư khách hàng</h6>
+
+            <div class="mb-2">
+                <input type="text"
+                       id="inboxKeyword"
+                       class="form-control form-control-sm"
+                       placeholder="Tìm tên, SĐT, nội dung chat...">
+            </div>
+
+            <div class="d-flex gap-2">
+                <select id="inboxStatus" class="form-select form-select-sm">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="Unread">Chưa đọc</option>
+                    <option value="Processing">Đang xử lý</option>
+                    <option value="Replied">Đã phản hồi</option>
+                </select>
+
+                <select id="inboxPageSize" class="form-select form-select-sm">
+                    <option value="10">10 dòng</option>
+                    <option value="20" selected>20 dòng</option>
+                    <option value="50">50 dòng</option>
+                </select>
+            </div>
+
+            <button type="button"
+                    class="btn btn-sm btn-info text-white rounded-pill w-100 mt-2"
+                    onclick="searchInbox()">
+                <i class="fa-solid fa-magnifying-glass me-1"></i>
+                Lọc hội thoại
+            </button>
         </div>
 
         <div id="threadList" class="thread-list">
             <div class="p-4 text-center text-muted">Đang tải hội thoại...</div>
         </div>
+
+        <div id="inboxPagination" class="p-2 border-top bg-white inbox-pagination"></div>
     </div>
 
     <div class="cskh-panel chat-main">
@@ -234,9 +279,15 @@
     <script>
         let selectedThreadId = null;
         let currentThreads = [];
-        let inboxLoadedOnce = false;
         let inboxRequestRunning = false;
         let threadRequestToken = 0;
+
+        let inboxPage = 1;
+        let inboxPageSize = 20;
+        let inboxTotalItems = 0;
+        let inboxTotalPages = 1;
+        let inboxKeyword = '';
+        let inboxStatus = '';
 
         const CSKH_REFRESH_INTERVAL = 60 * 1000;
 
@@ -314,41 +365,51 @@
             `).join('');
         };
 
-        const mergeThreadsKeepingOrder = (incomingThreads) => {
-            const incoming = Array.isArray(incomingThreads) ? incomingThreads : [];
+        const renderInboxPagination = () => {
+            const box = document.getElementById('inboxPagination');
 
-            if (!inboxLoadedOnce || !currentThreads.length) {
-                currentThreads = incoming;
-                inboxLoadedOnce = true;
+            if (!box) {
                 return;
             }
 
-            const incomingMap = new Map(
-                incoming.map(thread => [String(thread.id), thread])
-            );
-
-            const existingIds = new Set(
-                currentThreads.map(thread => String(thread.id))
-            );
-
-            currentThreads = currentThreads
-                .filter(thread => incomingMap.has(String(thread.id)))
-                .map(thread => {
-                    const newData = incomingMap.get(String(thread.id));
-                    return {
-                        ...thread,
-                        ...newData
-                    };
-                });
-
-            const newThreads = incoming.filter(thread => !existingIds.has(String(thread.id)));
-
-            if (newThreads.length) {
-                currentThreads = currentThreads.concat(newThreads);
+            if (inboxTotalPages <= 1) {
+                box.innerHTML = `
+                    <div class="pagination-info text-center">
+                        Tổng: ${inboxTotalItems} hội thoại
+                    </div>
+                `;
+                return;
             }
+
+            const prevDisabled = inboxPage <= 1 ? 'disabled' : '';
+            const nextDisabled = inboxPage >= inboxTotalPages ? 'disabled' : '';
+
+            box.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center gap-2">
+                    <button type="button"
+                            class="btn btn-sm btn-outline-secondary"
+                            ${prevDisabled}
+                            onclick="loadInbox(true, ${inboxPage - 1})">
+                        Trước
+                    </button>
+
+                    <div class="pagination-info text-center">
+                        Trang ${inboxPage}/${inboxTotalPages}
+                        <br>
+                        ${inboxTotalItems} hội thoại
+                    </div>
+
+                    <button type="button"
+                            class="btn btn-sm btn-outline-secondary"
+                            ${nextDisabled}
+                            onclick="loadInbox(true, ${inboxPage + 1})">
+                        Sau
+                    </button>
+                </div>
+            `;
         };
 
-        const loadInbox = async (showLoading = false) => {
+        const loadInbox = async (showLoading = false, page = inboxPage) => {
             const list = document.getElementById('threadList');
 
             if (inboxRequestRunning) {
@@ -357,26 +418,50 @@
 
             inboxRequestRunning = true;
 
-            if (showLoading && !inboxLoadedOnce) {
+            if (showLoading) {
                 list.innerHTML = '<div class="p-4 text-center text-muted">Đang tải hội thoại...</div>';
             }
 
             try {
-                const response = await fetch('/SalesCSKH/GetCustomerInbox');
+                inboxPage = page;
+                inboxPageSize = Number(document.getElementById('inboxPageSize')?.value || inboxPageSize);
+                inboxKeyword = document.getElementById('inboxKeyword')?.value.trim() || '';
+                inboxStatus = document.getElementById('inboxStatus')?.value || '';
+
+                const url =
+                    `/SalesCSKH/GetCustomerInbox?page=${inboxPage}` +
+                    `&pageSize=${inboxPageSize}` +
+                    `&keyword=${encodeURIComponent(inboxKeyword)}` +
+                    `&status=${encodeURIComponent(inboxStatus)}`;
+
+                const response = await fetch(url);
 
                 if (!response.ok) {
                     throw new Error('Không tải được danh sách hội thoại.');
                 }
 
-                const incomingThreads = await response.json();
+                const data = await response.json();
 
-                mergeThreadsKeepingOrder(incomingThreads);
+                currentThreads = Array.isArray(data.items) ? data.items : [];
+                inboxPage = data.currentPage || 1;
+                inboxPageSize = data.pageSize || 20;
+                inboxTotalItems = data.totalItems || 0;
+                inboxTotalPages = data.totalPages || 1;
+
                 renderInbox();
+                renderInboxPagination();
             } catch (err) {
                 list.innerHTML = `<div class="p-4 text-danger text-center">${escapeHtml(err.message)}</div>`;
             } finally {
                 inboxRequestRunning = false;
             }
+        };
+
+        const searchInbox = () => {
+            selectedThreadId = null;
+            inboxPage = 1;
+            clearSelectedThreadView();
+            loadInbox(true, 1);
         };
 
         const selectThread = async (id) => {
@@ -456,6 +541,12 @@
                 }
 
                 renderInbox();
+
+                if (currentThreads.length === 0 && inboxPage > 1) {
+                    await loadInbox(true, inboxPage - 1);
+                } else {
+                    await loadInbox(false, inboxPage);
+                }
             } catch (err) {
                 alert(err.message || 'Xóa hội thoại thất bại.');
             }
@@ -562,21 +653,37 @@
                 renderInbox();
 
                 await loadThread(selectedThreadId, false);
-                await loadInbox(false);
+                await loadInbox(false, inboxPage);
             } catch (err) {
                 status.textContent = err.message;
                 status.className = 'small text-danger';
             }
         };
 
-        loadInbox(true);
+        document.addEventListener('DOMContentLoaded', () => {
+            const keywordInput = document.getElementById('inboxKeyword');
+            const statusSelect = document.getElementById('inboxStatus');
+            const pageSizeSelect = document.getElementById('inboxPageSize');
 
-        setInterval(async () => {
-            await loadInbox(false);
+            keywordInput?.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    searchInbox();
+                }
+            });
 
-            if (selectedThreadId) {
-                await loadThread(selectedThreadId, true);
-            }
-        }, CSKH_REFRESH_INTERVAL);
+            statusSelect?.addEventListener('change', searchInbox);
+            pageSizeSelect?.addEventListener('change', searchInbox);
+
+            loadInbox(true, 1);
+
+            setInterval(async () => {
+                await loadInbox(false, inboxPage);
+
+                if (selectedThreadId) {
+                    await loadThread(selectedThreadId, true);
+                }
+            }, CSKH_REFRESH_INTERVAL);
+        });
     </script>
 }
