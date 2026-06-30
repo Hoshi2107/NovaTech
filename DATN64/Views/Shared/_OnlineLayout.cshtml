@@ -80,15 +80,20 @@
             border-top: 1px solid #e2e8f0;
             color: var(--nt-text);
         }
+        .nav-link,
+        .nav-link * {
+            white-space: nowrap !important;
+            flex-shrink: 0 !important;
+        }
         .nav-link {
             color: #475569 !important;
             font-weight: 600;
-            font-size: 13px;
-            padding: 8px 16px !important;
+            font-size: 13.5px;
+            padding: 8px 18px !important;
             border-radius: 50rem;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             transition: all 0.25s ease;
         }
         .nav-link:hover {
@@ -104,6 +109,60 @@
         }
         .nav-link:hover i {
             transform: scale(1.1);
+        }
+        .navbar-nav {
+            margin: 0 auto !important;
+            gap: 24px !important;
+        }
+        .navbar .btn,
+        .navbar .btn *,
+        .mega-menu-dropdown-toggle .btn,
+        .mega-menu-dropdown-toggle .btn *,
+        .nav-item {
+            white-space: nowrap !important;
+            flex-shrink: 0 !important;
+        }
+        .mega-menu-dropdown-toggle {
+            margin-right: 20px !important;
+            margin-left: 10px !important;
+        }
+        @@media (min-width: 1200px) and (max-width: 1500px) {
+            .nav-link i {
+                display: none !important;
+            }
+            .nav-link {
+                padding: 6px 10px !important;
+                font-size: 12.5px !important;
+                gap: 0 !important;
+            }
+            .navbar-nav {
+                margin: 0 auto !important;
+                gap: 16px !important;
+            }
+            .mega-menu-dropdown-toggle {
+                margin-left: 5px !important;
+                margin-right: 15px !important;
+            }
+            .mega-menu-dropdown-toggle .btn {
+                padding: 6px 10px !important;
+                font-size: 12px !important;
+            }
+            .navbar .btn {
+                padding: 6px 10px !important;
+                font-size: 12px !important;
+            }
+            .navbar-brand {
+                font-size: 1.2rem !important;
+            }
+            .navbar .container-fluid,
+            .navbar .container {
+                max-width: 100% !important;
+                padding-left: 8px !important;
+                padding-right: 8px !important;
+            }
+            .theme-switch-wrapper {
+                margin-right: 4px !important;
+            }
         }
         .card-product {
             background: #ffffff;
@@ -140,19 +199,31 @@
         .text-muted-custom {
             color: var(--nt-muted) !important;
         }
+        /* Fixed: Dark Mode Active & Hover state styles for navbar links to prevent invisible text */
+        body[data-theme="dark"] .nav-link {
+            color: #94a3b8 !important; /* Muted text for inactive tabs in dark mode */
+            background-color: transparent !important;
+        }
+        body[data-theme="dark"] .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.08) !important;
+            color: #ffffff !important;
+        }
+        body[data-theme="dark"] .nav-link.active {
+            background-color: #0ea5e9 !important; /* Premium sky blue active background */
+            color: #ffffff !important; /* Solid white text for perfect readability */
+        }
     </style>
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-gradient-nav sticky-top py-3">
-        <div class="container">
+    <nav class="navbar navbar-expand-xl navbar-light bg-gradient-nav sticky-top py-3">
+        <div class="container-fluid px-4 px-lg-5">
             <a class="navbar-brand fw-extrabold fs-3 text-neon d-flex align-items-center gap-2" href="@Url.Action("Index", "Online")">
                 <i class="fa-solid fa-bolt-lightning text-cyan animate-pulse"></i> NovaTech
             </a>
 
             <!-- Duchuymobile Category Mega Menu Button -->
-            <div class="mega-menu-dropdown-toggle ms-2 d-none d-lg-block">
+            <div class="mega-menu-dropdown-toggle ms-2 d-none d-xl-block">
                 <button class="btn btn-outline-primary rounded-pill px-3 py-2 text-xs fw-bold shadow-sm d-flex align-items-center gap-2">
                     <i class="fa-solid fa-table-cells"></i> Danh mục
                 </button>
@@ -319,7 +390,7 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="onlineNav">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-2">
+                <ul class="navbar-nav me-auto mb-2 mb-xl-0 gap-2">
                     <li class="nav-item">
                         <a class="nav-link @(onlineCtrl == "Online" && onlineAct == "Index" ? "active" : "")" href="@Url.Action("Index", "Online")">
                             <i class="fa-solid fa-house text-primary"></i> Trang chủ

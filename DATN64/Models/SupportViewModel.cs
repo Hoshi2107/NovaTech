@@ -29,6 +29,9 @@ namespace DATN64.Models
     {
         public string Query { get; set; } = string.Empty;
         public string Issue { get; set; } = string.Empty;
+        public string DeviceType { get; set; } = string.Empty;
+        public string PreferredTime { get; set; } = string.Empty;
+        public string Priority { get; set; } = string.Empty;
         public bool Success { get; set; }
         public bool HasAttempted { get; set; }
         public string Message { get; set; } = string.Empty;

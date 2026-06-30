@@ -7,116 +7,299 @@
 <div class="container my-5 animate-fade-in">
     <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Online")" class="text-decoration-none text-danger"><i class="fa-solid fa-house me-1"></i>Trang chủ</a></li>
-            <li class="breadcrumb-item"><a href="#" class="text-decoration-none text-muted">@(Model.DanhMuc?.TenDanhMuc ?? "Khác")</a></li>
+        <ol class="breadcrumb bg-white p-3 rounded-3 shadow-xs border border-light">
+            <li class="breadcrumb-item">
+                <a href="@Url.Action("Index", "Online")" class="text-decoration-none text-primary fw-medium">
+                    <i class="fa-solid fa-house me-1"></i>Trang chủ
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="/Online/ProductsList?category=@Model.DanhMuc?.TenDanhMuc" class="text-decoration-none text-muted">
+                    @(Model.DanhMuc?.TenDanhMuc ?? "Khác")
+                </a>
+            </li>
             <li class="breadcrumb-item active text-dark fw-bold" aria-current="page">@Model.TenSanPham</li>
         </ol>
     </nav>
 
-    <div class="row gx-5">
-        <!-- L: Image Gallery (CellphoneS Style) -->
-        <div class="col-md-5 mb-4 mb-md-0">
-            <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-3 p-3 text-center" style="background: white;">
-                <img src="@Model.HinhAnh" class="img-fluid rounded-3" alt="@Model.TenSanPham" style="max-height: 400px; object-fit: contain;" onerror="this.src='https://images.unsplash.com/photo-1531297484001-80022131f5a1?q=80&w=500'">
+    <div class="row gx-lg-5">
+        <!-- L: Image Gallery (Premium Glowing Card) -->
+        <div class="col-md-5 mb-5 mb-md-0">
+            <div class="product-image-container card border-0 shadow-sm rounded-4 overflow-hidden mb-4 p-4 text-center bg-white position-relative">
+                <div class="position-absolute top-0 start-0 m-3">
+                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1.5 rounded-pill text-xxs fw-bold text-uppercase">
+                        <i class="fa-solid fa-certificate me-1"></i>Chính hãng
+                    </span>
+                </div>
+                <img src="@Model.HinhAnh?v=2" class="img-fluid rounded-3 product-main-image" alt="@Model.TenSanPham" style="max-height: 380px; object-fit: contain; transition: transform 0.4s ease;" onerror="this.src='https://images.unsplash.com/photo-1531297484001-80022131f5a1?q=80&w=500'">
             </div>
             
-            <!-- Features Block -->
-            <div class="d-flex justify-content-center gap-3 mt-4 text-center text-muted">
-                <div>
-                    <i class="fa-solid fa-shield-halved fs-4 mb-2 text-danger"></i>
-                    <div class="text-xxs">Bảo hành 12 tháng</div>
+            <!-- Features Block (Premium Grid) -->
+            <div class="row g-3 text-center text-muted">
+                <div class="col-4">
+                    <div class="p-3 bg-white rounded-3 border border-light shadow-xs h-100 d-flex flex-column align-items-center justify-content-center">
+                        <i class="fa-solid fa-shield-halved fs-4 mb-2 text-primary"></i>
+                        <div class="text-xxs fw-bold text-dark mb-0.5">Bảo hành 12T</div>
+                        <div class="text-xxxs text-muted">Chính hãng Việt Nam</div>
+                    </div>
                 </div>
-                <div>
-                    <i class="fa-solid fa-rotate-left fs-4 mb-2 text-danger"></i>
-                    <div class="text-xxs">Đổi trả trong 30 ngày</div>
+                <div class="col-4">
+                    <div class="p-3 bg-white rounded-3 border border-light shadow-xs h-100 d-flex flex-column align-items-center justify-content-center">
+                        <i class="fa-solid fa-rotate-left fs-4 mb-2 text-primary"></i>
+                        <div class="text-xxs fw-bold text-dark mb-0.5">Đổi trả 30 ngày</div>
+                        <div class="text-xxxs text-muted">Lỗi 1 đổi 1 nhanh chóng</div>
+                    </div>
                 </div>
-                <div>
-                    <i class="fa-solid fa-truck-fast fs-4 mb-2 text-danger"></i>
-                    <div class="text-xxs">Giao hàng miễn phí</div>
+                <div class="col-4">
+                    <div class="p-3 bg-white rounded-3 border border-light shadow-xs h-100 d-flex flex-column align-items-center justify-content-center">
+                        <i class="fa-solid fa-truck-fast fs-4 mb-2 text-primary"></i>
+                        <div class="text-xxs fw-bold text-dark mb-0.5">Giao miễn phí</div>
+                        <div class="text-xxxs text-muted">Giao siêu tốc toàn quốc</div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- R: Product Info (CellphoneS Style) -->
+        <!-- R: Product Info (Premium Tech Theme) -->
         <div class="col-md-7">
-            <h1 class="fw-bold mb-2 text-dark fs-3">@Model.TenSanPham</h1>
-            <div class="d-flex align-items-center mb-4 text-sm">
-                <span class="text-warning me-2">
-                    <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-stroke"></i>
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-2.5 py-1 rounded-pill text-xxs fw-bold">
+                    @(Model.ThuongHieu?.TenThuongHieu ?? "NovaTech")
                 </span>
-                <span class="text-primary me-3">(24 đánh giá)</span>
-                <span class="text-muted">Thương hiệu: <span class="fw-bold text-dark">@(Model.ThuongHieu?.TenThuongHieu ?? "Khác")</span></span>
+            </div>
+            <h1 class="fw-extrabold mb-2 text-dark fs-2 text-gradient-title">@Model.TenSanPham</h1>
+            
+            <div class="d-flex align-items-center mb-4 text-xs bg-white p-2.5 rounded-3 border border-light shadow-xs d-inline-flex gap-3">
+                <span class="text-warning d-flex align-items-center gap-0.5">
+                    <i class="fa-solid fa-star"></i>
+                    <i class="fa-solid fa-star"></i>
+                    <i class="fa-solid fa-star"></i>
+                    <i class="fa-solid fa-star"></i>
+                    <i class="fa-solid fa-star"></i>
+                    <span class="text-dark fw-bold ms-1 text-xs">5.0</span>
+                </span>
+                <span class="text-muted">|</span>
+                <span class="text-primary fw-medium cursor-pointer"><i class="fa-regular fa-comment-dots me-1"></i>24 đánh giá</span>
+                <span class="text-muted">|</span>
+                <span class="text-muted">Lượt xem: <span class="fw-bold text-dark">1,248</span></span>
             </div>
 
-            <!-- Price Block -->
-            <div class="p-3 rounded-3 mb-4" style="background: #D70018; color: white;">
-                <div class="d-flex align-items-end gap-3 mb-1">
-                    <span class="fw-bold fs-2" style="line-height: 1;">@Model.GiaBan.ToString("N0") ₫</span>
-                    <span class="text-decoration-line-through text-white-50 fs-6">@((Model.GiaBan * 1.1m).ToString("N0")) ₫</span>
+            <!-- Price Block (Premium Tech Gradient) -->
+            <div class="p-4 rounded-4 mb-4 shadow-sm position-relative overflow-hidden" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white;">
+                <div class="position-absolute end-0 bottom-0 opacity-10 m-n3">
+                    <i class="fa-solid fa-bolt-lightning text-white" style="font-size: 8rem;"></i>
+                </div>
+                <div class="text-white-50 text-xs text-uppercase fw-bold mb-1">Giá bán ưu đãi độc quyền</div>
+                <div class="d-flex align-items-baseline gap-3">
+                    <span class="fw-extrabold fs-1" style="letter-spacing: -0.5px;">@Model.GiaBan.ToString("N0") ₫</span>
+                    <span class="text-decoration-line-through text-white-50 fs-6">@((Model.GiaBan * 1.15m).ToString("N0")) ₫</span>
+                    <span class="badge bg-danger text-white rounded-2 text-xxs px-2 py-1 fw-bold">-15%</span>
                 </div>
             </div>
 
-            <!-- Options (Mock) -->
-            <div class="mb-4">
-                <p class="fw-bold mb-2">Chọn màu sắc:</p>
+            <!-- Options (Premium Styled Selection) -->
+            <div class="mb-4 bg-white p-3 rounded-4 border border-light shadow-xs">
+                <p class="fw-bold mb-2 text-sm text-dark"><i class="fa-solid fa-palette text-primary me-2"></i>Chọn phiên bản màu sắc:</p>
                 <div class="d-flex gap-2">
-                    <button class="btn btn-outline-secondary text-dark active border-danger" style="width: 100px;">
-                        Titan Tự Nhiên
+                    <button class="btn btn-outline-primary btn-option-custom active" style="min-width: 120px;">
+                        <div class="text-xxs fw-bold">Titan Tự Nhiên</div>
+                        <div class="text-xxxs text-muted">@Model.GiaBan.ToString("N0") ₫</div>
                     </button>
-                    <button class="btn btn-outline-secondary text-dark" style="width: 100px;">
-                        Titan Xanh
+                    <button class="btn btn-outline-secondary btn-option-custom" style="min-width: 120px;">
+                        <div class="text-xxs fw-bold">Titan Xanh</div>
+                        <div class="text-xxxs text-muted">@Model.GiaBan.ToString("N0") ₫</div>
                     </button>
-                    <button class="btn btn-outline-secondary text-dark" style="width: 100px;">
-                        Titan Đen
+                    <button class="btn btn-outline-secondary btn-option-custom" style="min-width: 120px;">
+                        <div class="text-xxs fw-bold">Titan Đen</div>
+                        <div class="text-xxxs text-muted">@Model.GiaBan.ToString("N0") ₫</div>
                     </button>
                 </div>
             </div>
 
-            <!-- Promo Box -->
-            <div class="card border border-danger mb-4 shadow-sm">
-                <div class="card-header bg-danger text-white fw-bold py-2">
-                    <i class="fa-solid fa-gift me-2"></i>Khuyến mãi ưu đãi
+            <!-- Promo Box (Stunning Clean Design) -->
+            <div class="card border border-primary border-opacity-25 mb-4 shadow-sm rounded-4 overflow-hidden">
+                <div class="card-header bg-gradient-nav text-primary fw-extrabold py-3 border-bottom border-primary border-opacity-10 d-flex align-items-center gap-2" style="background: rgba(2, 132, 199, 0.04) !important;">
+                    <i class="fa-solid fa-gift text-cyan"></i>Khuyến mãi & ưu đãi đặc biệt
                 </div>
-                <div class="card-body p-3 text-sm bg-light">
-                    <ul class="mb-0 text-dark" style="padding-left: 20px;">
-                        <li class="mb-2">Giảm thêm 500.000đ khi thanh toán qua thẻ tín dụng ngân hàng đối tác.</li>
-                        <li class="mb-2">Tặng ốp lưng bảo vệ chính hãng trị giá 300.000đ.</li>
-                        <li>Thu cũ đổi mới trợ giá thêm lên đến 1.000.000đ.</li>
-                    </ul>
+                <div class="card-body p-3.5 text-sm bg-white">
+                    <div class="d-flex flex-column gap-3 text-secondary">
+                        <div class="d-flex align-items-start gap-2.5">
+                            <div class="badge bg-primary bg-opacity-10 text-primary rounded-circle p-1.5 d-flex align-items-center justify-content-center" style="width: 22px; height: 22px;">1</div>
+                            <div>Giảm thêm <span class="fw-bold text-dark">500.000đ</span> khi thanh toán qua chuyển khoản ngân hàng trực tuyến.</div>
+                        </div>
+                        <div class="d-flex align-items-start gap-2.5">
+                            <div class="badge bg-primary bg-opacity-10 text-primary rounded-circle p-1.5 d-flex align-items-center justify-content-center" style="width: 22px; height: 22px;">2</div>
+                            <div>Tặng gói bảo hành vàng <span class="fw-bold text-dark">1 đổi 1 trong 12 tháng</span> trị giá 990.000đ.</div>
+                        </div>
+                        <div class="d-flex align-items-start gap-2.5">
+                            <div class="badge bg-primary bg-opacity-10 text-primary rounded-circle p-1.5 d-flex align-items-center justify-content-center" style="width: 22px; height: 22px;">3</div>
+                            <div>Hỗ trợ thu cũ đổi mới - Trợ giá trực tiếp lên đến <span class="fw-bold text-dark">1.000.000đ</span>.</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Actions -->
-            <div class="mb-4">
+            <!-- Actions (Stunning Action Button) -->
+            <div class="mb-5">
                 @if (Model.SoLuongTon <= 0)
                 {
-                    <button class="btn btn-secondary w-100 py-3 fw-bold fs-5 text-white rounded-3 shadow-sm" disabled style="background: #6c757d;">
+                    <button class="btn btn-secondary w-100 py-3.5 fw-bold fs-5 text-white rounded-3 shadow-sm border-0 cursor-not-allowed" disabled style="background: #94a3b8 !important;">
                         HẾT HÀNG
-                        <div class="fw-normal" style="font-size: 0.85rem;">Sản phẩm tạm thời hết hàng</div>
+                        <div class="fw-normal" style="font-size: 0.8rem; opacity: 0.8;">Sản phẩm tạm thời hết hàng</div>
                     </button>
                 }
                 else
                 {
-                    <button class="btn btn-danger w-100 py-3 fw-bold fs-5 text-white rounded-3 shadow-sm" style="background: #D70018;" onclick="addToCart(@Model.MaSanPham)">
+                    <button class="btn btn-primary-gradient w-100 py-3 fw-bold fs-5 text-white rounded-3 shadow-md border-0 position-relative overflow-hidden btn-hover-effect" onclick="addToCart(@Model.MaSanPham)">
                         MUA NGAY
-                        <div class="fw-normal" style="font-size: 0.85rem;">Giao tận nơi hoặc nhận tại cửa hàng</div>
+                        <div class="fw-normal" style="font-size: 0.8rem; opacity: 0.9;">Giao hàng siêu tốc tận nơi hoặc nhận tại cửa hàng</div>
                     </button>
                 }
             </div>
 
-            <!-- Specs Info -->
-            <div class="card border-0 shadow-sm rounded-4 mb-4">
-                <div class="card-header bg-white border-bottom fw-bold fs-5 py-3">
-                    Thông số kỹ thuật
+            <!-- Specs Info (Clean Tabular Details) -->
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+                <div class="card-header bg-white border-bottom fw-extrabold fs-5 py-3.5 text-dark d-flex align-items-center gap-2">
+                    <i class="fa-solid fa-list-check text-primary"></i>Thông tin chi tiết sản phẩm
                 </div>
-                <div class="card-body p-4 text-dark text-sm bg-light" style="white-space: pre-line;">
-                    @(Model.MoTa ?? "Đang cập nhật thông tin chi tiết về sản phẩm này.")
+                <div class="card-body p-4 text-secondary text-sm bg-light bg-opacity-50" style="white-space: pre-line; line-height: 1.7; font-family: system-ui, -apple-system, sans-serif;">
+                    @(Model.MoTa ?? "Đang cập nhật thông tin chi tiết về sản phẩm này từ hãng sản xuất.")
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    .product-image-container {
+        border: 1px solid rgba(0,0,0,0.04) !important;
+        transition: box-shadow 0.3s ease, border-color 0.3s ease;
+    }
+    .product-image-container:hover {
+        border-color: rgba(2, 132, 199, 0.2) !important;
+        box-shadow: 0 15px 30px -5px rgba(2, 132, 199, 0.08) !important;
+    }
+    .product-image-container:hover .product-main-image {
+        transform: scale(1.03);
+    }
+    .text-gradient-title {
+        background: linear-gradient(to right, #0b1528, #0284c7);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+    .btn-option-custom {
+        border-radius: 12px;
+        padding: 10px 14px !important;
+        transition: all 0.25s ease;
+        border-color: #e2e8f0 !important;
+        text-align: left;
+    }
+    .btn-option-custom:hover {
+        border-color: #0284c7 !important;
+        background-color: rgba(2, 132, 199, 0.02) !important;
+        color: #0284c7 !important;
+    }
+    .btn-option-custom.active {
+        border-color: #0284c7 !important;
+        background-color: rgba(2, 132, 199, 0.06) !important;
+        box-shadow: 0 0 0 1px #0284c7 !important;
+        color: #0284c7 !important;
+    }
+    .btn-primary-gradient {
+        background: linear-gradient(135deg, #06b6d4, #0284c7) !important;
+        box-shadow: 0 8px 24px -6px rgba(2, 132, 199, 0.35) !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    .btn-primary-gradient:hover {
+        background: linear-gradient(135deg, #0891b2, #0369a1) !important;
+        box-shadow: 0 12px 30px -4px rgba(2, 132, 199, 0.5) !important;
+        transform: translateY(-2px);
+    }
+    .btn-primary-gradient:active {
+        transform: translateY(0);
+    }
+    .text-xxs {
+        font-size: 0.78rem !important;
+    }
+    .text-xxxs {
+        font-size: 0.7rem !important;
+    }
+    .shadow-xs {
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03) !important;
+    }
+
+    /* Dark Mode Premium Styles for Detail Page */
+    body[data-theme="dark"] .bg-white {
+        background-color: var(--nt-card) !important;
+    }
+    body[data-theme="dark"] .border-light {
+        border-color: rgba(255,255,255,0.08) !important;
+    }
+    body[data-theme="dark"] .border {
+        border-color: rgba(255,255,255,0.08) !important;
+    }
+    body[data-theme="dark"] .breadcrumb {
+        background-color: var(--nt-card) !important;
+        border-color: rgba(255,255,255,0.08) !important;
+    }
+    body[data-theme="dark"] .breadcrumb-item a {
+        color: var(--nt-primary) !important;
+    }
+    body[data-theme="dark"] .breadcrumb-item.active {
+        color: var(--nt-text) !important;
+    }
+    body[data-theme="dark"] .product-image-container {
+        background-color: var(--nt-card) !important;
+        border-color: rgba(255,255,255,0.08) !important;
+    }
+    body[data-theme="dark"] .card-body.bg-light {
+        background-color: var(--nt-dark) !important;
+        color: var(--nt-text) !important;
+    }
+    body[data-theme="dark"] .text-dark {
+        color: var(--nt-text) !important;
+    }
+    body[data-theme="dark"] .text-secondary {
+        color: var(--nt-muted) !important;
+    }
+    body[data-theme="dark"] .text-gradient-title {
+        background: linear-gradient(to right, #ffffff, #38bdf8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    body[data-theme="dark"] .btn-option-custom {
+        background-color: rgba(255,255,255,0.02) !important;
+        border-color: rgba(255,255,255,0.1) !important;
+        color: var(--nt-text) !important;
+    }
+    body[data-theme="dark"] .btn-option-custom:hover {
+        border-color: var(--nt-primary) !important;
+        background-color: rgba(56, 189, 248, 0.08) !important;
+        color: var(--nt-primary) !important;
+    }
+    body[data-theme="dark"] .btn-option-custom.active {
+        background-color: var(--nt-primary) !important;
+        color: #ffffff !important;
+        border-color: var(--nt-primary) !important;
+    }
+    body[data-theme="dark"] .btn-option-custom.active .text-muted {
+        color: rgba(255,255,255,0.8) !important;
+    }
+    body[data-theme="dark"] .btn-option-custom .text-muted {
+        color: var(--nt-muted) !important;
+    }
+    body[data-theme="dark"] .badge.bg-primary.bg-opacity-10 {
+        background-color: rgba(56, 189, 248, 0.15) !important;
+        color: var(--nt-primary) !important;
+        border-color: rgba(56, 189, 248, 0.3) !important;
+    }
+    body[data-theme="dark"] .badge.bg-info.bg-opacity-10 {
+        background-color: rgba(14, 165, 233, 0.15) !important;
+        color: var(--nt-secondary) !important;
+        border-color: rgba(14, 165, 233, 0.3) !important;
+    }
+</style>
 
 @section Scripts {
     <script>
@@ -133,22 +316,6 @@
                     window.location.href = '@Url.Action("Cart", "Online")';
                 } else {
                     alert(data.message || 'Không thể thêm sản phẩm vào giỏ hàng!');
-                }
-            });
-        }
-
-        function toggleFavorite(productId) {
-            var isFav = document.getElementById('favoriteText').innerText.trim() !== 'Yêu thích';
-            var action = isFav ? 'RemoveFromFavorites' : 'AddToFavorites';
-            fetch('@Url.Action("AddToFavorites", "Online")'.replace('AddToFavorites', action), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'id=' + productId
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    window.location.reload();
                 }
             });
         }

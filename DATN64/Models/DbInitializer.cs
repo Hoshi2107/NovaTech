@@ -204,6 +204,17 @@ namespace DATN64.Models
                 );
             ");
 
+            // Create YeuThich table
+            ExecuteSql(db, @"
+                IF OBJECT_ID('dbo.YeuThich', 'U') IS NULL
+                CREATE TABLE dbo.YeuThich (
+                    Id INT IDENTITY(1,1) PRIMARY KEY,
+                    MaKhachHang INT NOT NULL,
+                    MaSanPham INT NOT NULL,
+                    NgayTao DATETIME NOT NULL DEFAULT GETDATE()
+                );
+            ");
+
             // Create ChamCong table
             ExecuteSql(db, @"
                 IF OBJECT_ID('dbo.ChamCong', 'U') IS NULL

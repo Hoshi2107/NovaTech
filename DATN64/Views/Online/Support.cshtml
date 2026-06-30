@@ -114,7 +114,12 @@
         background: #1e293b;
     }
     body[data-theme="dark"] .support-tab-btn.active {
-        background: #0f172a;
+        background: #0ea5e9 !important;
+        color: #ffffff !important;
+    }
+    body[data-theme="dark"] .support-tab-btn:hover:not(.active) {
+        background: rgba(255, 255, 255, 0.08) !important;
+        color: #ffffff !important;
     }
 
     .support-section {
@@ -590,6 +595,34 @@
                                             <span class="label">Mã đơn hàng</span>
                                             <span class="value">#@Model.RepairRequest.OrderId</span>
                                         </div>
+                                        @if (!string.IsNullOrEmpty(Model.RepairRequest.DeviceType))
+                                        {
+                                            <div class="result-item">
+                                                <span class="label">Thiết bị</span>
+                                                <span class="value">@Model.RepairRequest.DeviceType</span>
+                                            </div>
+                                        }
+                                        @if (!string.IsNullOrEmpty(Model.RepairRequest.Issue))
+                                        {
+                                            <div class="result-item">
+                                                <span class="label">Mô tả lỗi</span>
+                                                <span class="value">@Model.RepairRequest.Issue</span>
+                                            </div>
+                                        }
+                                        @if (!string.IsNullOrEmpty(Model.RepairRequest.PreferredTime))
+                                        {
+                                            <div class="result-item">
+                                                <span class="label">Hẹn giờ</span>
+                                                <span class="value">@Model.RepairRequest.PreferredTime</span>
+                                            </div>
+                                        }
+                                        @if (!string.IsNullOrEmpty(Model.RepairRequest.Priority))
+                                        {
+                                            <div class="result-item">
+                                                <span class="label">Độ ưu tiên</span>
+                                                <span class="value" style="text-transform: capitalize;">@Model.RepairRequest.Priority</span>
+                                            </div>
+                                        }
                                     </div>
                                 }
                                 else

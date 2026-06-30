@@ -131,6 +131,37 @@ private string GetLoginEmail()
 
         private List<int> GetFavoritesFromSession()
         {
+            var customerId = GetCurrentCustomerId();
+            if (customerId != null)
+            {
+                var isLoaded = HttpContext.Session.GetString("FavoritesLoaded");
+                if (string.IsNullOrEmpty(isLoaded))
+                {
+                    // Load from DB
+                    var dbFavorites = _context.YeuThichs
+                        .Where(y => y.MaKhachHang == customerId.Value)
+                        .Select(y => y.MaSanPham)
+                        .ToList();
+
+                    // Merge with existing session favorites if any (anonymous browsing before login)
+                    var anonFavoritesJson = HttpContext.Session.GetString("Favorites");
+                    if (!string.IsNullOrEmpty(anonFavoritesJson))
+                    {
+                        var sessionFavorites = JsonSerializer.Deserialize<List<int>>(anonFavoritesJson) ?? new List<int>();
+                        var merged = dbFavorites.Union(sessionFavorites).ToList();
+                        
+                        // Save merged to session and database
+                        SaveFavoritesToSession(merged);
+                        HttpContext.Session.SetString("FavoritesLoaded", "true");
+                        return merged;
+                    }
+
+                    HttpContext.Session.SetString("Favorites", JsonSerializer.Serialize(dbFavorites));
+                    HttpContext.Session.SetString("FavoritesLoaded", "true");
+                    return dbFavorites;
+                }
+            }
+
             var favoritesJson = HttpContext.Session.GetString("Favorites");
             if (string.IsNullOrEmpty(favoritesJson)) return new List<int>();
             return JsonSerializer.Deserialize<List<int>>(favoritesJson) ?? new List<int>();
@@ -139,6 +170,39 @@ private string GetLoginEmail()
         private void SaveFavoritesToSession(List<int> favorites)
         {
             HttpContext.Session.SetString("Favorites", JsonSerializer.Serialize(favorites));
+
+            var customerId = GetCurrentCustomerId();
+            if (customerId != null)
+            {
+                // Sync with DB
+                var existing = _context.YeuThichs
+                    .Where(y => y.MaKhachHang == customerId.Value)
+                    .ToList();
+
+                // Remove items in DB that are no longer in favorites list
+                var toRemove = existing.Where(e => !favorites.Contains(e.MaSanPham)).ToList();
+                if (toRemove.Any())
+                {
+                    _context.YeuThichs.RemoveRange(toRemove);
+                }
+
+                // Add new items
+                var existingProdIds = existing.Select(e => e.MaSanPham).ToList();
+                var toAdd = favorites.Where(id => !existingProdIds.Contains(id))
+                    .Select(id => new YeuThich
+                    {
+                        MaKhachHang = customerId.Value,
+                        MaSanPham = id,
+                        NgayTao = DateTime.Now
+                    }).ToList();
+
+                if (toAdd.Any())
+                {
+                    _context.YeuThichs.AddRange(toAdd);
+                }
+
+                _context.SaveChanges();
+            }
         }
 
        private int? GetCurrentCustomerId()
@@ -282,13 +346,19 @@ private string GetLoginEmail()
                         .ThenInclude(ct => ct.SanPham)
                     .AsQueryable();
 
-                if (int.TryParse(query, out var orderId))
+                var cleanQuery = query.Trim();
+                if (cleanQuery.StartsWith("#"))
+                {
+                    cleanQuery = cleanQuery.Substring(1);
+                }
+
+                if (int.TryParse(cleanQuery, out var orderId) && cleanQuery.Length < 7)
                 {
                     orderQuery = orderQuery.Where(d => d.MaDonHang == orderId);
                 }
                 else
                 {
-                    orderQuery = orderQuery.Where(d => d.KhachHang != null && d.KhachHang.SoDienThoai != null && d.KhachHang.SoDienThoai == query);
+                    orderQuery = orderQuery.Where(d => d.KhachHang != null && d.KhachHang.SoDienThoai != null && d.KhachHang.SoDienThoai == cleanQuery);
                 }
 
                 var order = orderQuery.OrderByDescending(d => d.NgayDat).FirstOrDefault();
@@ -342,7 +412,7 @@ private string GetLoginEmail()
         }
 
         [HttpPost]
-        public IActionResult Support(string tab, string query, string issue)
+        public IActionResult Support(string tab, string query, string issue, string deviceType, string preferredTime, string priority)
         {
             var model = new SupportViewModel
             {
@@ -351,6 +421,9 @@ private string GetLoginEmail()
                 {
                     Query = query ?? string.Empty,
                     Issue = issue ?? string.Empty,
+                    DeviceType = deviceType ?? string.Empty,
+                    PreferredTime = preferredTime ?? string.Empty,
+                    Priority = priority ?? string.Empty,
                     HasAttempted = true
                 }
             };
@@ -366,13 +439,19 @@ private string GetLoginEmail()
                 .Include(d => d.KhachHang)
                 .AsQueryable();
 
-            if (int.TryParse(query, out var orderId))
+            var cleanQuery = query.Trim();
+            if (cleanQuery.StartsWith("#"))
+            {
+                cleanQuery = cleanQuery.Substring(1);
+            }
+
+            if (int.TryParse(cleanQuery, out var orderId) && cleanQuery.Length < 7)
             {
                 orderQuery = orderQuery.Where(d => d.MaDonHang == orderId);
             }
             else
             {
-                orderQuery = orderQuery.Where(d => d.KhachHang != null && d.KhachHang.SoDienThoai != null && d.KhachHang.SoDienThoai == query);
+                orderQuery = orderQuery.Where(d => d.KhachHang != null && d.KhachHang.SoDienThoai != null && d.KhachHang.SoDienThoai == cleanQuery);
             }
 
             var order = orderQuery.OrderByDescending(d => d.NgayDat).FirstOrDefault();
