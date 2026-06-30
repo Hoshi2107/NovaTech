@@ -101,10 +101,29 @@ namespace DATN64.Controllers
             var filterTu = defaultTuNgay;
             var filterDen = defaultDenNgay;
 
-            // A. Doanh thu thuần (Đơn hàng hoàn thành)
-            vm.ReportPL.DoanhThuThuan = await _context.DonHangs
+            // A. Doanh thu thuần (Đơn hàng hoàn thành - tất cả kênh)
+            var completedOrdersForPL = await _context.DonHangs
                 .Where(d => d.TrangThai == "Hoàn thành" && d.NgayDat >= filterTu && d.NgayDat <= filterDen)
-                .SumAsync(d => d.TongTien ?? 0);
+                .ToListAsync();
+
+            vm.ReportPL.DoanhThuThuan = completedOrdersForPL.Sum(d => d.TongTien ?? 0);
+
+            // Phân tách doanh thu theo kênh
+            var tikTokOrders = completedOrdersForPL.Where(d => DetermineChannel(d) == "TikTok Shop").ToList();
+            var banLeOrders = completedOrdersForPL.Where(d => DetermineChannel(d) == "Bán lẻ tại quầy").ToList();
+            var onlineOrders = completedOrdersForPL.Where(d => DetermineChannel(d) == "Online / Web").ToList();
+
+            vm.ReportPL.DoanhThuTikTok = tikTokOrders.Sum(d => d.TongTien ?? 0);
+            vm.ReportPL.DoanhThuOnline = onlineOrders.Sum(d => d.TongTien ?? 0);
+            vm.ReportPL.DoanhThuBanLe = banLeOrders.Sum(d => d.TongTien ?? 0);
+
+            // Danh sách kênh cho biểu đồ
+            vm.RevenueByChannel = new List<RevenueChannelDto>
+            {
+                new RevenueChannelDto { TenKenh = "TikTok Shop", DoanhThu = vm.ReportPL.DoanhThuTikTok, SoDonHang = tikTokOrders.Count, MauSac = "#ff2d55", Icon = "fa-brands fa-tiktok" },
+                new RevenueChannelDto { TenKenh = "Bán lẻ tại quầy", DoanhThu = vm.ReportPL.DoanhThuBanLe, SoDonHang = banLeOrders.Count, MauSac = "#0ea5e9", Icon = "fa-solid fa-store" },
+                new RevenueChannelDto { TenKenh = "Online / Web", DoanhThu = vm.ReportPL.DoanhThuOnline, SoDonHang = onlineOrders.Count, MauSac = "#8b5cf6", Icon = "fa-solid fa-globe" },
+            };
 
             // B. Giá vốn hàng bán (COGS)
             var cogsQuery = from ctdh in _context.ChiTietDonHangs
@@ -321,17 +340,22 @@ namespace DATN64.Controllers
                 {
                     count++;
                     var name = order.KhachHang?.HoTen ?? "Khách lẻ";
+                    // Phân loại kênh bán hàng dựa vào dấu hiệu trong GhiChu / PhuongThucThanhToan
+                    var channel = DetermineChannel(order);
+                    string nhom = channel == "TikTok Shop" ? "TikTok Shop" : (channel == "Online / Web" ? "Doanh thu Web" : "Bán hàng");
                     var sq = new SoQuy
                     {
                         MaGiaoDich = $"PT-{count:D5}",
                         LoaiGiaoDich = "Thu",
-                        NhomGiaoDich = "Bán hàng",
+                        NhomGiaoDich = nhom,
                         SoTien = order.TongTien ?? 0,
                         NgayGiaoDich = order.NgayDat ?? DateTime.Now,
                         PhuongThucThanhToan = order.PhuongThucThanhToan ?? "Chuyển khoản",
                         DoiTuongGiaoDich = name,
-                        GhiChu = $"Thu tiền đơn hàng #{order.MaDonHang} từ hệ thống bán hàng",
-                        MaNhanVien = order.MaNhanVien ?? 1, // Mặc định gán Admin nếu không có NV phụ trách
+                        GhiChu = channel == "TikTok Shop"
+                            ? $"Thu tiền đơn TikTok Shop #{order.MaDonHang}"
+                            : (channel == "Online / Web" ? $"Thu tiền đơn hàng Web #{order.MaDonHang}" : $"Thu tiền đơn hàng #{order.MaDonHang} từ hệ thống bán hàng"),
+                        MaNhanVien = order.MaNhanVien ?? 1,
                         MaDonHang = order.MaDonHang
                     };
                     _context.SoQuys.Add(sq);
@@ -408,6 +432,31 @@ namespace DATN64.Controllers
                     }
                 }
             }
+        }
+
+        private string DetermineChannel(DonHang order)
+        {
+            var note = order.GhiChu ?? "";
+            var payment = order.PhuongThucThanhToan ?? "";
+
+            if (note.Contains("[TikTokShop#", StringComparison.OrdinalIgnoreCase) || 
+                payment.Contains("TikTok", StringComparison.OrdinalIgnoreCase))
+            {
+                return "TikTok Shop";
+            }
+
+            if (note.Contains("Địa chỉ giao hàng", StringComparison.OrdinalIgnoreCase) ||
+                note.Contains("Voucher sử dụng", StringComparison.OrdinalIgnoreCase) ||
+                note.Contains("giao hàng", StringComparison.OrdinalIgnoreCase) ||
+                note.Contains("website", StringComparison.OrdinalIgnoreCase) ||
+                note.Contains("online", StringComparison.OrdinalIgnoreCase) ||
+                payment.Contains("online", StringComparison.OrdinalIgnoreCase) ||
+                payment.Contains("website", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Online / Web";
+            }
+
+            return "Bán lẻ tại quầy";
         }
     }
 }
