@@ -27,6 +27,9 @@ namespace DATN64.Models.ViewModels
         
         // Chart data
         public List<CashFlowChartDto> CashFlowChartData { get; set; } = new();
+
+        // Doanh thu phân theo kênh
+        public List<RevenueChannelDto> RevenueByChannel { get; set; } = new();
     }
 
     public class CongNoNccSummaryDto
@@ -49,6 +52,20 @@ namespace DATN64.Models.ViewModels
         public decimal ChiPhiVanhHanhKhac { get; set; }
         public decimal TongChiPhi { get; set; }
         public decimal LoiNhuanRong { get; set; }
+
+        // Phân tách doanh thu theo kênh bán hàng
+        public decimal DoanhThuTikTok { get; set; }
+        public decimal DoanhThuBanLe { get; set; }
+        public decimal DoanhThuOnline { get; set; }
+    }
+
+    public class RevenueChannelDto
+    {
+        public string TenKenh { get; set; } = "";
+        public decimal DoanhThu { get; set; }
+        public int SoDonHang { get; set; }
+        public string MauSac { get; set; } = "";
+        public string Icon { get; set; } = "";
     }
 
     public class CashFlowChartDto

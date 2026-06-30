@@ -1083,6 +1083,7 @@
                 brands: [],
                 loading: false,
                 submitting: false,
+                pollingTimer: null,
                 isManager: @(isManager ? "true" : "false"),
                 exportError: '',
                 adjustError: '',
@@ -1274,6 +1275,16 @@
                 if (tab) {
                     this.activeTab = tab;
                 }
+
+                // Tự động quét và làm mới dữ liệu sau mỗi 10 giây (Real-time polling)
+                this.pollingTimer = setInterval(() => {
+                    this.fetchData(true);
+                }, 10000);
+            },
+            beforeDestroy() {
+                if (this.pollingTimer) {
+                    clearInterval(this.pollingTimer);
+                }
             },
             methods: {
                 updateTime() {
@@ -1284,8 +1295,8 @@
                     if (!val && val !== 0) return '0 ₫';
                     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
                 },
-                async fetchData() {
-                    this.loading = true;
+                async fetchData(silent = false) {
+                    if (!silent) this.loading = true;
                     try {
                         const [prodRes, txRes, optRes] = await Promise.all([
                             axios.get('/api/inventory'),
@@ -1303,9 +1314,11 @@
                         });
                     } catch (err) {
                         console.error('Lỗi khi tải dữ liệu:', err);
-                        Swal.fire('Lỗi', 'Không thể tải dữ liệu kho hàng.', 'error');
+                        if (!silent) {
+                            Swal.fire('Lỗi', 'Không thể tải dữ liệu kho hàng.', 'error');
+                        }
                     } finally {
-                        this.loading = false;
+                        if (!silent) this.loading = false;
                         this.updateTime();
                     }
                 },

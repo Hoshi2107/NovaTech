@@ -19,15 +19,129 @@ namespace DATN64.Controllers
             _context = context;
         }
 
-        public IActionResult Index()
-        {
-            var orders = _context.DonHangs
-                .Include(o => o.KhachHang)
-                .OrderByDescending(o => o.NgayDat)
-                .ToList();
+       public IActionResult Index(string? keyword, string? status, string? channel, int page = 1, int pageSize = 20)
+{
+    if (page < 1) page = 1;
 
-            return View(orders);
+    var allowedPageSizes = new[] { 10, 20, 50 };
+    if (!allowedPageSizes.Contains(pageSize))
+    {
+        pageSize = 20;
+    }
+
+    keyword = (keyword ?? string.Empty).Trim();
+    status = (status ?? string.Empty).Trim();
+    channel = (channel ?? string.Empty).Trim();
+
+    var query = _context.DonHangs
+        .Include(o => o.KhachHang)
+        .AsQueryable();
+
+    if (!string.IsNullOrWhiteSpace(keyword))
+    {
+        if (int.TryParse(keyword, out var orderId))
+        {
+            query = query.Where(o =>
+                o.MaDonHang == orderId ||
+                (
+                    o.KhachHang != null &&
+                    (
+                        o.KhachHang.HoTen.Contains(keyword) ||
+                        (o.KhachHang.SoDienThoai != null && o.KhachHang.SoDienThoai.Contains(keyword)) ||
+                        (o.KhachHang.Email != null && o.KhachHang.Email.Contains(keyword))
+                    )
+                )
+            );
         }
+        else
+        {
+            query = query.Where(o =>
+                o.KhachHang != null &&
+                (
+                    o.KhachHang.HoTen.Contains(keyword) ||
+                    (o.KhachHang.SoDienThoai != null && o.KhachHang.SoDienThoai.Contains(keyword)) ||
+                    (o.KhachHang.Email != null && o.KhachHang.Email.Contains(keyword))
+                )
+            );
+        }
+    }
+
+    if (!string.IsNullOrWhiteSpace(status))
+    {
+        query = query.Where(o => o.TrangThai == status);
+    }
+
+    if (channel == "Website")
+    {
+        query = query.Where(o =>
+            (o.GhiChu != null &&
+                (
+                    o.GhiChu.Contains("Địa chỉ giao hàng") ||
+                    o.GhiChu.Contains("Voucher sử dụng") ||
+                    o.GhiChu.Contains("giao hàng") ||
+                    o.GhiChu.Contains("website") ||
+                    o.GhiChu.Contains("online") ||
+                    o.GhiChu.Contains("TikTok")
+                )
+            ) ||
+            (o.PhuongThucThanhToan != null &&
+                (
+                    o.PhuongThucThanhToan.Contains("online") ||
+                    o.PhuongThucThanhToan.Contains("website") ||
+                    o.PhuongThucThanhToan.Contains("TikTok")
+                )
+            )
+        );
+    }
+    else if (channel == "Cửa hàng")
+    {
+        query = query.Where(o =>
+            !(
+                (o.GhiChu != null &&
+                    (
+                        o.GhiChu.Contains("Địa chỉ giao hàng") ||
+                        o.GhiChu.Contains("Voucher sử dụng") ||
+                        o.GhiChu.Contains("giao hàng") ||
+                        o.GhiChu.Contains("website") ||
+                        o.GhiChu.Contains("online") ||
+                        o.GhiChu.Contains("TikTok")
+                    )
+                ) ||
+                (o.PhuongThucThanhToan != null &&
+                    (
+                        o.PhuongThucThanhToan.Contains("online") ||
+                        o.PhuongThucThanhToan.Contains("website") ||
+                        o.PhuongThucThanhToan.Contains("TikTok")
+                    )
+                )
+            )
+        );
+    }
+
+    var totalItems = query.Count();
+    var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+    if (totalPages > 0 && page > totalPages)
+    {
+        page = totalPages;
+    }
+
+    var orders = query
+        .OrderByDescending(o => o.NgayDat)
+        .Skip((page - 1) * pageSize)
+        .Take(pageSize)
+        .ToList();
+
+    ViewBag.Keyword = keyword;
+    ViewBag.StatusFilter = status;
+    ViewBag.ChannelFilter = channel;
+    ViewBag.CurrentPage = page;
+    ViewBag.PageSize = pageSize;
+    ViewBag.TotalItems = totalItems;
+    ViewBag.TotalPages = totalPages;
+
+    return View(orders);
+}
 
         public IActionResult Detail(int id)
         {

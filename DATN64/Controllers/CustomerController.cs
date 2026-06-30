@@ -16,15 +16,78 @@ namespace DATN64.Controllers
             _context = context;
         }
 
-        [HasPermission("View_Customer")]
-        public IActionResult Index()
-        {
-            var customers = _context.KhachHangs
-                .OrderByDescending(k => k.NgayTao)
-                .ToList();
+     [HasPermission("View_Customer")]
+public IActionResult Index(string? keyword, string? rank, string? status, int page = 1, int pageSize = 20)
+{
+    if (page < 1) page = 1;
 
-            return View(customers);
-        }
+    var allowedPageSizes = new[] { 10, 20, 50 };
+    if (!allowedPageSizes.Contains(pageSize))
+    {
+        pageSize = 20;
+    }
+
+    keyword = (keyword ?? string.Empty).Trim();
+    rank = (rank ?? string.Empty).Trim();
+    status = (status ?? string.Empty).Trim();
+
+    var query = _context.KhachHangs.AsQueryable();
+
+    if (!string.IsNullOrWhiteSpace(keyword))
+    {
+        query = query.Where(k =>
+            k.HoTen.Contains(keyword) ||
+            (k.SoDienThoai != null && k.SoDienThoai.Contains(keyword)) ||
+            (k.Email != null && k.Email.Contains(keyword))
+        );
+    }
+
+    if (!string.IsNullOrWhiteSpace(status))
+    {
+        query = query.Where(k => k.TrangThai == status);
+    }
+
+    if (rank == "Đồng")
+    {
+        query = query.Where(k => k.DiemTichLuy < 500);
+    }
+    else if (rank == "Bạc")
+    {
+        query = query.Where(k => k.DiemTichLuy >= 500 && k.DiemTichLuy < 1500);
+    }
+    else if (rank == "Vàng")
+    {
+        query = query.Where(k => k.DiemTichLuy >= 1500 && k.DiemTichLuy < 3000);
+    }
+    else if (rank == "Kim Cương")
+    {
+        query = query.Where(k => k.DiemTichLuy >= 3000);
+    }
+
+    var totalItems = query.Count();
+    var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+    if (totalPages > 0 && page > totalPages)
+    {
+        page = totalPages;
+    }
+
+    var customers = query
+        .OrderByDescending(k => k.NgayTao)
+        .Skip((page - 1) * pageSize)
+        .Take(pageSize)
+        .ToList();
+
+    ViewBag.Keyword = keyword;
+    ViewBag.RankFilter = rank;
+    ViewBag.StatusFilter = status;
+    ViewBag.CurrentPage = page;
+    ViewBag.PageSize = pageSize;
+    ViewBag.TotalItems = totalItems;
+    ViewBag.TotalPages = totalPages;
+
+    return View(customers);
+}
 
         [HttpPost]
         [ValidateAntiForgeryToken]

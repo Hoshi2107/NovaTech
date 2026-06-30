@@ -180,6 +180,40 @@
     .kpi-luong.amber { background: #fffbeb; border-color: #fde68a; }
     .kpi-luong .kpi-val { font-size: 1.4rem; font-weight: 800; }
     .kpi-luong .kpi-lbl { font-size: 0.72rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* ─── Premium Action Buttons ─── */
+    .btn-emp-action {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        padding: 6px 12px !important;
+        border-radius: 20px !important;
+        transition: all 0.2s ease-in-out !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+        text-decoration: none !important;
+    }
+    .btn-emp-action-edit {
+        color: #2563eb !important;
+    }
+    .btn-emp-action-edit:hover {
+        background-color: #eff6ff !important;
+    }
+    .btn-emp-action-lock {
+        color: #dc2626 !important;
+    }
+    .btn-emp-action-lock:hover {
+        background-color: #fee2e2 !important;
+    }
+    .btn-emp-action-unlock {
+        color: #16a34a !important;
+    }
+    .btn-emp-action-unlock:hover {
+        background-color: #ecfdf5 !important;
+    }
 </style>
 }
 
@@ -286,22 +320,22 @@
                                     <span class="badge rounded-pill status-locked fw-semibold px-2 py-1" style="font-size:.75rem"><i class="fa-solid fa-circle-xmark me-1"></i>Bị khóa</span>
                                 }
                             </td>
-                            <td class="text-end">
-                                <button class="btn btn-sm btn-light text-primary rounded-3 shadow-sm border-0 me-1 px-2"
+                            <td class="text-end text-nowrap">
+                                <button class="btn-emp-action btn-emp-action-edit"
                                         onclick="openEditModal(@emp.MaNhanVien,'@Html.Raw(emp.HoTen.Replace("'","\\'"  ))','@Html.Raw(emp.Email ?? "")','@Html.Raw(emp.SoDienThoai ?? "")','@Html.Raw(emp.TrangThai ?? "Hoạt động")',[@roleIdsStr],@(emp.LuongTheoGio.HasValue ? emp.LuongTheoGio.Value.ToString() : "0"))"
                                         title="Sửa nhân viên">
-                                    <i class="fa-solid fa-pen-to-square"></i> <span class="d-none d-xl-inline ms-1">Sửa</span>
+                                    <i class="fa-solid fa-pen-to-square"></i><span>Sửa</span>
                                 </button>
                                 @if (emp.TrangThai == "Hoạt động")
                                 {
-                                    <button class="btn btn-sm btn-light text-warning rounded-3 shadow-sm border-0 px-2" onclick="toggleStatus(@emp.MaNhanVien,'@Html.Raw(emp.HoTen)','Bị khóa')" title="Vô hiệu hóa">
-                                        <i class="fa-solid fa-lock"></i> <span class="d-none d-xl-inline ms-1">Khóa</span>
+                                    <button class="btn-emp-action btn-emp-action-lock" onclick="toggleStatus(@emp.MaNhanVien,'@Html.Raw(emp.HoTen)','Bị khóa')" title="Vô hiệu hóa">
+                                        <i class="fa-solid fa-lock"></i><span>Khóa</span>
                                     </button>
                                 }
                                 else
                                 {
-                                    <button class="btn btn-sm btn-light text-success rounded-3 shadow-sm border-0 px-2" onclick="toggleStatus(@emp.MaNhanVien,'@Html.Raw(emp.HoTen)','Hoạt động')" title="Mở khóa">
-                                        <i class="fa-solid fa-lock-open"></i> <span class="d-none d-xl-inline ms-1">Mở</span>
+                                    <button class="btn-emp-action btn-emp-action-unlock" onclick="toggleStatus(@emp.MaNhanVien,'@Html.Raw(emp.HoTen)','Hoạt động')" title="Mở khóa">
+                                        <i class="fa-solid fa-lock-open"></i><span>Mở</span>
                                     </button>
                                 }
                             </td>
@@ -418,13 +452,14 @@
                         <th>Giờ ra</th>
                         <th>Tổng giờ</th>
                         <th>Trạng thái</th>
+                        <th>Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if (!chamCongList.Any())
                     {
                         <tr>
-                            <td colspan="6" class="text-center py-5 text-muted">
+                            <td colspan="7" class="text-center py-5 text-muted">
                                 <i class="fa-solid fa-clock-rotate-left fa-2x mb-2 d-block opacity-30"></i>
                                 Chưa có dữ liệu chấm công trong khoảng thời gian này.
                             </td>
@@ -455,7 +490,14 @@
                                 }
                                 else
                                 {
-                                    <span class="badge cc-miss"><i class="fa-solid fa-circle-dot me-1"></i>Đang làm</span>
+                                    @if (cc.TrangThai == "Quên checkout")
+                                    {
+                                        <span class="text-danger fw-semibold"><i class="fa-solid fa-triangle-exclamation me-1"></i>Trống</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge cc-miss"><i class="fa-solid fa-circle-dot me-1"></i>Đang làm</span>
+                                    }
                                 }
                             </td>
                             <td>
@@ -470,16 +512,28 @@
                                 {
                                     <span class="badge cc-out rounded-pill"><i class="fa-solid fa-check me-1"></i>Hoàn thành</span>
                                 }
+                                else if (cc.TrangThai == "Quên checkout")
+                                {
+                                    <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 rounded-pill px-2 py-1 text-xs fw-bold">
+                                        <i class="fa-solid fa-triangle-exclamation me-1"></i>Quên checkout
+                                    </span>
+                                }
                                 else
                                 {
                                     <span class="badge cc-in rounded-pill"><i class="fa-solid fa-spinner fa-spin me-1"></i>Đang làm</span>
                                 }
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary rounded-pill py-0.5 px-2.5 text-xs fw-semibold" data-bs-toggle="modal" data-bs-target="#editCcModal-@cc.Id">
+                                    <i class="fa-solid fa-pen-to-square me-1"></i> Cập nhật
+                                </button>
                             </td>
                         </tr>
                     }
                 </tbody>
             </table>
         </div>
+
         <div class="mt-2 text-muted text-xs">
             Hiển thị @chamCongList.Count bản ghi · Tổng giờ: <strong>@chamCongList.Sum(c => c.TongGioLam ?? 0).ToString("F1")</strong> giờ
         </div>
@@ -908,6 +962,44 @@
 <form id="toggleStatusForm" asp-action="ToggleStatus" method="post" style="display:none">
     <input type="hidden" name="id" id="toggleId">
 </form>
+
+@foreach (var cc in chamCongList)
+{
+    <!-- Modal Cập nhật Chấm công -->
+    <div class="modal fade" id="editCcModal-@cc.Id" tabindex="-1" aria-labelledby="editCcModalLabel-@cc.Id" aria-hidden="true" data-bs-backdrop="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+                <form asp-action="UpdateChamCong" asp-controller="Employee" method="post" class="m-0">
+                    <input type="hidden" name="id" value="@cc.Id" />
+                    <div class="modal-header border-bottom border-light">
+                        <h6 class="modal-title fw-bold text-dark" id="editCcModalLabel-@cc.Id">
+                            <i class="fa-solid fa-clock text-primary me-2"></i>Sửa ca làm việc
+                        </h6>
+                        <button type="button" class="btn-close text-xs" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body text-start py-3">
+                        <div class="mb-2.5">
+                            <label class="form-label text-muted fw-semibold text-xs mb-1">Giờ vào thực tế</label>
+                            <input type="datetime-local" name="gioVao" class="form-control form-control-sm" value="@(cc.GioVao?.ToString("yyyy-MM-ddTHH:mm") ?? cc.NgayCham.ToString("yyyy-MM-dd") + "T08:00")" required />
+                        </div>
+                        <div class="mb-2.5">
+                            <label class="form-label text-dark fw-semibold text-xs mb-1">Nhập giờ ra thực tế</label>
+                            <input type="datetime-local" name="gioRa" class="form-control form-control-sm" value="@(cc.GioRa?.ToString("yyyy-MM-ddTHH:mm") ?? cc.NgayCham.ToString("yyyy-MM-dd") + "T17:30")" required />
+                        </div>
+                        <div class="mb-0">
+                            <label class="form-label text-muted fw-semibold text-xs mb-1">Ghi chú / Lý do sửa</label>
+                            <textarea name="ghiChu" class="form-control form-control-sm" rows="2" placeholder="Ví dụ: Bổ sung giờ ra quên checkout">@cc.GhiChu</textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top border-light py-2">
+                        <button type="button" class="btn btn-secondary btn-xs rounded-pill" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary btn-xs rounded-pill px-3 fw-bold">Lưu lại</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
 
 }
 

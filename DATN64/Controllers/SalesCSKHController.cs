@@ -3,6 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http;
 using DATN64.Models;
 using DATN64.Helpers;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace DATN64.Controllers
 {
@@ -24,33 +27,83 @@ namespace DATN64.Controllers
 
         [HttpGet]
         [HasPermission("View_Order")]
-        public IActionResult GetCustomerInbox()
+        public IActionResult GetCustomerInbox(string? keyword, string? status, int page = 1, int pageSize = 20)
         {
-            var threads = _context.CustomerInboxThreads
-                .Include(t => t.Messages)
+            if (page < 1)
+            {
+                page = 1;
+            }
+
+            var allowedPageSizes = new[] { 10, 20, 50 };
+
+            if (!allowedPageSizes.Contains(pageSize))
+            {
+                pageSize = 20;
+            }
+
+            keyword = (keyword ?? string.Empty).Trim();
+            status = (status ?? string.Empty).Trim();
+
+            var query = _context.CustomerInboxThreads
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                query = query.Where(t =>
+                    t.CustomerName.Contains(keyword) ||
+                    (t.CustomerPhone != null && t.CustomerPhone.Contains(keyword)) ||
+                    (t.Subject != null && t.Subject.Contains(keyword)) ||
+                    t.Messages.Any(m => m.Text.Contains(keyword))
+                );
+            }
+
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                query = query.Where(t => t.Status == status);
+            }
+
+            var totalItems = query.Count();
+            var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+            if (totalPages > 0 && page > totalPages)
+            {
+                page = totalPages;
+            }
+
+            var threads = query
                 .OrderByDescending(t => t.UpdatedAt)
-                .ToList()
-                .Select(t =>
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(t => new
                 {
-                    var messages = t.Messages.OrderBy(m => m.Timestamp).ToList();
+                    id = t.Id,
+                    customerId = t.CustomerId,
+                    customerName = t.CustomerName,
+                    customerPhone = t.CustomerPhone,
+                    channel = t.Channel,
+                    subject = t.Subject,
+                    status = t.Status,
+                    priority = t.Priority,
+                    updatedAt = t.UpdatedAt,
 
-                    return new
-                    {
-                        id = t.Id,
-                        customerId = t.CustomerId,
-                        customerName = t.CustomerName,
-                        customerPhone = t.CustomerPhone,
-                        channel = t.Channel,
-                        subject = t.Subject,
-                        status = t.Status,
-                        priority = t.Priority,
-                        updatedAt = t.UpdatedAt,
-                        unreadCount = messages.Count(m => m.Sender == "customer" && !m.IsRead),
-                        lastMessage = messages.LastOrDefault()?.Text ?? ""
-                    };
-                });
+                    lastMessage = t.Messages
+                        .OrderByDescending(m => m.Timestamp)
+                        .Select(m => m.Text)
+                        .FirstOrDefault(),
 
-            return Json(threads);
+                    unreadCount = t.Messages
+                        .Count(m => m.Sender == "customer" && !m.IsRead)
+                })
+                .ToList();
+
+            return Json(new
+            {
+                items = threads,
+                currentPage = page,
+                pageSize = pageSize,
+                totalItems = totalItems,
+                totalPages = totalPages
+            });
         }
 
         [HttpGet]
@@ -73,48 +126,57 @@ namespace DATN64.Controllers
             return Json(ToThreadDto(thread));
         }
 
-      [HttpPost]
-[HasPermission("View_Order")]
-public IActionResult MarkCustomerThreadRead([FromBody] ThreadIdRequest request)
-{
-    var thread = _context.CustomerInboxThreads
-        .Include(t => t.Messages)
-        .FirstOrDefault(t => t.Id == request.ThreadId);
-
-    if (thread == null)
-    {
-        return NotFound(new { message = "Không tìm thấy hội thoại." });
-    }
-
-    foreach (var message in thread.Messages)
-    {
-        if (message.Sender == "customer")
+        [HttpPost]
+        [HasPermission("View_Order")]
+        public IActionResult MarkCustomerThreadRead([FromBody] ThreadIdRequest request)
         {
-            message.IsRead = true;
+            if (request == null || request.ThreadId <= 0)
+            {
+                return BadRequest(new { message = "Hội thoại không hợp lệ." });
+            }
+
+            var thread = _context.CustomerInboxThreads
+                .Include(t => t.Messages)
+                .FirstOrDefault(t => t.Id == request.ThreadId);
+
+            if (thread == null)
+            {
+                return NotFound(new { message = "Không tìm thấy hội thoại." });
+            }
+
+            foreach (var message in thread.Messages)
+            {
+                if (message.Sender == "customer")
+                {
+                    message.IsRead = true;
+                }
+            }
+
+            if (thread.Status == "Unread")
+            {
+                thread.Status = "Processing";
+            }
+
+            // Không cập nhật UpdatedAt ở đây.
+            // Nếu chỉ bấm xem chat mà cập nhật UpdatedAt thì danh sách sẽ bị đảo vị trí.
+            _context.SaveChanges();
+
+            return Json(new
+            {
+                message = "Đã đánh dấu đã đọc.",
+                thread = ToThreadDto(thread)
+            });
         }
-    }
-
-    if (thread.Status == "Unread")
-    {
-        thread.Status = "Processing";
-    }
-
-    // Không cập nhật UpdatedAt ở đây.
-    // Nếu cập nhật UpdatedAt khi chỉ bấm xem chat,
-    // danh sách hộp thư sẽ bị đảo vị trí.
-    _context.SaveChanges();
-
-    return Json(new
-    {
-        message = "Đã đánh dấu đã đọc.",
-        thread = ToThreadDto(thread)
-    });
-}
 
         [HttpPost]
         [HasPermission("View_Order")]
         public IActionResult ReplyCustomerMessage([FromBody] ReplyCustomerMessageRequest request)
         {
+            if (request == null || request.ThreadId <= 0)
+            {
+                return BadRequest(new { message = "Hội thoại không hợp lệ." });
+            }
+
             var thread = _context.CustomerInboxThreads
                 .Include(t => t.Messages)
                 .FirstOrDefault(t => t.Id == request.ThreadId);
@@ -131,11 +193,13 @@ public IActionResult MarkCustomerThreadRead([FromBody] ThreadIdRequest request)
                 return BadRequest(new { message = "Vui lòng nhập nội dung phản hồi." });
             }
 
+            var now = DateTime.Now;
+
             thread.Messages.Add(new CustomerInboxMessage
             {
                 Sender = "staff",
                 Text = messageText,
-                Timestamp = DateTime.Now,
+                Timestamp = now,
                 IsRead = true
             });
 
@@ -147,8 +211,12 @@ public IActionResult MarkCustomerThreadRead([FromBody] ThreadIdRequest request)
                 }
             }
 
-            thread.Status = string.IsNullOrWhiteSpace(request.Status) ? "Replied" : request.Status;
-           
+            thread.Status = string.IsNullOrWhiteSpace(request.Status)
+                ? "Replied"
+                : request.Status;
+
+            // Có phản hồi mới thật sự thì cập nhật UpdatedAt là hợp lý.
+            thread.UpdatedAt = now;
 
             _context.SaveChanges();
 
@@ -158,37 +226,39 @@ public IActionResult MarkCustomerThreadRead([FromBody] ThreadIdRequest request)
                 thread = ToThreadDto(thread)
             });
         }
-[HttpPost]
-[HasPermission("View_Order")]
-public IActionResult DeleteCustomerThread([FromBody] ThreadIdRequest request)
-{
-    if (request == null || request.ThreadId <= 0)
-    {
-        return BadRequest(new { message = "Hội thoại không hợp lệ." });
-    }
 
-    var thread = _context.CustomerInboxThreads
-        .Include(t => t.Messages)
-        .FirstOrDefault(t => t.Id == request.ThreadId);
+        [HttpPost]
+        [HasPermission("View_Order")]
+        public IActionResult DeleteCustomerThread([FromBody] ThreadIdRequest request)
+        {
+            if (request == null || request.ThreadId <= 0)
+            {
+                return BadRequest(new { message = "Hội thoại không hợp lệ." });
+            }
 
-    if (thread == null)
-    {
-        return NotFound(new { message = "Không tìm thấy hội thoại." });
-    }
+            var thread = _context.CustomerInboxThreads
+                .Include(t => t.Messages)
+                .FirstOrDefault(t => t.Id == request.ThreadId);
 
-    if (thread.Messages != null && thread.Messages.Any())
-    {
-        _context.RemoveRange(thread.Messages);
-    }
+            if (thread == null)
+            {
+                return NotFound(new { message = "Không tìm thấy hội thoại." });
+            }
 
-    _context.CustomerInboxThreads.Remove(thread);
-    _context.SaveChanges();
+            if (thread.Messages != null && thread.Messages.Any())
+            {
+                _context.RemoveRange(thread.Messages);
+            }
 
-    return Json(new
-    {
-        message = "Đã xóa hội thoại."
-    });
-}
+            _context.CustomerInboxThreads.Remove(thread);
+            _context.SaveChanges();
+
+            return Json(new
+            {
+                message = "Đã xóa hội thoại."
+            });
+        }
+
         [HttpPost]
         public IActionResult CreateCustomerInquiry([FromBody] CreateInquiryRequest request)
         {
@@ -197,11 +267,18 @@ public IActionResult DeleteCustomerThread([FromBody] ThreadIdRequest request)
                 return Unauthorized(new { message = "Vui lòng đăng nhập để sử dụng chat." });
             }
 
+            if (request == null)
+            {
+                return BadRequest(new { message = "Dữ liệu không hợp lệ." });
+            }
+
             var customerName = (request.CustomerName ?? "").Trim();
             var customerPhone = (request.CustomerPhone ?? "").Trim();
+
             var subjectText = string.IsNullOrWhiteSpace(request.Subject)
                 ? "Chat hỗ trợ NovaTech"
                 : request.Subject.Trim();
+
             var messageText = (request.Message ?? "").Trim();
 
             if (string.IsNullOrWhiteSpace(customerName) || string.IsNullOrWhiteSpace(messageText))
@@ -213,7 +290,8 @@ public IActionResult DeleteCustomerThread([FromBody] ThreadIdRequest request)
 
             if (!string.IsNullOrWhiteSpace(customerPhone))
             {
-                customer = _context.KhachHangs.FirstOrDefault(k => k.SoDienThoai == customerPhone);
+                customer = _context.KhachHangs
+                    .FirstOrDefault(k => k.SoDienThoai == customerPhone);
             }
 
             var now = DateTime.Now;
@@ -240,7 +318,7 @@ public IActionResult DeleteCustomerThread([FromBody] ThreadIdRequest request)
                     new CustomerInboxMessage
                     {
                         Sender = "staff",
-                        Text = "Anh/chị vui lòng chờ, admin sẽ phản hồi lại sau 10 phút.",
+                        Text = "Anh/chị vui lòng chờ, admin sẽ phản hồi lại sau vài phút.",
                         Timestamp = now.AddSeconds(1),
                         IsRead = true,
                         IsAutoReply = true
@@ -266,6 +344,11 @@ public IActionResult DeleteCustomerThread([FromBody] ThreadIdRequest request)
                 return Unauthorized(new { message = "Vui lòng đăng nhập để sử dụng chat." });
             }
 
+            if (request == null || request.ThreadId <= 0)
+            {
+                return BadRequest(new { message = "Hội thoại không hợp lệ." });
+            }
+
             var thread = _context.CustomerInboxThreads
                 .Include(t => t.Messages)
                 .FirstOrDefault(t => t.Id == request.ThreadId);
@@ -282,16 +365,18 @@ public IActionResult DeleteCustomerThread([FromBody] ThreadIdRequest request)
                 return BadRequest(new { message = "Vui lòng nhập nội dung tin nhắn." });
             }
 
+            var now = DateTime.Now;
+
             thread.Messages.Add(new CustomerInboxMessage
             {
                 Sender = "customer",
                 Text = messageText,
-                Timestamp = DateTime.Now,
+                Timestamp = now,
                 IsRead = false
             });
 
             thread.Status = "Unread";
-            thread.UpdatedAt = DateTime.Now;
+            thread.UpdatedAt = now;
 
             _context.SaveChanges();
 
@@ -324,6 +409,14 @@ public IActionResult DeleteCustomerThread([FromBody] ThreadIdRequest request)
                 })
                 .ToList();
 
+            var lastMessage = messages
+                .OrderByDescending(m => m.timestamp)
+                .Select(m => m.text)
+                .FirstOrDefault();
+
+            var unreadCount = messages
+                .Count(m => m.sender == "customer" && !m.isRead);
+
             return new
             {
                 id = thread.Id,
@@ -335,6 +428,8 @@ public IActionResult DeleteCustomerThread([FromBody] ThreadIdRequest request)
                 status = thread.Status,
                 priority = thread.Priority,
                 updatedAt = thread.UpdatedAt,
+                lastMessage = lastMessage,
+                unreadCount = unreadCount,
                 messages = messages
             };
         }

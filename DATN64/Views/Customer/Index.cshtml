@@ -4,6 +4,14 @@
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
     ViewData["Title"] = "Khách hàng";
     ViewData["BreadcrumbActive"] = "Khách hàng";
+
+    var keyword = ViewBag.Keyword as string ?? "";
+    var rankFilter = ViewBag.RankFilter as string ?? "";
+    var statusFilter = ViewBag.StatusFilter as string ?? "";
+    var currentPage = ViewBag.CurrentPage as int? ?? 1;
+    var pageSize = ViewBag.PageSize as int? ?? 20;
+    var totalItems = ViewBag.TotalItems as int? ?? 0;
+    var totalPages = ViewBag.TotalPages as int? ?? 1;
 }
 
 @functions {
@@ -36,9 +44,12 @@
 
     string GetStatusBadgeClass(string? status)
     {
-        return status == "Hoạt động"
-            ? "bg-success text-white"
-            : "bg-danger text-white";
+        if (string.IsNullOrWhiteSpace(status) || status == "Hoạt động")
+        {
+            return "bg-success text-white";
+        }
+
+        return "bg-danger text-white";
     }
 }
 
@@ -86,6 +97,7 @@
                            class="form-control"
                            required
                            placeholder="Nhập mật khẩu cho khách hàng">
+
                     <div class="text-xxs text-muted mt-1">
                         Mật khẩu sẽ được lưu dưới dạng hash, không lưu mật khẩu thường.
                     </div>
@@ -149,10 +161,77 @@
 
     <div class="col-md-8">
         <div class="card card-glass p-4">
-            <h5 class="fw-bold mb-4 text-cyan">
-                <i class="fa-solid fa-user-group me-2"></i>
-                Thành viên mua sắm
-            </h5>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h5 class="fw-bold mb-1 text-cyan">
+                        <i class="fa-solid fa-user-group me-2"></i>
+                        Thành viên mua sắm
+                    </h5>
+
+                    <div class="text-muted small">
+                        Quản lý khách hàng theo phân trang, tìm kiếm, phân hạng và trạng thái.
+                    </div>
+                </div>
+
+                <a href="@Url.Action("Index", "Customer")"
+                   class="btn btn-outline-secondary rounded-pill px-3">
+                    <i class="fa-solid fa-rotate-left me-1"></i>
+                    Đặt lại
+                </a>
+            </div>
+
+            <form method="get" class="row g-2 mb-4">
+                <div class="col-md-4">
+                    <input type="text"
+                           name="keyword"
+                           value="@keyword"
+                           class="form-control"
+                           placeholder="Tìm tên, SĐT, email...">
+                </div>
+
+                <div class="col-md-2">
+                    <select name="rank" class="form-select">
+                        <option value="">Tất cả hạng</option>
+                        <option value="Đồng" selected="@(rankFilter == "Đồng")">Đồng</option>
+                        <option value="Bạc" selected="@(rankFilter == "Bạc")">Bạc</option>
+                        <option value="Vàng" selected="@(rankFilter == "Vàng")">Vàng</option>
+                        <option value="Kim Cương" selected="@(rankFilter == "Kim Cương")">Kim Cương</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <select name="status" class="form-select">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="Hoạt động" selected="@(statusFilter == "Hoạt động")">Hoạt động</option>
+                        <option value="Ngừng hoạt động" selected="@(statusFilter == "Ngừng hoạt động")">Ngừng hoạt động</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <select name="pageSize" class="form-select" onchange="this.form.submit()">
+                        <option value="10" selected="@(pageSize == 10)">10 dòng</option>
+                        <option value="20" selected="@(pageSize == 20)">20 dòng</option>
+                        <option value="50" selected="@(pageSize == 50)">50 dòng</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2 d-grid">
+                    <button type="submit" class="btn btn-info text-white rounded-pill">
+                        <i class="fa-solid fa-magnifying-glass me-1"></i>
+                        Lọc
+                    </button>
+                </div>
+            </form>
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="text-muted small">
+                    Tổng số khách hàng: <strong>@totalItems</strong>
+                </div>
+
+                <div class="text-muted small">
+                    Trang <strong>@currentPage</strong> / <strong>@(totalPages <= 0 ? 1 : totalPages)</strong>
+                </div>
+            </div>
 
             <div class="table-responsive">
                 <table class="table table-hover mb-0 text-sm align-middle">
@@ -173,7 +252,7 @@
                         {
                             <tr>
                                 <td colspan="7" class="text-center text-muted py-4">
-                                    Chưa có khách hàng nào.
+                                    Không tìm thấy khách hàng phù hợp.
                                 </td>
                             </tr>
                         }
@@ -182,17 +261,24 @@
                             foreach (var item in Model)
                             {
                                 var rank = GetRank(item.DiemTichLuy);
+                                var status = string.IsNullOrWhiteSpace(item.TrangThai) ? "Hoạt động" : item.TrangThai;
 
                                 <tr>
                                     <td>
-                                        <div class="fw-bold text-dark">@item.HoTen</div>
-                                        <div class="text-xxs text-muted">Mã KH: @item.MaKhachHang</div>
+                                        <div class="fw-bold text-dark">
+                                            @item.HoTen
+                                        </div>
+
+                                        <div class="text-xxs text-muted">
+                                            Mã KH: @item.MaKhachHang
+                                        </div>
                                     </td>
 
                                     <td>
                                         <div class="text-xs">
                                             @(string.IsNullOrWhiteSpace(item.SoDienThoai) ? "Chưa có SĐT" : item.SoDienThoai)
                                         </div>
+
                                         <div class="text-xxs text-muted">
                                             @(string.IsNullOrWhiteSpace(item.Email) ? "Chưa có email" : item.Email)
                                         </div>
@@ -219,8 +305,8 @@
                                     </td>
 
                                     <td>
-                                        <span class="badge rounded-pill px-2 @GetStatusBadgeClass(item.TrangThai)">
-                                            @(item.TrangThai ?? "Hoạt động")
+                                        <span class="badge rounded-pill px-2 @GetStatusBadgeClass(status)">
+                                            @status
                                         </span>
                                     </td>
                                 </tr>
@@ -229,6 +315,61 @@
                     </tbody>
                 </table>
             </div>
+
+            @if (totalPages > 1)
+            {
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <div class="text-muted small">
+                        Hiển thị @pageSize dòng / trang
+                    </div>
+
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
+                                <a class="page-link"
+                                   href="@Url.Action("Index", new {
+                                       page = currentPage - 1,
+                                       pageSize = pageSize,
+                                       keyword = keyword,
+                                       rank = rankFilter,
+                                       status = statusFilter
+                                   })">
+                                    Trước
+                                </a>
+                            </li>
+
+                            @for (int p = Math.Max(1, currentPage - 2); p <= Math.Min(totalPages, currentPage + 2); p++)
+                            {
+                                <li class="page-item @(p == currentPage ? "active" : "")">
+                                    <a class="page-link"
+                                       href="@Url.Action("Index", new {
+                                           page = p,
+                                           pageSize = pageSize,
+                                           keyword = keyword,
+                                           rank = rankFilter,
+                                           status = statusFilter
+                                       })">
+                                        @p
+                                    </a>
+                                </li>
+                            }
+
+                            <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
+                                <a class="page-link"
+                                   href="@Url.Action("Index", new {
+                                       page = currentPage + 1,
+                                       pageSize = pageSize,
+                                       keyword = keyword,
+                                       rank = rankFilter,
+                                       status = statusFilter
+                                   })">
+                                    Sau
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            }
         </div>
     </div>
 </div>

@@ -40,6 +40,7 @@ namespace DATN64.Models
         public DbSet<ChamCong> ChamCongs { get; set; }
         public DbSet<SoQuy> SoQuys { get; set; }
         public DbSet<CongNoNCC> CongNoNCCs { get; set; }
+        public DbSet<YeuThich> YeuThichs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
