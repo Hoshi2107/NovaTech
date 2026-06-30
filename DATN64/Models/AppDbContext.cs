@@ -168,5 +168,97 @@ namespace DATN64.Models
                 await base.SaveChangesAsync(cancellationToken);
             }
         }
+
+        public void AutoGenerateLowStockTickets()
+        {
+            var lowStockProducts = SanPhams.Where(p => p.SoLuongTon <= 5).ToList();
+            if (lowStockProducts.Any())
+            {
+                bool autoImportCreated = false;
+                foreach (var item in lowStockProducts)
+                {
+                    string skuStr = item.MaSanPham.ToString();
+                    bool hasPending = InventoryTransactions.Any(t => 
+                        t.ProductSKU == skuStr && 
+                        t.TrangThai == "Chờ duyệt" && 
+                        (t.Type == "Nhập kho" || t.Type == "Điều chỉnh"));
+
+                    if (!hasPending)
+                    {
+                        int count = InventoryTransactions.Count(t => t.Type == "Nhập kho") + 1;
+                        string code = "PN" + count.ToString("D6");
+
+                        var autoTx = new InventoryTransaction
+                        {
+                            Code = code,
+                            Type = "Nhập kho",
+                            ProductSKU = skuStr,
+                            ProductName = item.TenSanPham,
+                            QuantityChange = 50,
+                            Creator = "Hệ thống (Tự động)",
+                            Date = DateTime.Now,
+                            Note = $"Đề xuất nhập tự động: Tồn kho chạm ngưỡng tối thiểu ({item.SoLuongTon} cái).",
+                            TrangThai = "Chờ duyệt",
+                            SoLuongTruoc = null,
+                            SoLuongSau = null
+                        };
+
+                        InventoryTransactions.Add(autoTx);
+                        autoImportCreated = true;
+                    }
+                }
+
+                if (autoImportCreated)
+                {
+                    base.SaveChanges();
+                }
+            }
+        }
+
+        public async Task AutoGenerateLowStockTicketsAsync()
+        {
+            var lowStockProducts = await SanPhams.Where(p => p.SoLuongTon <= 5).ToListAsync();
+            if (lowStockProducts.Any())
+            {
+                bool autoImportCreated = false;
+                foreach (var item in lowStockProducts)
+                {
+                    string skuStr = item.MaSanPham.ToString();
+                    bool hasPending = await InventoryTransactions.AnyAsync(t => 
+                        t.ProductSKU == skuStr && 
+                        t.TrangThai == "Chờ duyệt" && 
+                        (t.Type == "Nhập kho" || t.Type == "Điều chỉnh"));
+
+                    if (!hasPending)
+                    {
+                        int count = await InventoryTransactions.CountAsync(t => t.Type == "Nhập kho") + 1;
+                        string code = "PN" + count.ToString("D6");
+
+                        var autoTx = new InventoryTransaction
+                        {
+                            Code = code,
+                            Type = "Nhập kho",
+                            ProductSKU = skuStr,
+                            ProductName = item.TenSanPham,
+                            QuantityChange = 50,
+                            Creator = "Hệ thống (Tự động)",
+                            Date = DateTime.Now,
+                            Note = $"Đề xuất nhập tự động: Tồn kho chạm ngưỡng tối thiểu ({item.SoLuongTon} cái).",
+                            TrangThai = "Chờ duyệt",
+                            SoLuongTruoc = null,
+                            SoLuongSau = null
+                        };
+
+                        InventoryTransactions.Add(autoTx);
+                        autoImportCreated = true;
+                    }
+                }
+
+                if (autoImportCreated)
+                {
+                    await base.SaveChangesAsync();
+                }
+            }
+        }
     }
 }
