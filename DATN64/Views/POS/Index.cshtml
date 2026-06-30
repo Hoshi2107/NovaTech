@@ -87,10 +87,10 @@
       <div class="col-lg-8 d-flex flex-column h-100 p-4 border-end border-slate-800 overflow-hidden" :class="{ 'd-none d-lg-flex': activeTab !== 'products' }">
         
         <!-- Search and Catalog Filter -->
-        <div class="d-flex flex-row flex-wrap gap-2 mb-4 flex-shrink-0 align-items-center justify-content-end">
+        <div class="d-flex flex-row flex-wrap gap-2 mb-4 flex-shrink-0 align-items-center justify-content-start">
 
           <!-- Spacious Search Bar with Search Button -->
-          <div class="search-box-pos d-flex align-items-center" style="min-width: 260px; max-width: 480px; flex: 1 1 320px;">
+          <div class="search-box-pos d-flex align-items-center" style="min-width: 300px; max-width: 520px; flex: 1 1 360px;">
             <div class="input-group">
               <input type="text" v-model="searchQuery" class="form-control" style="border-radius: 22px 0 0 22px; border-right: none; font-size: 0.8rem; padding: 0.45rem 1rem;" placeholder="🔍  Tìm tên sản phẩm hoặc mã SKU...">
               <button class="btn btn-search-pos d-flex align-items-center justify-content-center" type="button" style="border-radius: 0 22px 22px 0; min-width: 44px; font-size: 0.9rem;">
@@ -107,7 +107,7 @@
             <button class="btn btn-outline-slate rounded-pill px-3 py-1.5 text-xs fw-bold dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
               <i class="fa-solid fa-filter text-cyan"></i> ${ activeCategory }
             </button>
-            <ul class="dropdown-menu dropdown-menu-end shadow">
+            <ul class="dropdown-menu shadow">
               <li><a class="dropdown-item text-xs" href="#" @@click.prevent="activeCategory = 'Tất cả'">Tất cả</a></li>
               <li v-for="cat in categories" :key="cat">
                 <a class="dropdown-item text-xs" href="#" @@click.prevent="activeCategory = cat">${ cat }</a>
@@ -120,7 +120,7 @@
             <button class="btn btn-outline-slate rounded-pill px-3 py-1.5 text-xs fw-bold dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
               <i class="fa-solid fa-tag text-cyan"></i> ${ activeBrand }
             </button>
-            <ul class="dropdown-menu dropdown-menu-end shadow">
+            <ul class="dropdown-menu shadow">
               <li><a class="dropdown-item text-xs" href="#" @@click.prevent="activeBrand = 'Tất cả'">Tất cả</a></li>
               <li v-for="brand in brands" :key="brand">
                 <a class="dropdown-item text-xs" href="#" @@click.prevent="activeBrand = brand">${ brand }</a>
@@ -133,7 +133,7 @@
             <button class="btn btn-outline-slate rounded-pill px-3 py-1.5 text-xs fw-bold dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
               <i class="fa-solid fa-arrow-down-wide-narrow text-cyan"></i> ${ getSortLabel() }
             </button>
-            <ul class="dropdown-menu dropdown-menu-end shadow">
+            <ul class="dropdown-menu shadow">
               <li><a class="dropdown-item text-xs" href="#" @@click.prevent="sortBy = 'default'">Mặc định</a></li>
               <li><a class="dropdown-item text-xs" href="#" @@click.prevent="sortBy = 'priceAsc'">Giá: Thấp → Cao</a></li>
               <li><a class="dropdown-item text-xs" href="#" @@click.prevent="sortBy = 'priceDesc'">Giá: Cao → Thấp</a></li>
@@ -147,29 +147,72 @@
           <div class="spinner-border text-info" role="status"></div>
         </div>
 
-        <!-- Scrollable Products Grid -->
-        <div class="flex-grow-1 overflow-y-auto pe-2 products-grid-container" v-else>
-          <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 g-3" v-if="filteredProducts.length > 0">
-            <div class="col" v-for="p in filteredProducts" :key="p.id">
-              <div class="card product-card h-100 cursor-pointer" @@click="addToCart(p)">
-                <div class="position-relative overflow-hidden rounded-top-3">
-                  <img :src="p.image" class="card-img-top" :alt="p.name">
-                  <span class="position-absolute top-0 start-0 m-2 badge" :class="p.stock > 5 ? 'bg-success' : p.stock > 0 ? 'bg-warning text-dark' : 'bg-danger'">
-                    Tồn: ${ p.stock }
-                  </span>
-                </div>
-                <div class="card-body p-2.5 d-flex flex-column justify-content-between">
-                  <h6 class="text-xs text-truncate mb-1 fw-bold product-name-highlight" :title="p.name">${ p.name }</h6>
-                  <div class="text-xxs mb-2 sku-highlight">${ p.sku }</div>
-                  <div class="text-xs text-emerald fw-extrabold">${ formatMoney(p.price) } đ</div>
+        <!-- Products Grid with Pagination -->
+        <div class="flex-grow-1 d-flex flex-column overflow-hidden products-grid-container" v-else>
+
+          <!-- Scrollable grid area -->
+          <div class="flex-grow-1 overflow-y-auto pe-2">
+            <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 g-3" v-if="filteredProducts.length > 0">
+              <div class="col" v-for="p in filteredProducts" :key="p.id">
+                <div class="card product-card h-100 cursor-pointer" @@click="addToCart(p)">
+                  <div class="position-relative overflow-hidden rounded-top-3">
+                    <img :src="p.image" class="card-img-top" :alt="p.name">
+                    <span class="position-absolute top-0 start-0 m-2 badge" :class="p.stock > 5 ? 'bg-success' : p.stock > 0 ? 'bg-warning text-dark' : 'bg-danger'">
+                      Tồn: ${ p.stock }
+                    </span>
+                  </div>
+                  <div class="card-body p-2.5 d-flex flex-column justify-content-between">
+                    <h6 class="text-xs text-truncate mb-1 fw-bold product-name-highlight" :title="p.name">${ p.name }</h6>
+                    <div class="text-xxs mb-2 sku-highlight">${ p.sku }</div>
+                    <div class="text-xs text-emerald fw-extrabold">${ formatMoney(p.price) } đ</div>
+                  </div>
                 </div>
               </div>
             </div>
+            <div class="d-flex flex-column align-items-center justify-content-center text-muted-custom py-5" v-else>
+              <i class="fa-solid fa-box-open fs-1 mb-3 text-slate-600"></i>
+              <p class="text-xs text-slate-400">Không tìm thấy sản phẩm nào phù hợp</p>
+            </div>
           </div>
-          <div class="d-flex flex-column align-items-center justify-content-center text-muted-custom py-5 flex-grow-1" v-else>
-            <i class="fa-solid fa-box-open fs-1 mb-3 text-slate-600"></i>
-            <p class="text-xs text-slate-400">Không tìm thấy sản phẩm nào phù hợp</p>
+
+          <!-- Pagination Bar -->
+          <div class="pos-pagination d-flex align-items-center justify-content-center gap-1 pt-2 pb-1 flex-shrink-0" v-if="totalPages > 1 || products.length > 0">
+            <!-- First / Prev -->
+            <button type="button" class="page-nav-btn" @@click="goToPage(1)" :disabled="currentPage === 1" title="Trang đầu">
+              <i class="fa-solid fa-angles-left"></i>
+            </button>
+            <button type="button" class="page-nav-btn" @@click="goToPage(currentPage - 1)" :disabled="currentPage === 1" title="Trang trước">
+              <i class="fa-solid fa-angle-left"></i>
+            </button>
+
+            <!-- Ellipsis left -->
+            <span class="page-ellipsis" v-if="displayedPages[0] > 1">…</span>
+
+            <!-- Page numbers -->
+            <button
+              type="button"
+              v-for="page in displayedPages"
+              :key="page"
+              class="page-num-btn"
+              :class="{ 'page-num-btn-active': page === currentPage }"
+              @@click="goToPage(page)"
+            >${ page }</button>
+
+            <!-- Ellipsis right -->
+            <span class="page-ellipsis" v-if="displayedPages.length > 0 && displayedPages[displayedPages.length - 1] < totalPages">…</span>
+
+            <!-- Next / Last -->
+            <button type="button" class="page-nav-btn" @@click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages" title="Trang sau">
+              <i class="fa-solid fa-angle-right"></i>
+            </button>
+            <button type="button" class="page-nav-btn" @@click="goToPage(totalPages)" :disabled="currentPage === totalPages" title="Trang cuối">
+              <i class="fa-solid fa-angles-right"></i>
+            </button>
+
+            <!-- Page info -->
+            <span class="page-info-label ms-2">Trang ${ currentPage }/${ totalPages }</span>
           </div>
+
         </div>
       </div>
 

@@ -42,6 +42,10 @@ var app = new Vue({
         cashReceived: 0,
         heldCarts: [],
         zoomQR: false,
+        // Pagination
+        currentPage: 1,
+        itemsPerPage: 12,
+
         bankConfig: {
             bankId: 'VietinBank',
             accountNo: '108602210708',
@@ -60,7 +64,12 @@ var app = new Vue({
         },
         cart() {
             this.cashReceived = 0;
-        }
+        },
+        // Reset to page 1 when search or filter changes
+        searchQuery() { this.currentPage = 1; },
+        activeCategory() { this.currentPage = 1; },
+        activeBrand() { this.currentPage = 1; },
+        sortBy() { this.currentPage = 1; }
     },
     computed: {
         subtotalAmount() {
@@ -91,9 +100,9 @@ var app = new Vue({
             const bList = this.products.map(p => p.brand).filter(Boolean);
             return [...new Set(bList)];
         },
-        filteredProducts() {
+        allFilteredProducts() {
             let list = this.products;
-            
+
             // Category filter
             if (this.activeCategory !== 'Tất cả') {
                 list = list.filter(p => p.category === this.activeCategory);
@@ -103,12 +112,12 @@ var app = new Vue({
             if (this.activeBrand !== 'Tất cả') {
                 list = list.filter(p => p.brand === this.activeBrand);
             }
-            
+
             // Search filter
             if (this.searchQuery.trim() !== '') {
                 const query = this.searchQuery.toLowerCase().trim();
-                list = list.filter(p => 
-                    p.name.toLowerCase().includes(query) || 
+                list = list.filter(p =>
+                    p.name.toLowerCase().includes(query) ||
                     p.sku.toLowerCase().includes(query)
                 );
             }
@@ -121,11 +130,36 @@ var app = new Vue({
             } else if (this.sortBy === 'nameAsc') {
                 list = [...list].sort((a, b) => a.name.localeCompare(b.name, 'vi'));
             }
-            
+
             return list;
+        },
+        filteredProducts() {
+            const start = (this.currentPage - 1) * this.itemsPerPage;
+            return this.allFilteredProducts.slice(start, start + this.itemsPerPage);
+        },
+        totalPages() {
+            return Math.max(15, Math.ceil(this.allFilteredProducts.length / this.itemsPerPage));
+        },
+        displayedPages() {
+            const total = this.totalPages;
+            const current = this.currentPage;
+            const delta = 3;
+            const start = Math.max(1, current - delta);
+            const end = Math.min(total, current + delta);
+            const range = [];
+            for (let i = start; i <= end; i++) range.push(i);
+            return range;
         }
     },
     methods: {
+        goToPage(page) {
+            if (page >= 1 && page <= this.totalPages) {
+                this.currentPage = page;
+                // Scroll product area back to top
+                const grid = document.querySelector('.products-grid-container .overflow-y-auto');
+                if (grid) grid.scrollTop = 0;
+            }
+        },
         handleQrError(e) {
             console.error("QR code image failed to load, trying fallback...", e);
             if (!e.target.dataset.fallbackAttempt) {
@@ -133,7 +167,7 @@ var app = new Vue({
             } else {
                 e.target.dataset.fallbackAttempt = parseInt(e.target.dataset.fallbackAttempt) + 1;
             }
-            
+
             const attempt = parseInt(e.target.dataset.fallbackAttempt);
             const amount = this.totalAmount;
             const description = encodeURIComponent('Thanh toan POS NovaTech');
@@ -343,7 +377,7 @@ var app = new Vue({
                     customerName: this.customerName,
                     customerPhone: this.customerPhone,
                     paymentMethod: this.paymentMethod,
-                    items: this.cart.map(i => ({...i})),
+                    items: this.cart.map(i => ({ ...i })),
                     subtotal: this.subtotalAmount,
                     discount: this.voucherDiscountValue,
                     voucherCode: this.voucherAppliedCode,
@@ -363,20 +397,20 @@ var app = new Vue({
                 this.cashReceived = 0;
                 this.zoomQR = false;
                 this.activeTab = 'products';
-                
+
                 // Reload catalog counts from server
                 await this.fetchProducts();
             } catch (err) {
                 // Client-side mock checkout fallback
                 console.warn("Backend error, falling back to mock receipt generation:", err);
-                
+
                 this.lastOrder = {
                     orderCode: 'POS-' + Math.floor(100000 + Math.random() * 900000) + ' (Offline)',
                     cashier: this.user ? this.user.fullName : 'Nhân viên',
                     customerName: this.customerName,
                     customerPhone: this.customerPhone,
                     paymentMethod: this.paymentMethod,
-                    items: this.cart.map(i => ({...i})),
+                    items: this.cart.map(i => ({ ...i })),
                     subtotal: this.subtotalAmount,
                     discount: this.voucherDiscountValue,
                     voucherCode: this.voucherAppliedCode,
@@ -403,7 +437,7 @@ var app = new Vue({
         printReceipt() {
             const printContent = document.getElementById('printable-receipt').innerHTML;
             const printWindow = window.open('about:blank', 'PrintWindow', 'left=500,top=50,width=450,height=700');
-            
+
             printWindow.document.write(`
                 <html>
                     <head>
@@ -441,7 +475,7 @@ var app = new Vue({
             }
             const newHeldCart = {
                 id: Date.now(),
-                cart: [...this.cart.map(i => ({...i}))],
+                cart: [...this.cart.map(i => ({ ...i }))],
                 customerIndex: this.customerIndex,
                 customerName: this.customerName,
                 customerPhone: this.customerPhone,
@@ -455,7 +489,7 @@ var app = new Vue({
                 time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
             };
             this.heldCarts.push(newHeldCart);
-            
+
             // Clear current cart and details
             this.cart = [];
             this.customerIndex = "-1";
@@ -463,7 +497,7 @@ var app = new Vue({
             this.customerPhone = "";
             this.clearVoucher();
             this.cashReceived = 0;
-            
+
             alert("Đã lưu tạm đơn hàng thành công!");
         },
         restoreHeldCart(id) {
@@ -483,7 +517,7 @@ var app = new Vue({
                 this.voucherSuccessMsg = hc.voucherSuccessMsg;
                 this.voucherErrorMsg = hc.voucherErrorMsg;
                 this.cashReceived = 0;
-                
+
                 // Remove from held list
                 this.heldCarts = this.heldCarts.filter(c => c.id !== id);
             }
