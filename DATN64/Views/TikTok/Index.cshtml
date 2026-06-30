@@ -116,10 +116,10 @@
                                         <th class="px-3 py-2 text-muted text-xs fw-bold text-uppercase">Nội Dung Chi Tiết</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody id="syncLogsTableBody">
                                     @foreach (var log in syncLogs)
                                     {
-                                        <tr>
+                                        <tr class="log-row">
                                             <td class="px-3 font-monospace text-xs text-secondary">
                                                 @log.Timestamp.ToString("dd/MM/yyyy HH:mm:ss")
                                             </td>
@@ -150,6 +150,11 @@
                                 </tbody>
                             </table>
                         </div>
+                        <!-- Sync Logs Pagination -->
+                        <div class="d-flex justify-content-between align-items-center mt-3 px-1" id="syncLogsPaginationWrapper">
+                            <div class="text-muted small" id="syncLogsPageInfo"></div>
+                            <nav><ul class="pagination pagination-sm mb-0" id="syncLogsPagination"></ul></nav>
+                        </div>
                     }
                 </div>
             </div>
@@ -178,3 +183,46 @@
         to { opacity: 1; transform: translateY(0); }
     }
 </style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        function initTablePagination(rowSelector, pageInfoId, paginationId, pageSize) {
+            const rows = Array.from(document.querySelectorAll(rowSelector));
+            const pageInfo = document.getElementById(pageInfoId);
+            const paginationEl = document.getElementById(paginationId);
+            if (!rows.length || !paginationEl) return;
+            let currentPage = 1;
+            const totalPages = Math.ceil(rows.length / pageSize);
+            function render() {
+                const start = (currentPage - 1) * pageSize;
+                const end = start + pageSize;
+                rows.forEach((row, i) => { row.style.display = (i >= start && i < end) ? '' : 'none'; });
+                if (pageInfo) {
+                    pageInfo.innerHTML = `Hiển thị <strong>${start + 1}</strong> – <strong>${Math.min(end, rows.length)}</strong> / <strong>${rows.length}</strong> bản ghi`;
+                }
+                paginationEl.innerHTML = '';
+                const prev = document.createElement('li');
+                prev.className = 'page-item' + (currentPage === 1 ? ' disabled' : '');
+                prev.innerHTML = '<a class="page-link rounded-start-3" href="#">&laquo;</a>';
+                prev.addEventListener('click', e => { e.preventDefault(); if (currentPage > 1) { currentPage--; render(); } });
+                paginationEl.appendChild(prev);
+                for (let p = 1; p <= totalPages; p++) {
+                    const li = document.createElement('li');
+                    li.className = 'page-item' + (p === currentPage ? ' active' : '');
+                    li.innerHTML = `<a class="page-link" href="#">${p}</a>`;
+                    const page = p;
+                    li.addEventListener('click', e => { e.preventDefault(); currentPage = page; render(); });
+                    paginationEl.appendChild(li);
+                }
+                const next = document.createElement('li');
+                next.className = 'page-item' + (currentPage === totalPages ? ' disabled' : '');
+                next.innerHTML = '<a class="page-link rounded-end-3" href="#">&raquo;</a>';
+                next.addEventListener('click', e => { e.preventDefault(); if (currentPage < totalPages) { currentPage++; render(); } });
+                paginationEl.appendChild(next);
+            }
+            render();
+        }
+
+        initTablePagination('#syncLogsTableBody .log-row', 'syncLogsPageInfo', 'syncLogsPagination', 10);
+    });
+</script>
