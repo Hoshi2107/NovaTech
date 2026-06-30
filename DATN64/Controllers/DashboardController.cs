@@ -1,20 +1,25 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 using DATN64.Models;
+using DATN64.Services;
 using System.Linq;
+using System.Threading.Tasks;
+using System;
 
 namespace DATN64.Controllers
 {
     public class DashboardController : Controller
     {
         private readonly AppDbContext _context;
+        private readonly IAttendanceService _attendanceService;
 
-        public DashboardController(AppDbContext context)
+        public DashboardController(AppDbContext context, IAttendanceService attendanceService)
         {
             _context = context;
+            _attendanceService = attendanceService;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
             var userEmail = HttpContext.Session.GetString("UserEmail");
             if (string.IsNullOrEmpty(userEmail)) return RedirectToAction("Login", "Account");
@@ -30,6 +35,13 @@ namespace DATN64.Controllers
                     return RedirectToAction("Index", "Online");
                 }
                 return RedirectToAction("Selection", "Portal");
+            }
+
+            // Dọn dẹp ca làm quên checkout cũ của nhân viên hiện tại
+            var currentEmp = _context.NhanViens.FirstOrDefault(e => e.Email == userEmail);
+            if (currentEmp != null)
+            {
+                await _attendanceService.ProcessForgottenCheckoutAsync(currentEmp.MaNhanVien);
             }
 
             // Summarizing statistics

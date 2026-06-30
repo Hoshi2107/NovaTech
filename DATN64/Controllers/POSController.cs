@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using DATN64.Models;
 using System.Linq;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System;
 
 namespace DATN64.Controllers
@@ -11,13 +12,15 @@ namespace DATN64.Controllers
     public class POSController : Controller
     {
         private readonly AppDbContext _context;
+        private readonly DATN64.Services.IAttendanceService _attendanceService;
 
-        public POSController(AppDbContext context)
+        public POSController(AppDbContext context, DATN64.Services.IAttendanceService attendanceService)
         {
             _context = context;
+            _attendanceService = attendanceService;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
             var userEmail = HttpContext.Session.GetString("UserEmail");
             if (string.IsNullOrEmpty(userEmail)) return RedirectToAction("Login", "Account");
@@ -52,13 +55,15 @@ namespace DATN64.Controllers
                 ? _context.NhanViens.FirstOrDefault(e => e.Email == userEmail)
                 : null;
 
-            // Kiểm tra trạng thái chấm công hôm nay
+            // Kiểm tra trạng thái chấm công (ca làm đang hoạt động) - hỗ trợ ca đêm xuyên ngày
             ChamCong? todayChamCong = null;
             if (seller != null)
             {
+                // Dọn ca cũ của nhân viên
+                await _attendanceService.ProcessForgottenCheckoutAsync(seller.MaNhanVien);
+
                 todayChamCong = _context.ChamCongs
                     .Where(c => c.MaNhanVien == seller.MaNhanVien
-                             && c.NgayCham.Date == DateTime.Today
                              && c.TrangThai == "Đang làm")
                     .OrderByDescending(c => c.GioVao)
                     .FirstOrDefault();

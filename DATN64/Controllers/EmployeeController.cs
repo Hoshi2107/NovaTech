@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using DATN64.Models;
 using DATN64.Helpers;
+using DATN64.Services;
 using System.Linq;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System;
 using Microsoft.AspNetCore.Identity;
 
@@ -12,16 +14,18 @@ namespace DATN64.Controllers
     public class EmployeeController : Controller
     {
         private readonly AppDbContext _context;
+        private readonly IAttendanceService _attendanceService;
 
-        public EmployeeController(AppDbContext context)
+        public EmployeeController(AppDbContext context, IAttendanceService attendanceService)
         {
             _context = context;
+            _attendanceService = attendanceService;
         }
 
         // ═══════════════════════════════════════════════════════════════
         // GET: /Employee/Index — Trang chính với 4 tabs
         // ═══════════════════════════════════════════════════════════════
-        public IActionResult Index(
+        public async Task<IActionResult> Index(
             string activeTab = "nhanvien",
             int? filterMaNV = null,
             int? filterThang = null,
@@ -29,6 +33,21 @@ namespace DATN64.Controllers
             string? tuNgay = null,
             string? denNgay = null)
         {
+            // Dọn dẹp tất cả các ca quên checkout ngày hôm trước trở về trước
+            var activeShiftsOld = _context.ChamCongs
+                .Where(c => c.TrangThai == AttendanceService.Active && c.NgayCham.Date < DateTime.Today)
+                .ToList();
+            if (activeShiftsOld.Any())
+            {
+                foreach (var shift in activeShiftsOld)
+                {
+                    shift.TrangThai = AttendanceService.ForgottenCheckout;
+                    shift.GioRa = null;
+                    shift.TongGioLam = null;
+                }
+                _context.SaveChanges();
+            }
+
             var now = DateTime.Now;
             int thang = filterThang ?? now.Month;
             int nam = filterNam ?? now.Year;
@@ -405,6 +424,52 @@ namespace DATN64.Controllers
             TempData["ToastMessage"] = $"Đã thêm vai trò \"{roleName}\" thành công!";
             TempData["ToastType"] = "success";
             return RedirectToAction("Index", new { activeTab = "rbac" });
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // POST: Cập nhật ca chấm công (Dành cho Admin)
+        // ═══════════════════════════════════════════════════════════════
+        [HttpPost]
+        [HasPermission("Edit_Employee")]
+        public IActionResult UpdateChamCong(int id, DateTime? gioVao, DateTime? gioRa, string? ghiChu)
+        {
+            var cc = _context.ChamCongs.FirstOrDefault(c => c.Id == id);
+            if (cc == null)
+            {
+                TempData["ToastMessage"] = "Không tìm thấy bản ghi chấm công!";
+                TempData["ToastType"] = "danger";
+                return RedirectToAction("Index", new { activeTab = "chamcong" });
+            }
+
+            if (gioVao.HasValue && gioRa.HasValue && gioRa.Value < gioVao.Value)
+            {
+                TempData["ToastMessage"] = "Lỗi: Giờ ra không được nhỏ hơn giờ vào!";
+                TempData["ToastType"] = "danger";
+                return RedirectToAction("Index", new { activeTab = "chamcong" });
+            }
+
+            cc.GioVao = gioVao;
+            cc.GioRa = gioRa;
+            cc.GhiChu = ghiChu;
+
+            if (gioVao.HasValue && gioRa.HasValue)
+            {
+                cc.TongGioLam = Math.Round((gioRa.Value - gioVao.Value).TotalHours, 2);
+                cc.TrangThai = AttendanceService.Completed;
+            }
+            else
+            {
+                cc.TongGioLam = null;
+                cc.TrangThai = cc.NgayCham.Date < DateTime.Today 
+                    ? AttendanceService.ForgottenCheckout 
+                    : AttendanceService.Active;
+            }
+
+            _context.SaveChanges();
+
+            TempData["ToastMessage"] = "Cập nhật giờ chấm công thành công!";
+            TempData["ToastType"] = "success";
+            return RedirectToAction("Index", new { activeTab = "chamcong" });
         }
     }
 

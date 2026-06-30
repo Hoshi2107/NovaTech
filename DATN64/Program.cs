@@ -10,6 +10,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<GeminiService>();
+builder.Services.AddScoped<DATN64.Services.IAttendanceService, DATN64.Services.AttendanceService>();
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromMinutes(30);
