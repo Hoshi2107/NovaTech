@@ -58,6 +58,11 @@
                         <i class="fa-solid fa-history me-2"></i>Lịch sử
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link rounded-3 py-2.5" :class="{ active: activeTab === 'ledger' }" @@click="setTab('ledger')">
+                        <i class="fa-solid fa-book me-2 text-success"></i>Thẻ kho chi tiết
+                    </button>
+                </li>
             </ul>
         </div>
     </div>
@@ -112,6 +117,26 @@
                         </div>
                         <h6 class="text-muted-custom text-xs fw-bold text-uppercase mb-1">Sắp hết hàng</h6>
                         <h3 class="fw-extrabold text-warning mb-0">${ stats.lowStockProducts }</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-8">
+                    <div class="card border-0 shadow-sm rounded-4 card-glass p-4">
+                        <h5 class="fw-bold mb-3 text-gradient"><i class="fa-solid fa-chart-line me-2 text-primary"></i>Xu hướng Biến động Kho hàng (Nhập/Xuất 7 ngày qua)</h5>
+                        <div style="position: relative; height: 260px;">
+                            <canvas id="txTrendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm rounded-4 card-glass p-4 h-100">
+                        <h5 class="fw-bold mb-3 text-gradient"><i class="fa-solid fa-chart-pie me-2 text-success"></i>Cơ cấu Tồn kho theo Loại</h5>
+                        <div style="position: relative; height: 260px;">
+                            <canvas id="categoryRatioChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -899,6 +924,92 @@
             </div>
         </div>
 
+        <!-- THẺ KHO CHI TIẾT TAB -->
+        <div class="tab-pane show active" v-if="activeTab === 'ledger'">
+            <div class="card border-0 shadow-sm rounded-4 bg-glass p-4">
+                <div class="d-flex align-items-center mb-4">
+                    <div class="d-inline-flex align-items-center justify-content-center bg-success-subtle text-success rounded-circle me-3" style="width: 48px; height: 48px;">
+                        <i class="fa-solid fa-book fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-0">Thẻ kho Chi tiết (Sổ chi tiết vật tư)</h5>
+                        <p class="text-muted-custom text-sm mb-0">Theo dõi toàn bộ lịch sử biến động và tồn kho lũy kế của riêng từng sản phẩm</p>
+                    </div>
+                </div>
+                
+                <!-- Filter bar -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6 col-lg-4">
+                        <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Chọn sản phẩm cần theo dõi</label>
+                        <select class="form-select" v-model="ledgerProductId" @@change="generateLedger">
+                            <option value="" disabled>--- Chọn sản phẩm ---</option>
+                            <option v-for="p in products" :value="p.maSanPham">
+                                ${ p.tenSanPham } (Mã: #${ p.maSanPham }) - Hiện tại: ${ p.soLuongTon } cái
+                            </option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div v-if="!ledgerProductId" class="text-center py-5 text-muted border border-secondary border-opacity-10 rounded-4 bg-light bg-opacity-50">
+                    <i class="fa-solid fa-book-open fs-1 mb-3 text-secondary"></i>
+                    <h6 class="fw-bold">Chưa chọn sản phẩm</h6>
+                    <p class="text-muted-custom text-sm">Vui lòng chọn một sản phẩm từ danh sách phía trên để truy xuất Thẻ kho.</p>
+                </div>
+                
+                <div v-else class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Thời gian</th>
+                                <th>Mã phiếu</th>
+                                <th>Loại giao dịch</th>
+                                <th>Người thực hiện</th>
+                                <th class="text-center">Số lượng trước</th>
+                                <th class="text-center">Nhập (+)</th>
+                                <th class="text-center">Xuất (-)</th>
+                                <th class="text-center">Tồn lũy kế</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-if="ledgerRows.length === 0">
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <i class="fa-solid fa-folder-open fs-2 mb-2 d-block"></i>
+                                    Không tìm thấy bất kỳ giao dịch nào cho sản phẩm này!
+                                </td>
+                            </tr>
+                            <tr v-for="row in ledgerRows" :key="row.id" class="group-hover">
+                                <td class="text-xs text-muted-custom">${ row.date }</td>
+                                <td>
+                                    <span class="badge bg-dark fw-mono font-monospace text-xs">${ row.code }</span>
+                                </td>
+                                <td>
+                                    <span class="badge rounded-pill" :class="{
+                                        'bg-success': row.type === 'Nhập kho',
+                                        'bg-danger': row.type === 'Xuất kho',
+                                        'bg-warning text-dark': row.type === 'Kiểm kê',
+                                        'bg-primary': row.type === 'Điều chỉnh'
+                                    }">${ row.type }</span>
+                                </td>
+                                <td class="text-xs text-secondary">${ row.creator }</td>
+                                <td class="text-center text-xs text-muted-custom">
+                                    ${ row.soLuongTruoc } cái
+                                </td>
+                                <td class="text-center text-success fw-bold">
+                                    ${ row.quantityChange > 0 ? '+' + row.quantityChange + ' cái' : '---' }
+                                </td>
+                                <td class="text-center text-danger fw-bold">
+                                    ${ row.quantityChange < 0 ? row.quantityChange + ' cái' : '---' }
+                                </td>
+                                <td class="text-center text-dark fw-bold">
+                                    ${ row.soLuongSau } cái
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -906,6 +1017,7 @@
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         [v-cloak] { display: none; }
@@ -966,6 +1078,8 @@
                 adjustError: '',
                 historyPage: 1,
                 historyPageSize: 10,
+                ledgerProductId: '',
+                ledgerRows: [],
                 filters: {
                     search: '',
                     category: '',
@@ -1173,6 +1287,10 @@
                         this.transactions = txRes.data;
                         this.categories = optRes.data.categories;
                         this.brands = optRes.data.brands;
+                        this.$nextTick(() => {
+                            this.initCharts();
+                            this.generateLedger();
+                        });
                     } catch (err) {
                         console.error('Lỗi khi tải dữ liệu:', err);
                         Swal.fire('Lỗi', 'Không thể tải dữ liệu kho hàng.', 'error');
@@ -1186,6 +1304,143 @@
                     // Reset errors on tab change
                     this.exportError = '';
                     this.adjustError = '';
+                    if (tab === 'dashboard') {
+                        this.$nextTick(() => {
+                            this.initCharts();
+                        });
+                    }
+                },
+                initCharts() {
+                    const canvas1 = document.getElementById('txTrendChart');
+                    const canvas2 = document.getElementById('categoryRatioChart');
+                    if (!canvas1 || !canvas2) return;
+                    
+                    if (this.trendChart) this.trendChart.destroy();
+                    if (this.ratioChart) this.ratioChart.destroy();
+                    
+                    const labels = [];
+                    const importData = [];
+                    const exportData = [];
+                    const now = new Date();
+                    for (let i = 6; i >= 0; i--) {
+                        const d = new Date();
+                        d.setDate(now.getDate() - i);
+                        const dateStr = d.toISOString().slice(0, 10);
+                        const label = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+                        labels.push(label);
+                        
+                        const imp = this.transactions
+                            .filter(t => t.type === 'Nhập kho' && t.date.startsWith(dateStr) && t.trangThai === 'Đã duyệt')
+                            .reduce((sum, t) => sum + t.quantityChange, 0);
+                        const exp = this.transactions
+                            .filter(t => t.type === 'Xuất kho' && t.date.startsWith(dateStr) && t.trangThai === 'Đã duyệt')
+                            .reduce((sum, t) => sum + Math.abs(t.quantityChange), 0);
+                        importData.push(imp);
+                        exportData.push(exp);
+                    }
+                    
+                    const ctx1 = canvas1.getContext('2d');
+                    this.trendChart = new Chart(ctx1, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                {
+                                    label: 'Nhập kho',
+                                    data: importData,
+                                    borderColor: '#0ea5e9',
+                                    backgroundColor: 'rgba(14, 165, 233, 0.05)',
+                                    tension: 0.3,
+                                    fill: true,
+                                    borderWidth: 2
+                                },
+                                {
+                                    label: 'Xuất kho',
+                                    data: exportData,
+                                    borderColor: '#ef4444',
+                                    backgroundColor: 'rgba(239, 68, 68, 0.05)',
+                                    tension: 0.3,
+                                    fill: true,
+                                    borderWidth: 2
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    labels: { font: { family: "'Inter', sans-serif", size: 11 } }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: { font: { family: "'Inter', sans-serif", size: 10 } }
+                                },
+                                x: {
+                                    ticks: { font: { family: "'Inter', sans-serif", size: 10 } }
+                                }
+                            }
+                        }
+                    });
+                    
+                    const catMap = {};
+                    this.products.forEach(p => {
+                        const name = p.danhMucTen || 'Khác';
+                        catMap[name] = (catMap[name] || 0) + p.soLuongTon;
+                    });
+                    const catLabels = Object.keys(catMap);
+                    const catData = Object.values(catMap);
+                    
+                    const ctx2 = canvas2.getContext('2d');
+                    this.ratioChart = new Chart(ctx2, {
+                        type: 'doughnut',
+                        data: {
+                            labels: catLabels,
+                            datasets: [{
+                                data: catData,
+                                backgroundColor: ['#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#6b7280', '#14b8a6', '#f43f5e']
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: { font: { family: "'Inter', sans-serif", size: 10 } }
+                                }
+                            }
+                        }
+                    });
+                },
+                generateLedger() {
+                    if (!this.ledgerProductId) return;
+                    const idStr = this.ledgerProductId.toString();
+                    const txs = this.transactions
+                        .filter(t => t.productSKU === idStr && t.trangThai === 'Đã duyệt')
+                        .sort((a, b) => new Date(a.date) - new Date(b.date));
+                        
+                    let currentStock = 0;
+                    const rows = [];
+                    txs.forEach(t => {
+                        const before = t.soLuongTruoc != null ? t.soLuongTruoc : currentStock;
+                        const after = t.soLuongSau != null ? t.soLuongSau : (before + t.quantityChange);
+                        currentStock = after;
+                        
+                        rows.push({
+                            id: t.id,
+                            date: t.date,
+                            code: t.code,
+                            type: t.type,
+                            creator: t.creator,
+                            soLuongTruoc: before,
+                            quantityChange: t.quantityChange,
+                            soLuongSau: after
+                        });
+                    });
+                    this.ledgerRows = rows.reverse();
                 },
                 resetFilters() {
                     this.filters.search = '';
