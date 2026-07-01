@@ -241,6 +241,14 @@ namespace DATN64.Models
                 ALTER TABLE dbo.NhanVien ADD LuongTheoGio DECIMAL(18,2) NULL;
             ");
 
+            // Add TrangThai and CongNoId columns to SoQuy
+            ExecuteSql(db, @"
+                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.SoQuy') AND name = 'TrangThai')
+                    ALTER TABLE dbo.SoQuy ADD TrangThai NVARCHAR(50) NOT NULL DEFAULT N'Đã duyệt';
+                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.SoQuy') AND name = 'CongNoId')
+                    ALTER TABLE dbo.SoQuy ADD CongNoId INT NULL;
+            ");
+
             // Ensure DonHang.MaNhanVien column allows NULL when the model is optional
             ExecuteSql(db, @"
                 IF OBJECT_ID('dbo.DonHang', 'U') IS NOT NULL

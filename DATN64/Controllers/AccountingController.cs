@@ -58,10 +58,10 @@ namespace DATN64.Controllers
                 .OrderByDescending(s => s.NgayGiaoDich)
                 .ToListAsync();
 
-            // Tổng hợp tiền Thu / Chi / Số Dư
+            // Tổng hợp tiền Thu / Chi / Số Dư (bỏ phiếu đã hủy)
             var allSoQuys = await _context.SoQuys.ToListAsync();
-            vm.TongThu = allSoQuys.Where(s => s.LoaiGiaoDich == "Thu").Sum(s => s.SoTien);
-            vm.TongChi = allSoQuys.Where(s => s.LoaiGiaoDich == "Chi").Sum(s => s.SoTien);
+            vm.TongThu = allSoQuys.Where(s => s.LoaiGiaoDich == "Thu" && s.TrangThai != "Đã hủy").Sum(s => s.SoTien);
+            vm.TongChi = allSoQuys.Where(s => s.LoaiGiaoDich == "Chi" && s.TrangThai != "Đã hủy").Sum(s => s.SoTien);
             vm.SoDuQuy = vm.TongThu - vm.TongChi;
 
             // 3. Lấy thông tin Công nợ Nhà cung cấp
@@ -175,11 +175,11 @@ namespace DATN64.Controllers
                 var dayEnd = day.Date.AddDays(1).AddSeconds(-1);
 
                 var thuTrongNgay = allSoQuys
-                    .Where(s => s.LoaiGiaoDich == "Thu" && s.NgayGiaoDich >= dayStart && s.NgayGiaoDich <= dayEnd)
+                    .Where(s => s.LoaiGiaoDich == "Thu" && s.TrangThai != "Đã hủy" && s.NgayGiaoDich >= dayStart && s.NgayGiaoDich <= dayEnd)
                     .Sum(s => s.SoTien);
 
                 var chiTrongNgay = allSoQuys
-                    .Where(s => s.LoaiGiaoDich == "Chi" && s.NgayGiaoDich >= dayStart && s.NgayGiaoDich <= dayEnd)
+                    .Where(s => s.LoaiGiaoDich == "Chi" && s.TrangThai != "Đã hủy" && s.NgayGiaoDich >= dayStart && s.NgayGiaoDich <= dayEnd)
                     .Sum(s => s.SoTien);
 
                 chartData.Add(new CashFlowChartDto
@@ -190,6 +190,40 @@ namespace DATN64.Controllers
                 });
             }
             vm.CashFlowChartData = chartData;
+
+            // 6. Biểu đồ P&L theo tháng (12 tháng gần nhất)
+            var allCompletedOrders = await _context.DonHangs
+                .Where(d => d.TrangThai == "Hoàn thành")
+                .ToListAsync();
+            var allCogs = await (from ctdh in _context.ChiTietDonHangs
+                                 join dh in _context.DonHangs on ctdh.MaDonHang equals dh.MaDonHang
+                                 join sp in _context.SanPhams on ctdh.MaSanPham equals sp.MaSanPham
+                                 where dh.TrangThai == "Hoàn thành"
+                                 select new { dh.NgayDat, Cogs = ctdh.SoLuong * sp.GiaNhap }).ToListAsync();
+
+            var monthlyPL = new List<MonthlyPLChartDto>();
+            for (int i = 11; i >= 0; i--)
+            {
+                var monthStart = new DateTime(today.Year, today.Month, 1).AddMonths(-i);
+                var monthEnd = monthStart.AddMonths(1).AddSeconds(-1);
+
+                var rev = allCompletedOrders
+                    .Where(d => d.NgayDat >= monthStart && d.NgayDat <= monthEnd)
+                    .Sum(d => d.TongTien ?? 0);
+
+                var cogs = allCogs
+                    .Where(x => x.NgayDat >= monthStart && x.NgayDat <= monthEnd)
+                    .Sum(x => x.Cogs);
+
+                monthlyPL.Add(new MonthlyPLChartDto
+                {
+                    ThangLabel = $"T{monthStart.Month}/{monthStart.Year}",
+                    DoanhThu = rev,
+                    GiaVon = cogs,
+                    LoiNhuan = rev - cogs
+                });
+            }
+            vm.MonthlyPLChartData = monthlyPL;
 
             // Lấy danh sách Nhà cung cấp để hiển thị form trả nợ
             ViewBag.NhaCungCaps = await _context.NhaCungCaps.ToListAsync();
@@ -240,6 +274,37 @@ namespace DATN64.Controllers
             await _context.SaveChangesAsync();
 
             TempData["ToastMessage"] = $"Đã lập thành công phiếu {loaiGiaoDich.ToLower()} {maGiaoDich} trị giá {soTien:N0} đ.";
+            TempData["ToastType"] = "success";
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        // POST: Accounting/VoidTransaction
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> VoidTransaction(int id, string lyDoHuy)
+        {
+            var soQuy = await _context.SoQuys.FindAsync(id);
+            if (soQuy == null)
+            {
+                TempData["ToastMessage"] = "Không tìm thấy phiếu giao dịch!";
+                TempData["ToastType"] = "danger";
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (soQuy.TrangThai == "Đã hủy")
+            {
+                TempData["ToastMessage"] = "Phiếu này đã được hủy trước đó rồi!";
+                TempData["ToastType"] = "warning";
+                return RedirectToAction(nameof(Index));
+            }
+
+            soQuy.TrangThai = "Đã hủy";
+            soQuy.GhiChu = $"[HỦY PHIẾU - {DateTime.Now:dd/MM/yyyy HH:mm}] {lyDoHuy}. {soQuy.GhiChu}";
+
+            await _context.SaveChangesAsync();
+
+            TempData["ToastMessage"] = $"Đã void thành công phiếu {soQuy.MaGiaoDich}. Số dư quỹ đã được điều chỉnh.";
             TempData["ToastType"] = "success";
 
             return RedirectToAction(nameof(Index));
@@ -303,7 +368,8 @@ namespace DATN64.Controllers
                 DoiTuongGiaoDich = congNo.NhaCungCap?.TenNCC ?? "Nhà cung cấp",
                 GhiChu = string.IsNullOrEmpty(ghiChu) ? $"Trả nợ hóa đơn nhập kho #{congNo.MaPhieuNhap}" : ghiChu,
                 MaNhanVien = nhanVien.MaNhanVien,
-                NgayGiaoDich = DateTime.Now
+                NgayGiaoDich = DateTime.Now,
+                CongNoId = congNo.Id
             };
 
             _context.SoQuys.Add(phieuChi);
@@ -313,6 +379,96 @@ namespace DATN64.Controllers
             TempData["ToastType"] = "success";
 
             return RedirectToAction(nameof(Index));
+        }
+
+        // GET: Accounting/GetCongNoDetail/5
+        [HttpGet]
+        public async Task<IActionResult> GetCongNoDetail(int id)
+        {
+            var congNo = await _context.CongNoNCCs
+                .Include(c => c.NhaCungCap)
+                .Include(c => c.PhieuNhap)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (congNo == null)
+                return NotFound();
+
+            // Lấy chi tiết hàng hóa trong phiếu nhập
+            var chiTiets = await _context.ChiTietPhieuNhaps
+                .Include(ct => ct.SanPham)
+                .Where(ct => ct.MaPhieuNhap == congNo.MaPhieuNhap)
+                .ToListAsync();
+
+            // Lịch sử thanh toán từ Sổ Quỹ liên quan đến công nợ này
+            var lichSuThanhToan = await _context.SoQuys
+                .Where(s => s.CongNoId == congNo.Id && s.TrangThai != "Đã hủy")
+                .OrderByDescending(s => s.NgayGiaoDich)
+                .Select(s => new {
+                    s.MaGiaoDich,
+                    NgayThanhToan = s.NgayGiaoDich.ToString("dd/MM/yyyy HH:mm"),
+                    s.SoTien,
+                    s.PhuongThucThanhToan,
+                    s.GhiChu
+                })
+                .ToListAsync();
+
+            return Json(new
+            {
+                id = congNo.Id,
+                tenNCC = congNo.NhaCungCap?.TenNCC ?? $"NCC #{congNo.MaNCC}",
+                soDienThoai = congNo.NhaCungCap?.SoDienThoai ?? "",
+                maPhieuNhap = $"PN-{congNo.MaPhieuNhap:D5}",
+                ngayNhap = congNo.NgayTao.ToString("dd/MM/yyyy"),
+                hanThanhToan = congNo.HanThanhToan?.ToString("dd/MM/yyyy") ?? "—",
+                quaHan = congNo.HanThanhToan.HasValue && congNo.HanThanhToan < DateTime.Today,
+                tongTien = congNo.TongTien,
+                daThanhToan = congNo.DaThanhToan,
+                conNo = congNo.TongTien - congNo.DaThanhToan,
+                trangThai = congNo.TrangThai,
+                chiTietHang = chiTiets.Select(ct => new
+                {
+                    tenSanPham = ct.SanPham?.TenSanPham ?? $"SP #{ct.MaSanPham}",
+                    soLuong = ct.SoLuong,
+                    giaNhap = ct.GiaNhap,
+                    thanhTien = ct.SoLuong * ct.GiaNhap
+                }),
+                lichSuThanhToan
+            });
+        }
+
+        // GET: Accounting/GetSoQuyDetail/5
+        [HttpGet]
+        public async Task<IActionResult> GetSoQuyDetail(int id)
+        {
+            var soQuy = await _context.SoQuys
+                .Include(s => s.NhanVien)
+                .Include(s => s.DonHang)
+                    .ThenInclude(d => d != null ? d.KhachHang : null)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
+            if (soQuy == null)
+                return NotFound();
+
+            string? tenKhachHang = null;
+            if (soQuy.DonHang?.KhachHang != null)
+                tenKhachHang = soQuy.DonHang.KhachHang.HoTen;
+
+            return Json(new
+            {
+                id = soQuy.Id,
+                maGiaoDich = soQuy.MaGiaoDich,
+                loaiGiaoDich = soQuy.LoaiGiaoDich,
+                nhomGiaoDich = soQuy.NhomGiaoDich,
+                soTien = soQuy.SoTien,
+                ngayGiaoDich = soQuy.NgayGiaoDich.ToString("dd/MM/yyyy HH:mm:ss"),
+                phuongThucThanhToan = soQuy.PhuongThucThanhToan,
+                doiTuongGiaoDich = soQuy.DoiTuongGiaoDich,
+                ghiChu = soQuy.GhiChu,
+                nguoiLap = soQuy.NhanVien?.HoTen ?? "—",
+                trangThai = soQuy.TrangThai,
+                maDonHang = soQuy.MaDonHang,
+                tenKhachHang
+            });
         }
 
         // 6. Cơ chế Tự động đồng bộ hóa doanh thu và nhập kho gối đầu vào Kế toán

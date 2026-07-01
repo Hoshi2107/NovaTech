@@ -28,6 +28,9 @@ namespace DATN64.Models.ViewModels
         // Chart data
         public List<CashFlowChartDto> CashFlowChartData { get; set; } = new();
 
+        // Monthly P&L Chart (12 months)
+        public List<MonthlyPLChartDto> MonthlyPLChartData { get; set; } = new();
+
         // Doanh thu phân theo kênh
         public List<RevenueChannelDto> RevenueByChannel { get; set; } = new();
     }
@@ -73,5 +76,13 @@ namespace DATN64.Models.ViewModels
         public string NgayLabel { get; set; } = "";
         public decimal Thu { get; set; }
         public decimal Chi { get; set; }
+    }
+
+    public class MonthlyPLChartDto
+    {
+        public string ThangLabel { get; set; } = ""; // "T1/2025"
+        public decimal DoanhThu { get; set; }
+        public decimal GiaVon { get; set; }
+        public decimal LoiNhuan { get; set; }
     }
 }

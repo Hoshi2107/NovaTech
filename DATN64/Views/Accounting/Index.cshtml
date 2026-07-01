@@ -10,6 +10,12 @@
     var chartThu = System.Text.Json.JsonSerializer.Serialize(Model.CashFlowChartData.Select(x => x.Thu).ToList());
     var chartChi = System.Text.Json.JsonSerializer.Serialize(Model.CashFlowChartData.Select(x => x.Chi).ToList());
 
+    // Serialize data for Monthly P&L Chart
+    var plLabels = System.Text.Json.JsonSerializer.Serialize(Model.MonthlyPLChartData.Select(x => x.ThangLabel).ToList());
+    var plDoanhThu = System.Text.Json.JsonSerializer.Serialize(Model.MonthlyPLChartData.Select(x => x.DoanhThu).ToList());
+    var plGiaVon = System.Text.Json.JsonSerializer.Serialize(Model.MonthlyPLChartData.Select(x => x.GiaVon).ToList());
+    var plLoiNhuan = System.Text.Json.JsonSerializer.Serialize(Model.MonthlyPLChartData.Select(x => x.LoiNhuan).ToList());
+
     // Serialize data for Revenue Channel Chart
     var channelLabels = System.Text.Json.JsonSerializer.Serialize(Model.RevenueByChannel.Select(x => x.TenKenh).ToList());
     var channelData = System.Text.Json.JsonSerializer.Serialize(Model.RevenueByChannel.Select(x => x.DoanhThu).ToList());
@@ -320,21 +326,24 @@
                             <th>Phương thức</th>
                             <th>Ghi chú</th>
                             <th>Người lập</th>
+                            <th>Trạng thái</th>
+                            <th>Thao tác</th>
                         </tr>
                     </thead>
                     <tbody class="text-sm" id="soquyTableBody">
                         @if (!Model.GiaoDichs.Any())
                         {
                             <tr>
-                                <td colspan="9" class="text-center text-muted py-4">Chưa có bản ghi giao dịch thu chi nào trong thời gian này.</td>
+                                <td colspan="11" class="text-center text-muted py-4">Chưa có bản ghi giao dịch thu chi nào trong thời gian này.</td>
                             </tr>
                         }
                         else
                         {
                             @foreach (var gd in Model.GiaoDichs)
                             {
-                                <tr class="sq-row">
-                                    <td class="fw-bold text-cyan">@gd.MaGiaoDich</td>
+                                var isVoided = gd.TrangThai == "Đã hủy";
+                                <tr class="sq-row @(isVoided ? "opacity-50" : "")">
+                                    <td class="fw-bold @(isVoided ? "text-muted text-decoration-line-through" : "text-cyan")">@gd.MaGiaoDich</td>
                                     <td>@gd.NgayGiaoDich.ToString("dd/MM/yyyy HH:mm")</td>
                                     <td>
                                         <span class="badge @(gd.LoaiGiaoDich == "Thu" ? "bg-success bg-opacity-10 text-success" : "bg-danger bg-opacity-10 text-danger") px-2 py-1 text-xs">
@@ -342,15 +351,45 @@
                                         </span>
                                     </td>
                                     <td class="fw-medium">@gd.NhomGiaoDich</td>
-                                    <td class="fw-bold @(gd.LoaiGiaoDich == "Thu" ? "text-success" : "text-danger")">
+                                    <td class="fw-bold @(isVoided ? "text-muted text-decoration-line-through" : (gd.LoaiGiaoDich == "Thu" ? "text-success" : "text-danger"))">
                                         @(gd.LoaiGiaoDich == "Thu" ? "+" : "-")@gd.SoTien.ToString("N0")₫
                                     </td>
                                     <td>@gd.DoiTuongGiaoDich</td>
                                     <td>
                                         <span class="badge bg-secondary bg-opacity-10 text-dark text-xxs">@gd.PhuongThucThanhToan</span>
                                     </td>
-                                    <td class="text-muted text-xs" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@gd.GhiChu</td>
+                                    <td class="text-muted text-xs" style="max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@gd.GhiChu</td>
                                     <td>@gd.NhanVien?.HoTen</td>
+                                    <td>
+                                        @if (isVoided)
+                                        {
+                                            <span class="badge bg-secondary text-xs"><i class="fa-solid fa-ban me-1"></i>Đã hủy</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success bg-opacity-10 text-success text-xs"><i class="fa-solid fa-circle-check me-1"></i>Hợp lệ</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-1">
+                                            <button class="btn btn-outline-info btn-xs px-2 rounded-pill btn-sq-detail"
+                                                    data-id="@gd.Id"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#soQuyDetailModal">
+                                                <i class="fa-solid fa-eye"></i>
+                                            </button>
+                                            @if (!isVoided)
+                                            {
+                                                <button class="btn btn-outline-danger btn-xs px-2 rounded-pill btn-void-phieu"
+                                                        data-id="@gd.Id"
+                                                        data-ma="@gd.MaGiaoDich"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#voidTransactionModal">
+                                                    <i class="fa-solid fa-ban"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
                                 </tr>
                             }
                         }
@@ -366,6 +405,25 @@
 
         <!-- Tab 2: Công nợ Nhà cung cấp -->
         <div class="tab-pane fade" id="congno" role="tabpanel" aria-labelledby="congno-tab">
+            <!-- Filter Bar -->
+            <div class="row g-2 mb-4 align-items-end">
+                <div class="col-12 col-md-4">
+                    <label class="form-label text-xs fw-semibold text-muted">Lọc theo Nhà cung cấp</label>
+                    <input type="text" id="filterNCC" class="form-control text-sm" placeholder="Tìm tên NCC...">
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label text-xs fw-semibold text-muted">Trạng thái nợ</label>
+                    <select id="filterTrangThai" class="form-select text-sm">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="ChuaThanhToan">Chưa thanh toán</option>
+                        <option value="ThanhToanMotPhan">Thanh toán một phần</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-2">
+                    <button id="btnResetFilter" class="btn btn-outline-secondary w-100 text-sm"><i class="fa-solid fa-rotate me-1"></i>Reset</button>
+                </div>
+            </div>
+
             <h5 class="fw-bold text-dark mb-3"><i class="fa-solid fa-circle-info me-2 text-primary"></i>Tổng quan nợ theo Nhà cung cấp</h5>
             <div class="table-responsive mb-5">
                 <table class="table table-hover align-middle">
@@ -379,7 +437,7 @@
                             <th>Số hóa đơn còn nợ</th>
                         </tr>
                     </thead>
-                    <tbody class="text-sm">
+                    <tbody class="text-sm" id="nccSummaryBody">
                         @if (!Model.CongNoSummaries.Any())
                         {
                             <tr>
@@ -390,7 +448,7 @@
                         {
                             @foreach (var ncc in Model.CongNoSummaries)
                             {
-                                <tr>
+                                <tr class="ncc-row" data-ten="@ncc.TenNCC.ToLower()">
                                     <td class="fw-bold">@ncc.TenNCC</td>
                                     <td>@ncc.SoDienThoai</td>
                                     <td>@ncc.TongNo.ToString("N0")₫</td>
@@ -433,7 +491,7 @@
                             @foreach (var cn in Model.ChiTietCongNos)
                             {
                                 var conNo = cn.TongTien - cn.DaThanhToan;
-                                <tr class="cn-row">
+                                <tr class="cn-row" data-ten="@(cn.NhaCungCap?.TenNCC ?? "").ToLower()" data-trangthai="@cn.TrangThai">
                                     <td>#@cn.Id</td>
                                     <td class="fw-medium">@cn.NhaCungCap?.TenNCC</td>
                                     <td><span class="badge bg-secondary bg-opacity-20 text-dark">PN-@cn.MaPhieuNhap.ToString("D5")</span></td>
@@ -454,15 +512,23 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <button class="btn btn-success btn-xs px-2.5 rounded-pill btn-pay-debt" 
-                                                data-id="@cn.Id" 
-                                                data-ncc="@cn.NhaCungCap?.TenNCC" 
-                                                data-conno="@conNo" 
-                                                data-phieunhap="PN-@cn.MaPhieuNhap.ToString("D5")"
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#paySupplierDebtModal">
-                                            <i class="fa-solid fa-money-bill-wave me-1"></i>Trả nợ
-                                        </button>
+                                        <div class="d-flex gap-1 flex-nowrap">
+                                            <button class="btn btn-outline-primary btn-xs px-2 rounded-pill btn-cn-detail"
+                                                    data-id="@cn.Id"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#congNoDetailModal">
+                                                <i class="fa-solid fa-eye me-1"></i>Chi tiết
+                                            </button>
+                                            <button class="btn btn-success btn-xs px-2 rounded-pill btn-pay-debt"
+                                                    data-id="@cn.Id"
+                                                    data-ncc="@cn.NhaCungCap?.TenNCC"
+                                                    data-conno="@conNo"
+                                                    data-phieunhap="PN-@cn.MaPhieuNhap.ToString("D5")"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#paySupplierDebtModal">
+                                                <i class="fa-solid fa-money-bill-wave me-1"></i>Trả nợ
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             }
@@ -530,10 +596,17 @@
                 </div>
             </div>
 
-            <!-- Dòng tiền Chart -->
+            <!-- Biểu đồ P&L theo tháng -->
             <div class="card p-4 border rounded-3 mt-4">
-                <h6 class="fw-bold text-dark mb-3"><i class="fa-solid fa-chart-line text-info me-2"></i>Dòng tiền Thu vs Chi (7 ngày gần đây)</h6>
-                <div style="position: relative; height:250px;">
+                <h6 class="fw-bold text-dark mb-3"><i class="fa-solid fa-chart-bar text-info me-2"></i>Doanh thu & Lợi nhuận theo tháng (12 tháng gần đây)</h6>
+                <div style="position: relative; height:280px;">
+                    <canvas id="monthlyPLChart"></canvas>
+                </div>
+            </div>
+            <!-- Dòng tiền 7 ngày -->
+            <div class="card p-4 border rounded-3 mt-3">
+                <h6 class="fw-bold text-dark mb-3"><i class="fa-solid fa-chart-line text-success me-2"></i>Dòng tiền Thu vs Chi (7 ngày gần đây)</h6>
+                <div style="position: relative; height:220px;">
                     <canvas id="cashFlowChart"></canvas>
                 </div>
             </div>
@@ -597,7 +670,35 @@
     </div>
 </div>
 
-<!-- Modal 2: Thanh Toán Công Nợ Nhà Cung Cấp -->
+<!-- Modal: Void / Hủy phiếu -->
+<div class="modal fade" id="voidTransactionModal" tabindex="-1" aria-labelledby="voidTransactionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="@Url.Action("VoidTransaction", "Accounting")">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" id="voidId">
+                <div class="modal-header bg-danger text-white">
+                    <h6 class="modal-title fw-bold" id="voidTransactionModalLabel"><i class="fa-solid fa-ban me-2"></i>Hủy (Void) Phiếu Giao Dịch</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-sm">
+                    <div class="alert alert-warning py-2 px-3 text-xs mb-3">
+                        <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                        Đang hủy phiếu: <strong id="voidMaGD"></strong>. Thao tác này sẽ loại phiếu khỏi số dư quỹ nhưng không xóa khỏi cơ sở dữ liệu.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Lý do hủy phiếu <span class="text-danger">*</span></label>
+                        <textarea name="lyDoHuy" class="form-control text-sm" rows="3" placeholder="VD: Lập nhầm số tiền, nhầm đối tượng..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary text-sm rounded-pill px-4" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="submit" class="btn btn-danger text-sm rounded-pill px-4"><i class="fa-solid fa-ban me-1"></i>Xác nhận Void phiếu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 <div class="modal fade" id="paySupplierDebtModal" tabindex="-1" aria-labelledby="paySupplierDebtModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -632,9 +733,47 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary text-sm rounded-pill px-4" data-bs-dismiss="modal">Đóng</button>
-                    <button type="submit" class="btn btn-success text-sm rounded-pill px-4">Xác nhận chi tiền</button>
+                    <button type="submit" id="btnConfirmPayDebt" class="btn btn-success text-sm rounded-pill px-4">
+                        <i class="fa-solid fa-money-bill-wave me-1"></i>Xác nhận chi tiền
+                    </button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Chi tiết phiếu Sổ quỹ -->
+<div class="modal fade" id="soQuyDetailModal" tabindex="-1" aria-labelledby="soQuyDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background:linear-gradient(135deg,#0ea5e9,#6366f1); color:#fff;">
+                <h6 class="modal-title fw-bold" id="soQuyDetailModalLabel"><i class="fa-solid fa-file-invoice-dollar me-2"></i>Chi tiết phiếu giao dịch</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-sm" id="soQuyDetailBody">
+                <div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div> Đang tải...</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary text-sm rounded-pill px-4" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Chi tiết công nợ NCC -->
+<div class="modal fade modal-lg" id="congNoDetailModal" tabindex="-1" aria-labelledby="congNoDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background:linear-gradient(135deg,#7c3aed,#0ea5e9); color:#fff;">
+                <h6 class="modal-title fw-bold" id="congNoDetailModalLabel"><i class="fa-solid fa-truck-ramp-box me-2"></i>Chi tiết công nợ Nhà Cung Cấp</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-sm" id="congNoDetailBody">
+                <div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div> Đang tải...</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary text-sm rounded-pill px-4" data-bs-dismiss="modal">Đóng</button>
+            </div>
         </div>
     </div>
 </div>
@@ -682,7 +821,7 @@
             loaiSelect.dispatchEvent(new Event('change'));
         }
 
-        // Setup Pay Debt Modal data
+        // Setup Pay Debt Modal data + anti-spam
         const payButtons = document.querySelectorAll(".btn-pay-debt");
         payButtons.forEach(btn => {
             btn.addEventListener("click", function() {
@@ -694,13 +833,224 @@
                 document.getElementById("payDebtId").value = id;
                 document.getElementById("payDebtNCC").textContent = ncc;
                 document.getElementById("payDebtPhieuNhap").textContent = phieunhap;
-                
+
                 const amountInput = document.getElementById("payDebtAmount");
                 amountInput.value = parseFloat(conno);
                 amountInput.max = parseFloat(conno);
-                
+
                 document.getElementById("payDebtMax").textContent = parseFloat(conno).toLocaleString('vi-VN');
+
+                // Reset submit button (anti-spam re-enable when modal re-opens)
+                const confirmBtn = document.getElementById('btnConfirmPayDebt');
+                if (confirmBtn) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = '<i class="fa-solid fa-money-bill-wave me-1"></i>Xác nhận chi tiền';
+                }
             });
+        });
+
+        // Anti-spam: disable submit on first click
+        const payForm = document.querySelector('#paySupplierDebtModal form');
+        if (payForm) {
+            payForm.addEventListener('submit', function() {
+                const confirmBtn = document.getElementById('btnConfirmPayDebt');
+                if (confirmBtn) {
+                    confirmBtn.disabled = true;
+                    confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
+                }
+            });
+        }
+
+        // Setup Void Modal data
+        document.querySelectorAll('.btn-void-phieu').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.getElementById('voidId').value = this.getAttribute('data-id');
+                document.getElementById('voidMaGD').textContent = this.getAttribute('data-ma');
+            });
+        });
+
+        // ====== SoQuy Detail Modal ======
+        const fmt = v => parseFloat(v).toLocaleString('vi-VN');
+        document.querySelectorAll('.btn-sq-detail').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const id = this.getAttribute('data-id');
+                const body = document.getElementById('soQuyDetailBody');
+                body.innerHTML = '<div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div> Đang tải...</div>';
+                try {
+                    const res = await fetch(`/Accounting/GetSoQuyDetail/${id}`);
+                    if (!res.ok) throw new Error('Not found');
+                    const d = await res.json();
+                    const isVoided = d.trangThai === 'Đã hủy';
+                    const isThu = d.loaiGiaoDich === 'Thu';
+                    body.innerHTML = `
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="text-muted text-xs fw-semibold">ÊMÃ GIAO DỊCH</div>
+                                <div class="fw-bold text-primary fs-6">${d.maGiaoDich}</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-muted text-xs fw-semibold">TRẠNG THÁI</div>
+                                <div>${isVoided ? '<span class="badge bg-secondary"><i class="fa-solid fa-ban me-1"></i>Đã hủy</span>' : '<span class="badge bg-success bg-opacity-10 text-success"><i class="fa-solid fa-circle-check me-1"></i>Hợp lệ</span>'}</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-muted text-xs fw-semibold">LOẠI GIAO DỊCH</div>
+                                <div><span class="badge ${isThu ? 'bg-success bg-opacity-10 text-success' : 'bg-danger bg-opacity-10 text-danger'}">${isThu ? 'Thu tiền (+)' : 'Chi tiền (-)'}</span></div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-muted text-xs fw-semibold">NHÓM KHOẢN MỤC</div>
+                                <div class="fw-medium">${d.nhomGiaoDich}</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-muted text-xs fw-semibold">SỐ TIỀN</div>
+                                <div class="fw-bold fs-5 ${isThu ? 'text-success' : 'text-danger'}">${isThu ? '+' : '-'}${fmt(d.soTien)}₫</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-muted text-xs fw-semibold">NGÀY GIAO DỊCH</div>
+                                <div>${d.ngayGiaoDich}</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-muted text-xs fw-semibold">ĐỐI TƯỢNG</div>
+                                <div class="fw-medium">${d.doiTuongGiaoDich || '—'}</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-muted text-xs fw-semibold">PHƯƠNG THỨC</div>
+                                <div><span class="badge bg-secondary bg-opacity-10 text-dark">${d.phuongThucThanhToan}</span></div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-muted text-xs fw-semibold">NGƯỚI LẬP PHẾU</div>
+                                <div>${d.nguoiLap}</div>
+                            </div>
+                            ${d.maDonHang ? `<div class="col-6"><div class="text-muted text-xs fw-semibold">MÃ ĐỚN HÀNG</div><div class="fw-bold">#${d.maDonHang} ${d.tenKhachHang ? '(' + d.tenKhachHang + ')' : ''}</div></div>` : ''}
+                            ${d.ghiChu ? `<div class="col-12"><div class="text-muted text-xs fw-semibold">GHI CHÚ</div><div class="text-muted border rounded p-2 text-xs">${d.ghiChu}</div></div>` : ''}
+                        </div>
+                    `;
+                } catch(e) {
+                    body.innerHTML = '<div class="alert alert-danger text-sm">Không thể tải dữ liệu. Vui lòng thử lại!</div>';
+                }
+            });
+        });
+
+        // ====== CongNo Detail Modal ======
+        document.querySelectorAll('.btn-cn-detail').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const id = this.getAttribute('data-id');
+                const body = document.getElementById('congNoDetailBody');
+                body.innerHTML = '<div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div> Đang tải...</div>';
+                try {
+                    const res = await fetch(`/Accounting/GetCongNoDetail/${id}`);
+                    if (!res.ok) throw new Error('Not found');
+                    const d = await res.json();
+                    const paidPct = d.tongTien > 0 ? (d.daThanhToan / d.tongTien * 100).toFixed(1) : 0;
+                    const hangRows = (d.chiTietHang || []).map(h => `
+                        <tr class="text-sm">
+                            <td>${h.tenSanPham}</td>
+                            <td class="text-center">${h.soLuong}</td>
+                            <td class="text-end">${fmt(h.giaNhap)}₫</td>
+                            <td class="text-end fw-bold">${fmt(h.thanhTien)}₫</td>
+                        </tr>
+                    `).join('');
+                    const lichSuRows = (d.lichSuThanhToan || []).length > 0
+                        ? (d.lichSuThanhToan || []).map(lh => `
+                            <tr class="text-sm">
+                                <td class="text-cyan fw-bold">${lh.maGiaoDich}</td>
+                                <td>${lh.ngayThanhToan}</td>
+                                <td class="text-success fw-bold">${fmt(lh.soTien)}₫</td>
+                                <td><span class="badge bg-secondary bg-opacity-10 text-dark text-xxs">${lh.phuongThucThanhToan}</span></td>
+                            </tr>
+                        `).join('')
+                        : '<tr><td colspan="4" class="text-center text-muted py-2">Chưa có lịch sử thanh toán</td></tr>';
+
+                    body.innerHTML = `
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <div class="text-muted text-xs fw-semibold">NHÀ CUNG CẤP</div>
+                                <div class="fw-bold">${d.tenNCC}</div>
+                                <div class="text-muted text-xs">${d.soDienThoai}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="text-muted text-xs fw-semibold">PHẾU NHẬP KHO</div>
+                                <div class="fw-bold">${d.maPhieuNhap}</div>
+                                <div class="text-muted text-xs">Ngày: ${d.ngayNhap}</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-muted text-xs fw-semibold">TỔNG TIỀN NỢ</div>
+                                <div class="fw-bold">${fmt(d.tongTien)}₫</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-muted text-xs fw-semibold">ĐÃ THANH TOÁN</div>
+                                <div class="fw-bold text-success">${fmt(d.daThanhToan)}₫</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-muted text-xs fw-semibold">CÒN NỢ</div>
+                                <div class="fw-bold text-danger">${fmt(d.conNo)}₫</div>
+                            </div>
+                            <div class="col-12">
+                                <div class="text-muted text-xs fw-semibold mb-1">TIẾN ĐỘ THANH TOÁN</div>
+                                <div class="progress" style="height:10px;border-radius:6px;">
+                                    <div class="progress-bar bg-success" style="width:${paidPct}%;border-radius:6px;"></div>
+                                </div>
+                                <div class="text-xs text-muted mt-1">${paidPct}% đã thanh toán ${d.quaHan ? '<span class="text-danger fw-bold">· QUÁ HẠN ' + d.hanThanhToan + '</span>' : '· Hạn: ' + d.hanThanhToan}</div>
+                            </div>
+                        </div>
+                        <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-boxes-stacking me-2 text-primary"></i>Hàng hóa trong phiếu nhập</h6>
+                        <div class="table-responsive mb-3">
+                            <table class="table table-sm table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr class="text-xs text-muted">
+                                        <th>Sản phẩm</th><th class="text-center">Số lượng</th><th class="text-end">Giá nhập</th><th class="text-end">Thành tiền</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${hangRows || '<tr><td colspan="4" class="text-center text-muted">Không có chi tiết</td></tr>'}</tbody>
+                            </table>
+                        </div>
+                        <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-clock-rotate-left me-2 text-success"></i>Lịch sử thanh toán</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr class="text-xs text-muted">
+                                        <th>Mã phiếu chi</th><th>Ngày TT</th><th>Số tiền</th><th>Phương thức</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${lichSuRows}</tbody>
+                            </table>
+                        </div>
+                    `;
+                } catch(e) {
+                    body.innerHTML = '<div class="alert alert-danger text-sm">Không thể tải dữ liệu. Vui lòng thử lại!</div>';
+                }
+            });
+        });
+
+        // Congno filter
+        const filterNCC = document.getElementById('filterNCC');
+        const filterTrangThai = document.getElementById('filterTrangThai');
+        const btnReset = document.getElementById('btnResetFilter');
+
+        function applyCongNoFilter() {
+            const keyword = (filterNCC ? filterNCC.value.toLowerCase() : '');
+            const status = (filterTrangThai ? filterTrangThai.value : '');
+
+            // Filter NCC summary rows
+            document.querySelectorAll('.ncc-row').forEach(row => {
+                const ten = row.getAttribute('data-ten') || '';
+                row.style.display = ten.includes(keyword) ? '' : 'none';
+            });
+            // Filter detail rows
+            document.querySelectorAll('.cn-row').forEach(row => {
+                const ten = row.getAttribute('data-ten') || '';
+                const tt = row.getAttribute('data-trangthai') || '';
+                const matchNCC = ten.includes(keyword);
+                const matchStatus = !status || tt === status;
+                row.style.display = (matchNCC && matchStatus) ? '' : 'none';
+            });
+        }
+
+        if (filterNCC) filterNCC.addEventListener('input', applyCongNoFilter);
+        if (filterTrangThai) filterTrangThai.addEventListener('change', applyCongNoFilter);
+        if (btnReset) btnReset.addEventListener('click', function() {
+            if (filterNCC) filterNCC.value = '';
+            if (filterTrangThai) filterTrangThai.value = '';
+            applyCongNoFilter();
         });
 
         // Initialize Chart.js for Cash Flow comparing Thu vs Chi
@@ -753,6 +1103,74 @@
                             ticks: {
                                 callback: function(value) {
                                     return value >= 1000000 ? (value/1000000).toFixed(1) + 'M' : value.toLocaleString('vi-VN') + '₫';
+                                }
+                            },
+                            grid: { color: '#f1f5f9' }
+                        },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        // ====== Monthly P&L Bar Chart ======
+        const plLabels = @Html.Raw(plLabels);
+        const plDoanhThu = @Html.Raw(plDoanhThu);
+        const plGiaVon = @Html.Raw(plGiaVon);
+        const plLoiNhuan = @Html.Raw(plLoiNhuan);
+        const ctxPL = document.getElementById('monthlyPLChart');
+        if (ctxPL) {
+            new Chart(ctxPL, {
+                type: 'bar',
+                data: {
+                    labels: plLabels,
+                    datasets: [
+                        {
+                            label: 'Doanh thu (₫)',
+                            data: plDoanhThu,
+                            backgroundColor: 'rgba(14,165,233,0.7)',
+                            borderRadius: 5,
+                            order: 2
+                        },
+                        {
+                            label: 'Giá vốn (₫)',
+                            data: plGiaVon,
+                            backgroundColor: 'rgba(220,38,38,0.5)',
+                            borderRadius: 5,
+                            order: 2
+                        },
+                        {
+                            label: 'Lợi nhuận gộp (₫)',
+                            data: plLoiNhuan,
+                            type: 'line',
+                            borderColor: '#16a34a',
+                            backgroundColor: 'rgba(22,163,74,0.08)',
+                            borderWidth: 2.5,
+                            tension: 0.35,
+                            fill: true,
+                            pointBackgroundColor: '#16a34a',
+                            order: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.y.toLocaleString('vi-VN') + '₫';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: function(value) {
+                                    return value >= 1000000 ? (value/1000000).toFixed(1) + 'M' : value.toLocaleString('vi-VN');
                                 }
                             },
                             grid: { color: '#f1f5f9' }

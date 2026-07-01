@@ -39,11 +39,20 @@ namespace DATN64.Models
         public int MaNhanVien { get; set; } // Người lập phiếu
 
         public int? MaDonHang { get; set; } // Chỉ điền khi LoaiGiaoDich = "Thu" từ đơn hàng
+        
+        [Required]
+        [StringLength(50)]
+        public string TrangThai { get; set; } = "Đã duyệt"; // Đã duyệt / Đã hủy
+
+        public int? CongNoId { get; set; }
 
         [ForeignKey("MaNhanVien")]
         public virtual NhanVien? NhanVien { get; set; }
 
         [ForeignKey("MaDonHang")]
         public virtual DonHang? DonHang { get; set; }
+
+        [ForeignKey("CongNoId")]
+        public virtual CongNoNCC? CongNoNCC { get; set; }
     }
 }
