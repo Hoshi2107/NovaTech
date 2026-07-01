@@ -10,6 +10,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<GeminiService>();
+builder.Services.AddScoped<DATN64.Services.IAttendanceService, DATN64.Services.AttendanceService>();
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromMinutes(30);
@@ -23,10 +24,15 @@ using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     DbInitializer.Initialize(context);
-    // Force update iPhone 15 image to correct local uploads path
+
+    // Tự động tạo vé/phiếu cho sản phẩm sắp hết hàng (Code của bạn)
+    context.AutoGenerateLowStockTickets();
+
+    // Cập nhật ảnh iPhone 15 và Debug hệ thống (Code mới cập nhật từ server về)
     try
     {
         context.Database.ExecuteSqlRaw("UPDATE dbo.SanPham SET HinhAnh = '/uploads/products/33c5b785-4ba9-4ecf-99fe-0ff1b988811e_Gemini_Generated_Image_hi4wiahi4wiahi4w.png' WHERE TenSanPham LIKE N'%iPhone 15%'");
+        
         // Debug Customer and Orders
         var customer = context.KhachHangs.FirstOrDefault(k => k.Email == "haodvttb01628@gmail.com" || k.SoDienThoai == "0965419137");
         if (customer != null)
@@ -81,4 +87,3 @@ app.MapControllerRoute(
     pattern: "{controller=Online}/{action=Index}/{id?}");
 
 app.Run();
-

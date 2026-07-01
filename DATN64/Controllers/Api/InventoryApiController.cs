@@ -25,6 +25,9 @@ namespace DATN64.Controllers.Api
         {
             try
             {
+                // Auto generate tickets for existing low stock products
+                await _context.AutoGenerateLowStockTicketsAsync();
+
                 var query = _context.SanPhams
                     .Include(p => p.DanhMuc)
                     .Include(p => p.ThuongHieu)
