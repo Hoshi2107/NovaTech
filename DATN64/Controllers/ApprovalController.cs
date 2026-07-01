@@ -69,8 +69,8 @@ namespace DATN64.Controllers
 
             if (action == "approve")
             {
-                order.TrangThai = "Đã duyệt";
-                TempData["ToastMessage"] = $"Đã duyệt đơn hàng #{id} thành công.";
+                order.TrangThai = "Đã xác nhận";
+                TempData["ToastMessage"] = $"Đã duyệt đơn hàng #{id} thành công (Trạng thái: Đã xác nhận).";
                 TempData["ToastType"] = "success";
             }
             else if (action == "reject")

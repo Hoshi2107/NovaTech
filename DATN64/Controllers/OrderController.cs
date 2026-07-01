@@ -348,5 +348,90 @@ private string AppendLoyaltyPointMarker(string? ghiChu)
 
             return "Cửa hàng";
         }
+
+        public IActionResult ShippingLabels(string? keyword, int page = 1, int pageSize = 20)
+        {
+            if (page < 1) page = 1;
+            
+            var query = _context.DonHangs
+                .Include(o => o.KhachHang)
+                .Where(o => o.TrangThai == "Đã xác nhận" || o.TrangThai == "Đã duyệt")
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                keyword = keyword.Trim();
+                if (int.TryParse(keyword, out var orderId))
+                {
+                    query = query.Where(o =>
+                        o.MaDonHang == orderId ||
+                        (o.KhachHang != null &&
+                            (o.KhachHang.HoTen.Contains(keyword) || (o.KhachHang.SoDienThoai != null && o.KhachHang.SoDienThoai.Contains(keyword)))
+                        )
+                    );
+                }
+                else
+                {
+                    query = query.Where(o =>
+                        o.KhachHang != null &&
+                        (o.KhachHang.HoTen.Contains(keyword) || (o.KhachHang.SoDienThoai != null && o.KhachHang.SoDienThoai.Contains(keyword)))
+                    );
+                }
+            }
+
+            var totalItems = query.Count();
+            var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+            if (totalPages > 0 && page > totalPages)
+            {
+                page = totalPages;
+            }
+
+            var orders = query
+                .OrderByDescending(o => o.NgayDat)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            ViewBag.Keyword = keyword;
+            ViewBag.CurrentPage = page;
+            ViewBag.PageSize = pageSize;
+            ViewBag.TotalItems = totalItems;
+            ViewBag.TotalPages = totalPages;
+
+            return View(orders);
+        }
+
+        public IActionResult PrintLabels(string ids)
+        {
+            if (string.IsNullOrEmpty(ids))
+            {
+                return Content("<script>alert('Vui lòng chọn ít nhất 1 đơn hàng để in!'); window.close();</script>", "text/html; charset=utf-8");
+            }
+
+            var idList = ids.Split(',')
+                .Select(s => int.TryParse(s, out var id) ? id : 0)
+                .Where(id => id > 0)
+                .ToList();
+
+            var orders = _context.DonHangs
+                .Include(o => o.KhachHang)
+                .Include(o => o.ChiTietDonHangs)
+                    .ThenInclude(ct => ct.SanPham)
+                .Where(o => idList.Contains(o.MaDonHang))
+                .ToList();
+
+            var storeConfig = _context.CauHinhs.FirstOrDefault() ?? new CauHinh
+            {
+                TenCuaHang = "Siêu thị NovaTech",
+                Email = "contact@novatech.vn",
+                SoDienThoai = "1900 1000",
+                DiaChi = "123 Đường Điện Biên Phủ, TP.HCM"
+            };
+
+            ViewBag.StoreConfig = storeConfig;
+
+            return View(orders);
+        }
     }
 }

@@ -105,9 +105,15 @@
                 @if (canViewOrder)
                 {
                     <li class="nav-item">
-                        <a href="@Url.Action("Index", "Order")" class="nav-link-custom @(ctrl == "Order" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                        <a href="@Url.Action("Index", "Order")" class="nav-link-custom @(ctrl == "Order" && act == "Index" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
                             <i class="fa-solid fa-file-invoice-dollar text-cyan fs-5"></i>
                             <span>Đơn hàng</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="@Url.Action("ShippingLabels", "Order")" class="nav-link-custom @(ctrl == "Order" && act == "ShippingLabels" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                            <i class="fa-solid fa-print text-cyan fs-5"></i>
+                            <span>In vận đơn</span>
                         </a>
                     </li>
                     <li class="nav-item">

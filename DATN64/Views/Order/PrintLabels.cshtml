@@ -1,0 +1,501 @@
+@model List<DATN64.Models.DonHang>
+
+@{
+    Layout = null;
+    var storeConfig = ViewBag.StoreConfig as DATN64.Models.CauHinh;
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>In vận đơn hàng loạt - NovaTech</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: #f3f4f6;
+            margin: 0;
+            padding: 20px;
+            color: #1f2937;
+        }
+
+        /* Toolbar styles */
+        .print-toolbar {
+            background: white;
+            padding: 15px 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            max-width: 800px;
+            margin: 0 auto 30px auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-print {
+            background: #0ea5e9;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-print:hover {
+            background: #0284c7;
+        }
+
+        .btn-close-window {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-close-window:hover {
+            background: #dc2626;
+        }
+
+        /* Label layout styles */
+        .label-container {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        .shipping-label {
+            background: white;
+            border: 2px dashed #000;
+            padding: 24px;
+            position: relative;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            page-break-after: always;
+            border-radius: 8px;
+        }
+
+        /* Header */
+        .label-header {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            border-bottom: 2px solid #000;
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+            align-items: center;
+        }
+
+        .store-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .store-logo {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .store-title {
+            font-size: 18px;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+
+        .store-subtitle {
+            font-size: 11px;
+            color: #6b7280;
+            margin: 0;
+        }
+
+        .barcode-section {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .barcode-svg {
+            width: 200px;
+            height: 50px;
+        }
+
+        .barcode-number {
+            font-family: monospace;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 4px;
+            letter-spacing: 2px;
+        }
+
+        /* Sender & Receiver grid */
+        .address-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            border-bottom: 1px solid #000;
+            padding-bottom: 16px;
+            margin-bottom: 16px;
+        }
+
+        .address-box {
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .address-title {
+            font-weight: 800;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .address-box p {
+            margin: 0 0 4px 0;
+        }
+
+        .address-name {
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        /* COD Section */
+        .cod-section {
+            background-color: #f9fafb;
+            border: 2px solid #000;
+            border-radius: 6px;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .cod-left {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .cod-label {
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #374151;
+        }
+
+        .cod-info {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 2px;
+        }
+
+        .cod-amount {
+            font-size: 24px;
+            font-weight: 850;
+            color: #000;
+        }
+
+        /* Items list */
+        .items-section {
+            border-bottom: 1px solid #000;
+            padding-bottom: 16px;
+            margin-bottom: 16px;
+        }
+
+        .items-title {
+            font-size: 12px;
+            font-weight: 850;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .items-table th, .items-table td {
+            text-align: left;
+            padding: 6px 8px;
+        }
+
+        .items-table th {
+            background-color: #f3f4f6;
+            font-weight: 700;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .items-table td {
+            border-bottom: 1px dashed #e5e7eb;
+        }
+
+        .items-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Footer */
+        .label-footer {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #4b5563;
+        }
+
+        .notes-box {
+            max-width: 60%;
+        }
+
+        .notes-title {
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .shipper-sig {
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            width: 180px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9ca3af;
+            font-style: italic;
+            font-size: 12px;
+            background: #fafafa;
+        }
+
+        /* Page breaks for print */
+        @@media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .print-toolbar {
+                display: none;
+            }
+
+            .label-container {
+                gap: 0;
+            }
+
+            .shipping-label {
+                box-shadow: none;
+                border-radius: 0;
+                border: 2px dashed #000;
+                margin-bottom: 0;
+                page-break-after: always;
+            }
+
+            .shipping-label:last-child {
+                page-break-after: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="print-toolbar">
+        <div>
+            <h5 style="margin: 0; font-weight: 700;"><i class="fa-solid fa-print text-sky-500 me-2"></i>Chế độ in vận đơn</h5>
+            <span style="font-size: 12px; color: #6b7280;">Chọn khổ giấy A6 hoặc A5 và chế độ in dọc (Portrait)</span>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-print" onclick="window.print()">
+                <i class="fa-solid fa-print"></i>
+                Bắt đầu in ngay
+            </button>
+            <button class="btn-close-window" onclick="window.close()">
+                Đóng cửa sổ
+            </button>
+        </div>
+    </div>
+
+    <div class="label-container">
+        @if (Model != null)
+        {
+            foreach (var order in Model)
+            {
+                var dateStr = order.NgayDat?.ToString("yyMMdd") ?? DateTime.Now.ToString("yyMMdd");
+                var orderDisplayCode = $"ORD-{dateStr}{order.MaDonHang:D2}";
+                var barcodeValue = $"ORD{order.MaDonHang:D8}";
+
+                <div class="shipping-label">
+                    <!-- Header with Logo and Barcode -->
+                    <div class="label-header">
+                        <div class="store-info">
+                            @if (!string.IsNullOrWhiteSpace(storeConfig?.Logo))
+                            {
+                                <img src="@storeConfig.Logo" class="store-logo" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                            }
+                            <div class="store-logo-fallback" style="width: 50px; height: 50px; background: #111827; color: #ffffff; display: @(string.IsNullOrWhiteSpace(storeConfig?.Logo) ? "flex" : "none"); align-items: center; justify-content: center; border-radius: 8px; font-weight: 800; font-size: 20px;">
+                                NT
+                            </div>
+                            <div>
+                                <h1 class="store-title">@(storeConfig?.TenCuaHang ?? "NovaTech Store")</h1>
+                                <p class="store-subtitle">Mã đơn hàng: @orderDisplayCode</p>
+                            </div>
+                        </div>
+                        <div class="barcode-section">
+                            <!-- SVG Barcode (Code 39 mock) -->
+                            <svg class="barcode-svg" viewBox="0 0 100 20" preserveAspectRatio="none">
+                                <!-- Barcode bars -->
+                                <rect x="0" y="0" width="2" height="20" fill="black" />
+                                <rect x="3" y="0" width="1" height="20" fill="black" />
+                                <rect x="5" y="0" width="3" height="20" fill="black" />
+                                <rect x="9" y="0" width="1" height="20" fill="black" />
+                                <rect x="11" y="0" width="2" height="20" fill="black" />
+                                <rect x="14" y="0" width="1" height="20" fill="black" />
+                                <rect x="16" y="0" width="4" height="20" fill="black" />
+                                <rect x="21" y="0" width="2" height="20" fill="black" />
+                                <rect x="24" y="0" width="1" height="20" fill="black" />
+                                <rect x="26" y="0" width="3" height="20" fill="black" />
+                                <rect x="30" y="0" width="2" height="20" fill="black" />
+                                <rect x="33" y="0" width="1" height="20" fill="black" />
+                                <rect x="35" y="0" width="4" height="20" fill="black" />
+                                <rect x="40" y="0" width="1" height="20" fill="black" />
+                                <rect x="42" y="0" width="2" height="20" fill="black" />
+                                <rect x="45" y="0" width="3" height="20" fill="black" />
+                                <rect x="49" y="0" width="1" height="20" fill="black" />
+                                <rect x="51" y="0" width="2" height="20" fill="black" />
+                                <rect x="54" y="0" width="4" height="20" fill="black" />
+                                <rect x="59" y="0" width="2" height="20" fill="black" />
+                                <rect x="62" y="0" width="1" height="20" fill="black" />
+                                <rect x="64" y="0" width="3" height="20" fill="black" />
+                                <rect x="68" y="0" width="1" height="20" fill="black" />
+                                <rect x="70" y="0" width="4" height="20" fill="black" />
+                                <rect x="75" y="0" width="2" height="20" fill="black" />
+                                <rect x="78" y="0" width="1" height="20" fill="black" />
+                                <rect x="80" y="0" width="3" height="20" fill="black" />
+                                <rect x="84" y="0" width="2" height="20" fill="black" />
+                                <rect x="87" y="0" width="1" height="20" fill="black" />
+                                <rect x="89" y="0" width="4" height="20" fill="black" />
+                                <rect x="94" y="0" width="1" height="20" fill="black" />
+                                <rect x="96" y="0" width="2" height="20" fill="black" />
+                                <rect x="99" y="0" width="1" height="20" fill="black" />
+                            </svg>
+                            <span class="barcode-number">@barcodeValue</span>
+                        </div>
+                    </div>
+
+                    <!-- Addresses -->
+                    <div class="address-section">
+                        <div class="address-box">
+                            <div class="address-title"><i class="fa-solid fa-store"></i> Người gửi</div>
+                            <p class="address-name">@(storeConfig?.TenCuaHang ?? "NovaTech Store")</p>
+                            <p><i class="fa-solid fa-phone me-1" style="font-size:10px;"></i> @(storeConfig?.SoDienThoai ?? "1900 1000")</p>
+                            <p><i class="fa-solid fa-location-dot me-1" style="font-size:10px;"></i> @(storeConfig?.DiaChi ?? "123 Đường Điện Biên Phủ, TP.HCM")</p>
+                        </div>
+                        <div class="address-box" style="border-left: 1px solid #000; padding-left: 20px;">
+                            <div class="address-title"><i class="fa-solid fa-user"></i> Người nhận</div>
+                            <p class="address-name">@(order.KhachHang?.HoTen ?? "Khách vãng lai")</p>
+                            <p><i class="fa-solid fa-phone me-1" style="font-size:10px;"></i> <strong>@(order.KhachHang?.SoDienThoai ?? "Chưa cập nhật")</strong></p>
+                            <p><i class="fa-solid fa-location-dot me-1" style="font-size:10px;"></i> @(order.KhachHang?.DiaChi ?? "Nhận tại cửa hàng")</p>
+                        </div>
+                    </div>
+
+                    <!-- COD Amount -->
+                    <div class="cod-section">
+                        <div class="cod-left">
+                            <span class="cod-label">Thu hộ COD (Thu tiền khi giao hàng)</span>
+                            <span class="cod-info">Phương thức: @(order.PhuongThucThanhToan ?? "COD")</span>
+                        </div>
+                        <div class="cod-amount">
+                            @((order.TongTien ?? 0).ToString("N0")) đ
+                        </div>
+                    </div>
+
+                    <!-- Order Items -->
+                    <div class="items-section">
+                        <h2 class="items-title">Nội dung sản phẩm (Tổng SL: @(order.ChiTietDonHangs?.Sum(ct => ct.SoLuong) ?? 0))</h2>
+                        <table class="items-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">STT</th>
+                                    <th>Tên sản phẩm</th>
+                                    <th style="width: 100px; text-align: center;">Số lượng</th>
+                                    <th style="width: 120px; text-align: right;">Đơn giá</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (order.ChiTietDonHangs != null && order.ChiTietDonHangs.Any())
+                                {
+                                    int index = 1;
+                                    foreach (var item in order.ChiTietDonHangs)
+                                    {
+                                        <tr>
+                                            <td>@index</td>
+                                            <td><strong>@item.SanPham?.TenSanPham</strong></td>
+                                            <td style="text-align: center;"><strong>@item.SoLuong</strong></td>
+                                            <td style="text-align: right;">@item.DonGia.ToString("N0") đ</td>
+                                        </tr>
+                                        index++;
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="4" style="text-align: center;">Không có sản phẩm trong đơn hàng.</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Footer / Signatures -->
+                    <div class="label-footer">
+                        <div class="notes-box">
+                            <div class="notes-title"><i class="fa-solid fa-triangle-exclamation"></i> Ghi chú đơn hàng:</div>
+                            <p style="margin: 0; line-height: 1.4;">@(string.IsNullOrWhiteSpace(order.GhiChu) ? "Không có ghi chú. Cho phép đồng kiểm." : order.GhiChu)</p>
+                        </div>
+                        <div class="shipper-sig">
+                            Chữ ký của Shipper / Khách
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <p class="text-center py-5">Không có đơn hàng nào để hiển thị.</p>
+        }
+    </div>
+
+    <script>
+        // Trigger print dialog after a short timeout to let fonts/images load
+        window.addEventListener("load", function () {
+            setTimeout(function () {
+                window.print();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

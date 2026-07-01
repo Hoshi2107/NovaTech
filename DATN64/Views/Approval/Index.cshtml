@@ -107,8 +107,9 @@
                                     </td>
                                     <td class="text-center">
                                         <div class="d-flex gap-2 justify-content-center">
-                                            <form method="post" asp-action="ApproveOrder" asp-route-id="@order.MaDonHang" asp-route-action="approve" class="d-inline">
+                                            <form method="post" asp-action="ApproveOrder" asp-route-id="@order.MaDonHang" class="d-inline">
                                                 @Html.AntiForgeryToken()
+                                                <input type="hidden" name="action" value="approve" />
                                                 <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Duyệt đơn hàng #@order.MaDonHang?')">
                                                     <i class="fa-solid fa-check me-1"></i>Duyệt
                                                 </button>
@@ -201,8 +202,9 @@
                                     </td>
                                     <td class="text-center">
                                         <div class="d-flex gap-2 justify-content-center">
-                                            <form method="post" asp-action="ApproveInventory" asp-route-id="@txn.Id" asp-route-action="approve" class="d-inline">
+                                            <form method="post" asp-action="ApproveInventory" asp-route-id="@txn.Id" class="d-inline">
                                                 @Html.AntiForgeryToken()
+                                                <input type="hidden" name="action" value="approve" />
                                                 <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Duyệt phiếu @txn.Code?')">
                                                     <i class="fa-solid fa-check me-1"></i>Duyệt
                                                 </button>
