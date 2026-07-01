@@ -92,8 +92,8 @@ namespace DATN64.Controllers.Api
                 }
             }
 
-            // Find or create customer
-            var customer = await _context.KhachHangs.FirstOrDefaultAsync(k => k.SoDienThoai == data.Phone);
+            // Find or create customer (match both name and phone to prevent renaming existing ones)
+            var customer = await _context.KhachHangs.FirstOrDefaultAsync(k => k.SoDienThoai == data.Phone && k.HoTen == data.CustomerName);
             if (customer == null)
             {
                 var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<KhachHang>();
@@ -110,6 +110,13 @@ namespace DATN64.Controllers.Api
                 };
                 _context.KhachHangs.Add(customer);
                 await _context.SaveChangesAsync();
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(data.Address))
+                {
+                    customer.DiaChi = data.Address;
+                }
             }
 
             // Create Order

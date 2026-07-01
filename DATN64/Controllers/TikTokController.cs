@@ -97,8 +97,8 @@ namespace DATN64.Controllers
                                 continue;
                             }
 
-                            // Find or create customer
-                            var customer = _context.KhachHangs.FirstOrDefault(k => k.SoDienThoai == data.Phone);
+                            // Find or create customer (match both name and phone to prevent renaming existing ones)
+                            var customer = _context.KhachHangs.FirstOrDefault(k => k.SoDienThoai == data.Phone && k.HoTen == data.CustomerName);
                             if (customer == null)
                             {
                                 var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<KhachHang>();
@@ -115,6 +115,13 @@ namespace DATN64.Controllers
                                 };
                                 _context.KhachHangs.Add(customer);
                                 _context.SaveChanges(); // get customer ID
+                            }
+                            else
+                            {
+                                if (!string.IsNullOrEmpty(data.Address))
+                                {
+                                    customer.DiaChi = data.Address;
+                                }
                             }
 
                             // Validate products for this order

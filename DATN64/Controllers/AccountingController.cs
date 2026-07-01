@@ -103,6 +103,7 @@ namespace DATN64.Controllers
 
             // A. Doanh thu thuần (Đơn hàng hoàn thành - tất cả kênh)
             var completedOrdersForPL = await _context.DonHangs
+                .Include(d => d.KhachHang)
                 .Where(d => d.TrangThai == "Hoàn thành" && d.NgayDat >= filterTu && d.NgayDat <= filterDen)
                 .ToListAsync();
 
@@ -594,20 +595,50 @@ namespace DATN64.Controllers
         {
             var note = order.GhiChu ?? "";
             var payment = order.PhuongThucThanhToan ?? "";
+            var address = order.KhachHang?.DiaChi ?? "";
 
+            // ---- TikTok Shop detection ----
             if (note.Contains("[TikTokShop#", StringComparison.OrdinalIgnoreCase) || 
-                payment.Contains("TikTok", StringComparison.OrdinalIgnoreCase))
+                note.Contains("[TikTok", StringComparison.OrdinalIgnoreCase) ||
+                payment.Contains("TikTok", StringComparison.OrdinalIgnoreCase) ||
+                note.Contains("tiktok", StringComparison.OrdinalIgnoreCase))
             {
                 return "TikTok Shop";
             }
 
-            if (note.Contains("Địa chỉ giao hàng", StringComparison.OrdinalIgnoreCase) ||
+            // ---- POS / Counter Sales detection ----
+            if (note.Contains("POS", StringComparison.OrdinalIgnoreCase) ||
+                note.Contains("tại quầy", StringComparison.OrdinalIgnoreCase) ||
+                note.Contains("cửa hàng", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Bán lẻ tại quầy";
+            }
+
+            // ---- Online / Web detection ----
+            // 1. Explicit markers in note
+            bool hasOnlineNote = 
+                note.Contains("Địa chỉ giao hàng", StringComparison.OrdinalIgnoreCase) ||
                 note.Contains("Voucher sử dụng", StringComparison.OrdinalIgnoreCase) ||
                 note.Contains("giao hàng", StringComparison.OrdinalIgnoreCase) ||
                 note.Contains("website", StringComparison.OrdinalIgnoreCase) ||
                 note.Contains("online", StringComparison.OrdinalIgnoreCase) ||
+                note.Contains("web", StringComparison.OrdinalIgnoreCase) ||
+                note.Contains("đặt hàng online", StringComparison.OrdinalIgnoreCase) ||
+                note.Contains("đơn hàng web", StringComparison.OrdinalIgnoreCase);
+
+            // 2. Payment method markers
+            bool hasOnlinePayment =
                 payment.Contains("online", StringComparison.OrdinalIgnoreCase) ||
-                payment.Contains("website", StringComparison.OrdinalIgnoreCase))
+                payment.Contains("website", StringComparison.OrdinalIgnoreCase) ||
+                payment.Contains("VNPay", StringComparison.OrdinalIgnoreCase) ||
+                payment.Contains("MoMo", StringComparison.OrdinalIgnoreCase) ||
+                payment.Contains("ZaloPay", StringComparison.OrdinalIgnoreCase) ||
+                payment.Contains("COD", StringComparison.OrdinalIgnoreCase);
+
+            // 3. Has a delivery address set (retail walk-in orders don't have shipping addresses)
+            bool hasShippingAddress = !string.IsNullOrWhiteSpace(address);
+
+            if (hasOnlineNote || hasOnlinePayment || hasShippingAddress)
             {
                 return "Online / Web";
             }

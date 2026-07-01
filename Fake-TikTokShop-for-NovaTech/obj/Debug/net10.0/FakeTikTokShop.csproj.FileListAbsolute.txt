@@ -283,7 +283,6 @@ C:\Users\Admin\Desktop\NovaTech\Fake-TikTokShop-for-NovaTech\obj\Debug\net10.0\r
 C:\Users\Admin\Desktop\NovaTech\Fake-TikTokShop-for-NovaTech\obj\Debug\net10.0\rjsmrazor.dswa.cache.json
 C:\Users\Admin\Desktop\NovaTech\Fake-TikTokShop-for-NovaTech\obj\Debug\net10.0\rjsmcshtml.dswa.cache.json
 C:\Users\Admin\Desktop\NovaTech\Fake-TikTokShop-for-NovaTech\obj\Debug\net10.0\scopedcss\bundle\FakeTikTokShop.styles.css
-C:\Users\Admin\Desktop\NovaTech\Fake-TikTokShop-for-NovaTech\obj\Debug\net10.0\compressed\u4exrmvgzi-{0}-m2iov4raw0-m2iov4raw0.gz
 C:\Users\Admin\Desktop\NovaTech\Fake-TikTokShop-for-NovaTech\obj\Debug\net10.0\staticwebassets.build.json
 C:\Users\Admin\Desktop\NovaTech\Fake-TikTokShop-for-NovaTech\obj\Debug\net10.0\staticwebassets.build.json.cache
 C:\Users\Admin\Desktop\NovaTech\Fake-TikTokShop-for-NovaTech\obj\Debug\net10.0\staticwebassets.development.json
@@ -295,3 +294,4 @@ C:\Users\Admin\Desktop\NovaTech\Fake-TikTokShop-for-NovaTech\obj\Debug\net10.0\r
 C:\Users\Admin\Desktop\NovaTech\Fake-TikTokShop-for-NovaTech\obj\Debug\net10.0\FakeTikTokShop.pdb
 C:\Users\Admin\Desktop\NovaTech\Fake-TikTokShop-for-NovaTech\obj\Debug\net10.0\FakeTikTokShop.genruntimeconfig.cache
 C:\Users\Admin\Desktop\NovaTech\Fake-TikTokShop-for-NovaTech\obj\Debug\net10.0\ref\FakeTikTokShop.dll
+C:\Users\Admin\Desktop\NovaTech\Fake-TikTokShop-for-NovaTech\obj\Debug\net10.0\compressed\u4exrmvgzi-{0}-ev2kyyh2ei-ev2kyyh2ei.gz
