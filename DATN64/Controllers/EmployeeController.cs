@@ -301,6 +301,14 @@ namespace DATN64.Controllers
             emp.VaiTro = rolesInDb.Any() ? string.Join(", ", rolesInDb.Select(r => r.Name)) : "Nhân viên bán hàng";
             _context.SaveChanges();
 
+            // Cập nhật lại Session nếu tự sửa thông tin của chính mình
+            var sessionEmail = HttpContext.Session.GetString("UserEmail");
+            if (!string.IsNullOrEmpty(sessionEmail) && sessionEmail.Equals(emp.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                HttpContext.Session.SetString("UserName", emp.HoTen);
+                HttpContext.Session.SetString("UserRoles", emp.VaiTro);
+            }
+
             TempData["ToastMessage"] = "Cập nhật nhân viên thành công!";
             TempData["ToastType"] = "success";
             return RedirectToAction("Index");

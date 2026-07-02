@@ -324,13 +324,27 @@ namespace DATN64.Controllers
                 ViewBag.Email = email;
                 ViewBag.Phone = "0900000000";
                 ViewBag.Roles = "Khách hàng";
+
+                // Mapping for Profile.cshtml fields
+                ViewBag.TenNhanVien = HttpContext.Session.GetString("UserName") ?? "Khách hàng";
+                ViewBag.SoDienThoai = "0900000000";
+                ViewBag.ChucVu = "Khách hàng";
             }
             else
             {
+                // Đồng bộ ngược lại Session phòng trường hợp dữ liệu đã đổi ở màn quản trị
+                HttpContext.Session.SetString("UserName", emp.HoTen);
+                HttpContext.Session.SetString("UserRoles", emp.VaiTro);
+
                 ViewBag.FullName = emp.HoTen;
                 ViewBag.Email = emp.Email;
                 ViewBag.Phone = emp.SoDienThoai;
                 ViewBag.Roles = emp.VaiTro;
+
+                // Mapping for Profile.cshtml fields
+                ViewBag.TenNhanVien = emp.HoTen;
+                ViewBag.SoDienThoai = emp.SoDienThoai;
+                ViewBag.ChucVu = emp.VaiTro;
             }
 
             return View();
