@@ -23,7 +23,8 @@ namespace DATN64.Controllers
         [HttpPost]
         public IActionResult Login(string email, string password)
         {
-            var emp = _context.NhanViens.FirstOrDefault(e => e.Email != null && e.Email.Equals(email));
+            var cleanEmail = (email ?? "").Trim();
+            var emp = _context.NhanViens.FirstOrDefault(e => e.Email != null && e.Email.Trim() == cleanEmail);
 
             if (emp != null)
             {
@@ -129,7 +130,7 @@ namespace DATN64.Controllers
             }
 
             // Customer check (database lookup by email or phone)
-            var customer = _context.KhachHangs.FirstOrDefault(c => (c.Email != null && c.Email.Equals(email)) || (c.SoDienThoai != null && c.SoDienThoai.Equals(email)));
+            var customer = _context.KhachHangs.FirstOrDefault(c => (c.Email != null && c.Email.Trim() == cleanEmail) || (c.SoDienThoai != null && c.SoDienThoai.Trim() == cleanEmail));
             if (customer != null)
             {
                 var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<KhachHang>();

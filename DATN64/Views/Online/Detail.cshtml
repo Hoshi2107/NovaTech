@@ -2,7 +2,76 @@
 @{
     Layout = "~/Views/Shared/_OnlineLayout.cshtml";
     ViewData["Title"] = Model.TenSanPham;
+
+    var relatedVariants = ViewBag.RelatedVariants as List<DATN64.Models.SanPham> ?? new List<DATN64.Models.SanPham>();
+    
+    string currentName = Model.TenSanPham;
+    bool isIPhone15 = currentName.Contains("iPhone 15", StringComparison.OrdinalIgnoreCase);
+    bool isSamsungS24 = currentName.Contains("Samsung Galaxy S24", StringComparison.OrdinalIgnoreCase);
+    
+    var modelsList = new List<string>();
+    var storagesList = new List<string>();
+    var colorsList = new List<string>();
+    
+    string GetModelVersion(string name) {
+        if (name.Contains("Pro Max", StringComparison.OrdinalIgnoreCase)) return isIPhone15 ? "iPhone 15 Pro Max" : "Pro Max";
+        if (name.Contains("Pro", StringComparison.OrdinalIgnoreCase)) return isIPhone15 ? "iPhone 15 Pro" : "Pro";
+        if (name.Contains("Ultra", StringComparison.OrdinalIgnoreCase)) return isSamsungS24 ? "Samsung Galaxy S24 Ultra" : "Ultra";
+        return isIPhone15 ? "iPhone 15 Thường" : (isSamsungS24 ? "Samsung Galaxy S24 Thường" : name);
+    }
+    
+    string GetStorage(string name) {
+        if (name.Contains("128GB", StringComparison.OrdinalIgnoreCase)) return "128GB";
+        if (name.Contains("256GB", StringComparison.OrdinalIgnoreCase)) return "256GB";
+        if (name.Contains("512GB", StringComparison.OrdinalIgnoreCase)) return "512GB";
+        if (name.Contains("1TB", StringComparison.OrdinalIgnoreCase)) return "1TB";
+        
+        // Base model fallbacks
+        if (name.Equals("iPhone 15 Thường", StringComparison.OrdinalIgnoreCase)) return "128GB";
+        if (name.Equals("iPhone 15 Pro", StringComparison.OrdinalIgnoreCase)) return "128GB";
+        if (name.Equals("iPhone 15 Pro Max", StringComparison.OrdinalIgnoreCase)) return "256GB";
+        if (name.Equals("Samsung Galaxy S24", StringComparison.OrdinalIgnoreCase)) return "256GB";
+        if (name.Equals("Samsung Galaxy S24 Ultra", StringComparison.OrdinalIgnoreCase)) return "256GB";
+        return "";
+    }
+    
+    string GetColor(string name) {
+        var colors = new[] { "Titan Tự Nhiên", "Titan Xanh", "Titan Trắng", "Titan Đen", "Titan Vàng", "Titan Tím", "Titan Xám", "Hồng", "Vàng", "Xanh Lá", "Xanh Dương", "Đen", "Tím", "Xám" };
+        foreach(var c in colors) {
+            if (name.Contains(c, StringComparison.OrdinalIgnoreCase)) return c;
+        }
+        
+        // Base model fallbacks
+        if (name.Equals("iPhone 15 Thường", StringComparison.OrdinalIgnoreCase)) return "Đen";
+        if (name.Equals("iPhone 15 Pro", StringComparison.OrdinalIgnoreCase)) return "Titan Tự Nhiên";
+        if (name.Equals("iPhone 15 Pro Max", StringComparison.OrdinalIgnoreCase)) return "Titan Tự Nhiên";
+        if (name.Equals("Samsung Galaxy S24", StringComparison.OrdinalIgnoreCase)) return "Đen";
+        if (name.Equals("Samsung Galaxy S24 Ultra", StringComparison.OrdinalIgnoreCase)) return "Titan Xám";
+        return "Mặc định";
+    }
+
+    foreach(var item in relatedVariants) {
+        var m = GetModelVersion(item.TenSanPham);
+        if (!modelsList.Contains(m) && !string.IsNullOrEmpty(m)) modelsList.Add(m);
+        
+        var s = GetStorage(item.TenSanPham);
+        if (!storagesList.Contains(s) && !string.IsNullOrEmpty(s)) storagesList.Add(s);
+        
+        var c = GetColor(item.TenSanPham);
+        if (!colorsList.Contains(c) && !string.IsNullOrEmpty(c)) colorsList.Add(c);
+    }
+    
+    modelsList = modelsList.OrderBy(m => m.Contains("Max") || m.Contains("Ultra") ? 2 : (m.Contains("Pro") ? 1 : 0)).ToList();
+    
+    var storageOrder = new List<string> { "128GB", "256GB", "512GB", "1TB" };
+    storagesList = storagesList.OrderBy(s => storageOrder.IndexOf(s)).ToList();
+    colorsList = colorsList.OrderBy(c => c).ToList();
+
+    string currentModelVal = GetModelVersion(Model.TenSanPham);
+    string currentStorageVal = GetStorage(Model.TenSanPham);
+    string currentColorVal = GetColor(Model.TenSanPham);
 }
+
 
 <div class="container my-5 animate-fade-in">
     <!-- Breadcrumb -->
@@ -66,6 +135,18 @@
                 <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-2.5 py-1 rounded-pill text-xxs fw-bold">
                     @(Model.ThuongHieu?.TenThuongHieu ?? "NovaTech")
                 </span>
+                @if (!string.IsNullOrEmpty(Model.SKU))
+                {
+                    <span id="sku-badge-text" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2.5 py-1 rounded-pill text-xxs fw-bold" style="letter-spacing: 0.5px;">
+                        SKU: @Model.SKU
+                    </span>
+                }
+                else
+                {
+                    <span id="sku-badge-text" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2.5 py-1 rounded-pill text-xxs fw-bold" style="letter-spacing: 0.5px; display: none;">
+                        SKU:
+                    </span>
+                }
             </div>
             <h1 class="fw-extrabold mb-2 text-dark fs-2 text-gradient-title">@Model.TenSanPham</h1>
             
@@ -98,23 +179,68 @@
             </div>
 
             <!-- Options (Premium Styled Selection) -->
-            <div class="mb-4 bg-white p-3 rounded-4 border border-light shadow-xs">
-                <p class="fw-bold mb-2 text-sm text-dark"><i class="fa-solid fa-palette text-primary me-2"></i>Chọn phiên bản màu sắc:</p>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-outline-primary btn-option-custom active" style="min-width: 120px;">
-                        <div class="text-xxs fw-bold">Titan Tự Nhiên</div>
-                        <div class="text-xxxs text-muted">@Model.GiaBan.ToString("N0") ₫</div>
-                    </button>
-                    <button class="btn btn-outline-secondary btn-option-custom" style="min-width: 120px;">
-                        <div class="text-xxs fw-bold">Titan Xanh</div>
-                        <div class="text-xxxs text-muted">@Model.GiaBan.ToString("N0") ₫</div>
-                    </button>
-                    <button class="btn btn-outline-secondary btn-option-custom" style="min-width: 120px;">
-                        <div class="text-xxs fw-bold">Titan Đen</div>
+            @if (relatedVariants.Count > 1)
+            {
+                <div class="d-flex flex-column gap-3 mb-4">
+                    <!-- Version/Model Selector -->
+                    @if (modelsList.Count > 1)
+                    {
+                        <div class="bg-white p-3 rounded-4 border border-light shadow-xs">
+                            <p class="fw-bold mb-2 text-sm text-dark"><i class="fa-solid fa-layer-group text-primary me-2"></i>Chọn phiên bản:</p>
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach (var m in modelsList)
+                                {
+                                    <button type="button" class="btn btn-outline-secondary btn-option-custom variant-model @(m == currentModelVal ? "active" : "")" data-model="@m" onclick="selectModel('@m')">
+                                        <div class="text-xxs fw-bold">@m</div>
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Storage Selector -->
+                    @if (storagesList.Count > 1)
+                    {
+                        <div class="bg-white p-3 rounded-4 border border-light shadow-xs">
+                            <p class="fw-bold mb-2 text-sm text-dark"><i class="fa-solid fa-hard-drive text-primary me-2"></i>Chọn dung lượng:</p>
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach (var s in storagesList)
+                                {
+                                    <button type="button" class="btn btn-outline-secondary btn-option-custom variant-storage @(s == currentStorageVal ? "active" : "")" data-storage="@s" onclick="selectStorage('@s')">
+                                        <div class="text-xxs fw-bold">@s</div>
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Color Selector -->
+                    @if (colorsList.Count > 1)
+                    {
+                        <div class="bg-white p-3 rounded-4 border border-light shadow-xs">
+                            <p class="fw-bold mb-2 text-sm text-dark"><i class="fa-solid fa-palette text-primary me-2"></i>Chọn màu sắc:</p>
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach (var c in colorsList)
+                                {
+                                    <button type="button" class="btn btn-outline-secondary btn-option-custom variant-color @(c == currentColorVal ? "active" : "")" data-color="@c" onclick="selectColor('@c')">
+                                        <div class="text-xxs fw-bold">@c</div>
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="mb-4 bg-white p-3 rounded-4 border border-light shadow-xs">
+                    <p class="fw-bold mb-2 text-sm text-dark"><i class="fa-solid fa-circle-info text-primary me-2"></i>Phiên bản:</p>
+                    <button class="btn btn-outline-primary btn-option-custom active" style="min-width: 120px;" disabled>
+                        <div class="text-xxs fw-bold">@Model.TenSanPham</div>
                         <div class="text-xxxs text-muted">@Model.GiaBan.ToString("N0") ₫</div>
                     </button>
                 </div>
-            </div>
+            }
 
             <!-- Promo Box (Stunning Clean Design) -->
             <div class="card border border-primary border-opacity-25 mb-4 shadow-sm rounded-4 overflow-hidden">
@@ -157,13 +283,234 @@
                 }
             </div>
 
-            <!-- Specs Info (Clean Tabular Details) -->
+            <!-- Specs Info (Stunning Modern Layout) -->
             <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
                 <div class="card-header bg-white border-bottom fw-extrabold fs-5 py-3.5 text-dark d-flex align-items-center gap-2">
-                    <i class="fa-solid fa-list-check text-primary"></i>Thông tin chi tiết sản phẩm
+                    <i class="fa-solid fa-list-check text-primary"></i>Thông số kỹ thuật chi tiết
                 </div>
-                <div class="card-body p-4 text-secondary text-sm bg-light bg-opacity-50" style="white-space: pre-line; line-height: 1.7; font-family: system-ui, -apple-system, sans-serif;">
-                    @(Model.MoTa ?? "Đang cập nhật thông tin chi tiết về sản phẩm này từ hãng sản xuất.")
+                <div class="card-body p-4 text-sm bg-light bg-opacity-50" style="line-height: 1.7; font-family: system-ui, -apple-system, sans-serif;">
+                    @if (isIPhone15)
+                    {
+                        string modelType = "Thường";
+                        if (currentName.Contains("Pro Max", StringComparison.OrdinalIgnoreCase)) modelType = "Pro Max";
+                        else if (currentName.Contains("Pro", StringComparison.OrdinalIgnoreCase)) modelType = "Pro";
+
+                        <h5 class="fw-bold text-dark mb-4 d-flex align-items-center gap-2">
+                            <span class="badge bg-primary rounded-pill px-3.5 py-2 fs-6">iPhone 15 @modelType</span>
+                            Cấu hình chi tiết sản phẩm
+                        </h5>
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <div class="p-3.5 bg-white rounded-4 border border-light shadow-xs d-flex align-items-center gap-3 spec-item-card">
+                                    <div class="bg-primary bg-opacity-10 text-primary rounded-3 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; min-width: 46px;">
+                                        <i class="fa-solid fa-mobile-screen fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xxs text-muted fw-bold text-uppercase tracking-wider">Màn hình chính</div>
+                                        <div class="text-xs fw-semibold text-dark mt-0.5">
+                                            @if (modelType == "Pro Max") { <text>6.7" Super Retina XDR OLED, Dynamic Island, 120Hz ProMotion</text> }
+                                            else if (modelType == "Pro") { <text>6.1" Super Retina XDR OLED, Dynamic Island, 120Hz ProMotion</text> }
+                                            else { <text>6.1" Super Retina XDR OLED, Dynamic Island, 60Hz</text> }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="p-3.5 bg-white rounded-4 border border-light shadow-xs d-flex align-items-center gap-3 spec-item-card">
+                                    <div class="bg-info bg-opacity-10 text-info rounded-3 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; min-width: 46px;">
+                                        <i class="fa-solid fa-microchip fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xxs text-muted fw-bold text-uppercase tracking-wider">Vi xử lý (CPU)</div>
+                                        <div class="text-xs fw-semibold text-dark mt-0.5">
+                                            @if (modelType == "Thường") { <text>Apple A16 Bionic (4 nm) 6 nhân</text> }
+                                            else { <text>Apple A17 Pro (3 nm) 6 nhân mạnh mẽ</text> }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="p-3.5 bg-white rounded-4 border border-light shadow-xs d-flex align-items-center gap-3 spec-item-card">
+                                    <div class="bg-success bg-opacity-10 text-success rounded-3 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; min-width: 46px;">
+                                        <i class="fa-solid fa-memory fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xxs text-muted fw-bold text-uppercase tracking-wider">Bộ nhớ RAM</div>
+                                        <div class="text-xs fw-semibold text-dark mt-0.5">
+                                            @if (modelType == "Thường") { <text>6 GB LPDDR5</text> }
+                                            else { <text>8 GB LPDDR5X siêu tốc</text> }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="p-3.5 bg-white rounded-4 border border-light shadow-xs d-flex align-items-center gap-3 spec-item-card">
+                                    <div class="bg-danger bg-opacity-10 text-danger rounded-3 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; min-width: 46px;">
+                                        <i class="fa-solid fa-camera fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xxs text-muted fw-bold text-uppercase tracking-wider">Camera chính</div>
+                                        <div class="text-xs fw-semibold text-dark mt-0.5">
+                                            @if (modelType == "Pro Max") { <text>48MP + 12MP + 12MP (Zoom quang 5x)</text> }
+                                            else if (modelType == "Pro") { <text>48MP + 12MP + 12MP (Zoom quang 3x)</text> }
+                                            else { <text>48MP + 12MP Ultra-wide</text> }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="p-3.5 bg-white rounded-4 border border-light shadow-xs d-flex align-items-center gap-3 spec-item-card">
+                                    <div class="bg-warning bg-opacity-10 text-warning rounded-3 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; min-width: 46px;">
+                                        <i class="fa-solid fa-video fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xxs text-muted fw-bold text-uppercase tracking-wider">Camera selfie</div>
+                                        <div class="text-xs fw-semibold text-dark mt-0.5">12 MP, f/1.9, hỗ trợ FaceID</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="p-3.5 bg-white rounded-4 border border-light shadow-xs d-flex align-items-center gap-3 spec-item-card">
+                                    <div class="bg-secondary bg-opacity-10 text-secondary rounded-3 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; min-width: 46px;">
+                                        <i class="fa-solid fa-bolt fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xxs text-muted fw-bold text-uppercase tracking-wider">Kết nối & Sạc</div>
+                                        <div class="text-xs fw-semibold text-dark mt-0.5">
+                                            @if (modelType == "Thường") { <text>USB-C (tốc độ USB 2.0)</text> }
+                                            else { <text>USB-C (tốc độ USB 3.0 lên tới 10Gb/s)</text> }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="p-3.5 bg-white rounded-4 border border-light shadow-xs d-flex align-items-center gap-3 spec-item-card">
+                                    <div class="bg-info bg-opacity-10 text-info rounded-3 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; min-width: 46px;">
+                                        <i class="fa-solid fa-shield-halved fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xxs text-muted fw-bold text-uppercase tracking-wider">Chất liệu thiết kế</div>
+                                        <div class="text-xs fw-semibold text-dark mt-0.5">
+                                            @if (modelType == "Thường") { <text>Khung nhôm tái chế, mặt sau kính pha màu</text> }
+                                            else { <text>Khung Titanium chuẩn hàng không, lưng kính nhám</text> }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="p-3.5 bg-white rounded-4 border border-light shadow-xs d-flex align-items-center gap-3 spec-item-card">
+                                    <div class="bg-primary bg-opacity-10 text-primary rounded-3 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; min-width: 46px;">
+                                        <i class="fa-solid fa-weight-hanging fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xxs text-muted fw-bold text-uppercase tracking-wider">Trọng lượng máy</div>
+                                        <div class="text-xs fw-semibold text-dark mt-0.5">
+                                            @if (modelType == "Pro Max") { <text>221g siêu nhẹ so với dòng cũ</text> }
+                                            else if (modelType == "Pro") { <text>187g cực kỳ thoải mái</text> }
+                                            else { <text>171g mỏng nhẹ tinh tế</text> }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else if (isSamsungS24)
+                    {
+                        bool isUltra = currentName.Contains("Ultra", StringComparison.OrdinalIgnoreCase);
+                        <h5 class="fw-bold text-dark mb-4 d-flex align-items-center gap-2">
+                            <span class="badge bg-primary rounded-pill px-3.5 py-2 fs-6">Samsung S24 @(isUltra ? "Ultra" : "Thường")</span>
+                            Cấu hình chi tiết sản phẩm
+                        </h5>
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <div class="p-3.5 bg-white rounded-4 border border-light shadow-xs d-flex align-items-center gap-3 spec-item-card">
+                                    <div class="bg-primary bg-opacity-10 text-primary rounded-3 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; min-width: 46px;">
+                                        <i class="fa-solid fa-mobile-screen fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xxs text-muted fw-bold text-uppercase tracking-wider">Màn hình chính</div>
+                                        <div class="text-xs fw-semibold text-dark mt-0.5">
+                                            @if (isUltra) { <text>6.8" Dynamic AMOLED 2X, QHD+, 120Hz, Gorilla Armor chống chói</text> }
+                                            else { <text>6.2" Dynamic AMOLED 2X, FHD+, 120Hz, viền siêu mỏng</text> }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="p-3.5 bg-white rounded-4 border border-light shadow-xs d-flex align-items-center gap-3 spec-item-card">
+                                    <div class="bg-info bg-opacity-10 text-info rounded-3 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; min-width: 46px;">
+                                        <i class="fa-solid fa-microchip fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xxs text-muted fw-bold text-uppercase tracking-wider">Bộ xử lý (CPU)</div>
+                                        <div class="text-xs fw-semibold text-dark mt-0.5">
+                                            @if (isUltra) { <text>Snapdragon 8 Gen 3 for Galaxy (4nm)</text> }
+                                            else { <text>Exynos 2400 (4nm) 10 nhân xử lý mượt mà</text> }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="p-3.5 bg-white rounded-4 border border-light shadow-xs d-flex align-items-center gap-3 spec-item-card">
+                                    <div class="bg-success bg-opacity-10 text-success rounded-3 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; min-width: 46px;">
+                                        <i class="fa-solid fa-memory fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xxs text-muted fw-bold text-uppercase tracking-wider">Bộ nhớ RAM</div>
+                                        <div class="text-xs fw-semibold text-dark mt-0.5">
+                                            @if (isUltra) { <text>12 GB LPDDR5X đa nhiệm tối đa</text> }
+                                            else { <text>8 GB LPDDR5X thế hệ mới</text> }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="p-3.5 bg-white rounded-4 border border-light shadow-xs d-flex align-items-center gap-3 spec-item-card">
+                                    <div class="bg-danger bg-opacity-10 text-danger rounded-3 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; min-width: 46px;">
+                                        <i class="fa-solid fa-camera fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xxs text-muted fw-bold text-uppercase tracking-wider">Hệ thống Camera</div>
+                                        <div class="text-xs fw-semibold text-dark mt-0.5">
+                                            @if (isUltra) { <text>200MP + 50MP + 12MP + 10MP (Zoom 5x & 10x)</text> }
+                                            else { <text>50MP + 10MP + 12MP hỗ trợ OIS chống rung</text> }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="p-3.5 bg-white rounded-4 border border-light shadow-xs d-flex align-items-center gap-3 spec-item-card">
+                                    <div class="bg-warning bg-opacity-10 text-warning rounded-3 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; min-width: 46px;">
+                                        <i class="fa-solid fa-battery-three-quarters fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xxs text-muted fw-bold text-uppercase tracking-wider">Pin & Sạc nhanh</div>
+                                        <div class="text-xs fw-semibold text-dark mt-0.5">
+                                            @if (isUltra) { <text>5000 mAh, sạc nhanh 45W vượt trội</text> }
+                                            else { <text>4000 mAh, sạc nhanh 25W thông minh</text> }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="p-3.5 bg-white rounded-4 border border-light shadow-xs d-flex align-items-center gap-3 spec-item-card">
+                                    <div class="bg-primary bg-opacity-10 text-primary rounded-3 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; min-width: 46px;">
+                                        <i class="fa-solid fa-brain fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xxs text-muted fw-bold text-uppercase tracking-wider">Tính năng thông minh</div>
+                                        <div class="text-xs fw-semibold text-dark mt-0.5">
+                                            Tích hợp Galaxy AI (Phiên dịch trực tiếp, trợ lý chat, khoanh vùng tìm kiếm) @(isUltra ? ", đi kèm bút S-Pen" : "")
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <p style="white-space: pre-line;">@(Model.MoTa ?? "Đang cập nhật thông tin chi tiết về sản phẩm này từ hãng sản xuất.")</p>
+                    }
                 </div>
             </div>
         </div>
@@ -181,6 +528,22 @@
     }
     .product-image-container:hover .product-main-image {
         transform: scale(1.03);
+    }
+    .spec-item-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .spec-item-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px -5px rgba(2, 132, 199, 0.08) !important;
+        border-color: rgba(2, 132, 199, 0.2) !important;
+    }
+    body[data-theme="dark"] .spec-item-card {
+        background-color: var(--nt-card) !important;
+        border-color: rgba(255,255,255,0.08) !important;
+    }
+    body[data-theme="dark"] .spec-item-card:hover {
+        border-color: var(--nt-primary) !important;
+        box-shadow: 0 10px 20px -5px rgba(56, 189, 248, 0.15) !important;
     }
     .text-gradient-title {
         background: linear-gradient(to right, #0b1528, #0284c7);
@@ -303,6 +666,97 @@
 
 @section Scripts {
     <script>
+        var variantMap = [
+            @foreach(var item in relatedVariants) {
+                <text>{ id: @item.MaSanPham, model: "@Html.Raw(GetModelVersion(item.TenSanPham))", storage: "@Html.Raw(GetStorage(item.TenSanPham))", color: "@Html.Raw(GetColor(item.TenSanPham))", price: @item.GiaBan, sku: "@Html.Raw(item.SKU ?? "")" },</text>
+            }
+        ];
+
+        var selectedModel = "@Html.Raw(currentModelVal)";
+        var selectedStorage = "@Html.Raw(currentStorageVal)";
+        var selectedColor = "@Html.Raw(currentColorVal)";
+
+        function selectModel(model) {
+            selectedModel = model;
+            updateVariantSelection();
+        }
+
+        function selectStorage(storage) {
+            selectedStorage = storage;
+            updateVariantSelection();
+        }
+
+        function selectColor(color) {
+            selectedColor = color;
+            updateVariantSelection();
+        }
+
+        function updateVariantSelection() {
+            // Find exact match
+            var match = variantMap.find(v => v.model === selectedModel && v.storage === selectedStorage && v.color === selectedColor);
+            
+            // If exact match not found, find one matching same model and storage
+            if (!match) {
+                match = variantMap.find(v => v.model === selectedModel && v.storage === selectedStorage);
+            }
+            
+            // If still not found, find one matching same model
+            if (!match) {
+                match = variantMap.find(v => v.model === selectedModel);
+            }
+
+            if (match) {
+                // Instantly update price display
+                var priceEl = document.querySelector('.product-live-price');
+                if (priceEl) {
+                    priceEl.textContent = new Intl.NumberFormat('vi-VN').format(match.price) + ' ₫';
+                }
+                // Instantly update SKU badge before navigation
+                var skuEl = document.getElementById('sku-badge-text');
+                if (skuEl && match.sku) {
+                    skuEl.textContent = 'SKU: ' + match.sku;
+                    skuEl.closest('.badge').style.display = '';
+                }
+                // Navigate to variant page
+                window.location.href = '/Online/Detail/' + match.id;
+            }
+        }
+
+        function checkAvailableOptions() {
+            var availableStorages = variantMap.filter(v => v.model === selectedModel).map(v => v.storage);
+            var availableColors = variantMap.filter(v => v.model === selectedModel && v.storage === selectedStorage).map(v => v.color);
+
+            document.querySelectorAll('.variant-storage').forEach(btn => {
+                var s = btn.getAttribute('data-storage');
+                if (availableStorages.includes(s)) {
+                    btn.classList.remove('disabled');
+                    btn.style.opacity = '1';
+                    btn.style.pointerEvents = 'auto';
+                } else {
+                    btn.classList.add('disabled');
+                    btn.style.opacity = '0.4';
+                    btn.style.pointerEvents = 'none';
+                }
+            });
+
+            document.querySelectorAll('.variant-color').forEach(btn => {
+                var c = btn.getAttribute('data-color');
+                if (availableColors.includes(c)) {
+                    btn.classList.remove('disabled');
+                    btn.style.opacity = '1';
+                    btn.style.pointerEvents = 'auto';
+                } else {
+                    btn.classList.add('disabled');
+                    btn.style.opacity = '0.4';
+                    btn.style.pointerEvents = 'none';
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAvailableOptions();
+        });
+
         function addToCart(productId) {
             fetch('@Url.Action("AddToCart", "Online")', {
                 method: 'POST',

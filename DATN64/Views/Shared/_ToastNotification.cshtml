@@ -22,9 +22,23 @@
         
         toastMsg.innerText = message;
         
-        // Default styling
-        toastEl.style.backgroundColor = '#ffffff';
-        toastEl.style.color = '#0f172a';
+        // Detect theme and apply appropriate contrast styles
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || localStorage.getItem('theme') === 'dark';
+        const closeBtn = toastEl.querySelector('.btn-close');
+        
+        if (isDark) {
+            toastEl.style.setProperty('background-color', '#1e293b', 'important');
+            toastEl.style.setProperty('color', '#f8fafc', 'important');
+            toastMsg.style.setProperty('color', '#f8fafc', 'important');
+            toastEl.style.setProperty('border-color', 'rgba(255,255,255,0.08)', 'important');
+            if (closeBtn) closeBtn.style.setProperty('filter', 'invert(1)', 'important');
+        } else {
+            toastEl.style.setProperty('background-color', '#ffffff', 'important');
+            toastEl.style.setProperty('color', '#0f172a', 'important');
+            toastMsg.style.setProperty('color', '#0f172a', 'important');
+            toastEl.style.setProperty('border-color', 'rgba(0,0,0,0.04)', 'important');
+            if (closeBtn) closeBtn.style.setProperty('filter', 'none', 'important');
+        }
         
         if (type === 'success') {
             toastEl.style.borderLeft = '4px solid #10b981';

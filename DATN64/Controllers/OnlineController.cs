@@ -91,6 +91,29 @@ namespace DATN64.Controllers
 
             var favorites = GetFavoritesFromSession();
             ViewBag.IsFavorite = favorites.Contains(id);
+
+            // Find related variants for iPhone 15 or Samsung Galaxy S24
+            string series = "";
+            if (p.TenSanPham.Contains("iPhone 15", StringComparison.OrdinalIgnoreCase))
+            {
+                series = "iPhone 15";
+            }
+            else if (p.TenSanPham.Contains("Samsung Galaxy S24", StringComparison.OrdinalIgnoreCase))
+            {
+                series = "Samsung Galaxy S24";
+            }
+
+            if (!string.IsNullOrEmpty(series))
+            {
+                ViewBag.RelatedVariants = _context.SanPhams
+                    .Where(prod => prod.TenSanPham.Contains(series) && (prod.TrangThai == "Đang bán" || prod.TrangThai == "Biến thể"))
+                    .ToList();
+            }
+            else
+            {
+                ViewBag.RelatedVariants = new List<SanPham> { p };
+            }
+
             return View(p);
         }
 private string GetLoginName()

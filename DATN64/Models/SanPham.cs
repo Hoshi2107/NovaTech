@@ -13,6 +13,9 @@ namespace DATN64.Models
         [StringLength(255)]
         public string TenSanPham { get; set; } = "";
 
+        [StringLength(100)]
+        public string? SKU { get; set; }
+
         public int MaDanhMuc { get; set; }
         public int MaThuongHieu { get; set; }
         public int MaNCC { get; set; }

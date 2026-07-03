@@ -31,8 +31,7 @@ using (var scope = app.Services.CreateScope())
     // Cập nhật ảnh iPhone 15 và Debug hệ thống (Code mới cập nhật từ server về)
     try
     {
-        context.Database.ExecuteSqlRaw("UPDATE dbo.SanPham SET HinhAnh = '/uploads/products/33c5b785-4ba9-4ecf-99fe-0ff1b988811e_Gemini_Generated_Image_hi4wiahi4wiahi4w.png' WHERE TenSanPham LIKE N'%iPhone 15%'");
-        
+        // Image updates and SKU seeding are handled via DbInitializer.
         // Debug Customer and Orders
         var customer = context.KhachHangs.FirstOrDefault(k => k.Email == "haodvttb01628@gmail.com" || k.SoDienThoai == "0965419137");
         if (customer != null)
@@ -63,7 +62,7 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-        Console.WriteLine("Error seeding iPhone image: " + ex.Message);
+        Console.WriteLine("Error in startup initialization: " + ex.Message);
     }
 }
 

@@ -373,7 +373,15 @@
         border-color: rgba(255, 255, 255, 0.1) !important;
     }
     body[data-theme="dark"] .text-dark,
-    body[data-theme="dark"] .card-title a {
+    body[data-theme="dark"] .card-title a,
+    body[data-theme="dark"] .form-check-label,
+    body[data-theme="dark"] .form-label {
+        color: var(--nt-text) !important;
+    }
+    body[data-theme="dark"] .form-control,
+    body[data-theme="dark"] .form-select {
+        background-color: var(--nt-card) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
         color: var(--nt-text) !important;
     }
     .card-product:hover .card-img-top {

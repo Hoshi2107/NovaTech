@@ -119,6 +119,132 @@ namespace DATN64.Models
                     Timestamp DATETIME NOT NULL DEFAULT GETDATE()
                 );
             ");
+            // Alter SanPham to add SKU field if not exists
+            ExecuteSql(db, @"
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.SanPham') AND name = 'SKU')
+                    ALTER TABLE dbo.SanPham ADD SKU NVARCHAR(100) NULL;
+            ");
+            // Assign SKU codes to all base products that don't have one yet
+            ExecuteSql(db, @"
+                -- iPhone 15 base models
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15T-128G-BLK'  WHERE TenSanPham = N'iPhone 15 Thường'      AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15P-128G-NAT'  WHERE TenSanPham = N'iPhone 15 Pro'         AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15PM-256G-NAT' WHERE TenSanPham = N'iPhone 15 Pro Max'     AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15PM-256G-NAT' WHERE TenSanPham = N'iPhone 15 Pro Max 256GB' AND (SKU IS NULL OR SKU = '');
+
+                -- Samsung Galaxy S24 base models
+                UPDATE dbo.SanPham SET SKU = 'SS-S24-256G-YLW'   WHERE TenSanPham = N'Samsung Galaxy S24'             AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'SS-S24U-256G-GRY'   WHERE TenSanPham = N'Samsung Galaxy S24 Ultra'      AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'SS-S24U-256G-GRY'   WHERE TenSanPham = N'Samsung Galaxy S24 Ultra 256GB' AND (SKU IS NULL OR SKU = '');
+
+                -- Xiaomi
+                UPDATE dbo.SanPham SET SKU = 'XI-XM14P-256G-BLK'  WHERE TenSanPham = N'Xiaomi 14 Pro'          AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'XI-XM14-128G-BLK'   WHERE TenSanPham = N'Xiaomi 14'              AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'XI-XM13P-256G-BLK'  WHERE TenSanPham = N'Xiaomi 13 Pro'         AND (SKU IS NULL OR SKU = '');
+
+                -- MacBook / Apple Laptop
+                UPDATE dbo.SanPham SET SKU = 'AP-MBP14M3-16G-SLV' WHERE TenSanPham = N'MacBook Pro 14 inch M3'  AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-MBA15M3-8G-SLV'   WHERE TenSanPham = N'MacBook Air 15 inch M3' AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-MBP16M3-16G-SLV'  WHERE TenSanPham = N'MacBook Pro 16 inch M3' AND (SKU IS NULL OR SKU = '');
+
+                -- Dell Laptop
+                UPDATE dbo.SanPham SET SKU = 'DL-XPS13-OLED-PLT'  WHERE TenSanPham = N'Dell XPS 13 OLED'       AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'DL-INS15-FHD-BLK'   WHERE TenSanPham = N'Dell Inspiron 15'       AND (SKU IS NULL OR SKU = '');
+
+                -- ASUS Laptop
+                UPDATE dbo.SanPham SET SKU = 'AS-ROG16-FHD-BLK'   WHERE TenSanPham = N'ASUS ROG Strix G16'     AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AS-ZEN14-FHD-BLK'   WHERE TenSanPham = N'ASUS ZenBook 14'        AND (SKU IS NULL OR SKU = '');
+
+                -- iPad / Apple Tablet
+                UPDATE dbo.SanPham SET SKU = 'AP-IPP129-256G-SLV' WHERE TenSanPham = N'iPad Pro 12.9 inch'     AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IPAIR-128G-PNK'  WHERE TenSanPham = N'iPad Air'               AND (SKU IS NULL OR SKU = '');
+
+                -- Samsung Tablet
+                UPDATE dbo.SanPham SET SKU = 'SS-TABS9U-256G-GRY' WHERE TenSanPham = N'Samsung Galaxy Tab S9 Ultra' AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'SS-TABA9-128G-SLV'  WHERE TenSanPham = N'Samsung Galaxy Tab A9'       AND (SKU IS NULL OR SKU = '');
+
+                -- Sony Headphones
+                UPDATE dbo.SanPham SET SKU = 'SN-WH1000XM5-BLK'  WHERE TenSanPham = N'Sony WH-1000XM5'        AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'SN-WF1000XM5-BLK'  WHERE TenSanPham = N'Sony WF-1000XM5'        AND (SKU IS NULL OR SKU = '');
+
+                -- JBL Speaker
+                UPDATE dbo.SanPham SET SKU = 'JBL-CHG5-BLK'      WHERE TenSanPham = N'JBL Charge 5'           AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'JBL-FLP6-BLK'      WHERE TenSanPham = N'JBL Flip 6'             AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'JBL-BRCK-BLK'      WHERE TenSanPham = N'JBL Boombox'            AND (SKU IS NULL OR SKU = '');
+
+                -- Logitech Accessories
+                UPDATE dbo.SanPham SET SKU = 'LG-MXM3-BLK'       WHERE TenSanPham = N'Logitech MX Master 3'   AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'LG-MKYS-BLK'       WHERE TenSanPham = N'Logitech MX Keys S'     AND (SKU IS NULL OR SKU = '');
+
+                -- Anker Accessories
+                UPDATE dbo.SanPham SET SKU = 'AN-PB737-BLK'      WHERE TenSanPham = N'Anker 737 Power Bank'   AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AN-CHG65W-WHT'     WHERE TenSanPham = N'Anker 65W Charger'      AND (SKU IS NULL OR SKU = '');
+
+                -- Oppo
+                UPDATE dbo.SanPham SET SKU = 'OP-F25P-256G-BLK'  WHERE TenSanPham = N'Oppo Find X7 Pro'       AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'OP-A79-128G-BLU'   WHERE TenSanPham = N'Oppo A79'               AND (SKU IS NULL OR SKU = '');
+
+                -- iPhone variants by naming pattern (auto-correct already-seeded variants)
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15T-128G-BLK'  WHERE TenSanPham = N'iPhone 15 Thường 128GB Đen'      AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15T-128G-PNK'  WHERE TenSanPham = N'iPhone 15 Thường 128GB Hồng'     AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15T-128G-BLU'  WHERE TenSanPham = N'iPhone 15 Thường 128GB Xanh Dương' AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15T-128G-GRN'  WHERE TenSanPham = N'iPhone 15 Thường 128GB Xanh Lá'  AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15T-128G-YLW'  WHERE TenSanPham = N'iPhone 15 Thường 128GB Vàng'     AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15T-256G-BLK'  WHERE TenSanPham = N'iPhone 15 Thường 256GB Đen'      AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15T-256G-PNK'  WHERE TenSanPham = N'iPhone 15 Thường 256GB Hồng'     AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15T-256G-BLU'  WHERE TenSanPham = N'iPhone 15 Thường 256GB Xanh Dương' AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15T-256G-GRN'  WHERE TenSanPham = N'iPhone 15 Thường 256GB Xanh Lá'  AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15T-256G-YLW'  WHERE TenSanPham = N'iPhone 15 Thường 256GB Vàng'     AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15T-512G-BLK'  WHERE TenSanPham = N'iPhone 15 Thường 512GB Đen'      AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15T-512G-PNK'  WHERE TenSanPham = N'iPhone 15 Thường 512GB Hồng'     AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15T-512G-BLU'  WHERE TenSanPham = N'iPhone 15 Thường 512GB Xanh Dương' AND (SKU IS NULL OR SKU = '');
+
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15P-128G-NAT'  WHERE TenSanPham = N'iPhone 15 Pro 128GB Titan Tự Nhiên' AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15P-128G-BLU'  WHERE TenSanPham = N'iPhone 15 Pro 128GB Titan Xanh'    AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15P-128G-WHT'  WHERE TenSanPham = N'iPhone 15 Pro 128GB Titan Trắng'   AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15P-128G-BLK'  WHERE TenSanPham = N'iPhone 15 Pro 128GB Titan Đen'    AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15P-256G-NAT'  WHERE TenSanPham = N'iPhone 15 Pro 256GB Titan Tự Nhiên' AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15P-256G-BLU'  WHERE TenSanPham = N'iPhone 15 Pro 256GB Titan Xanh'    AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15P-256G-WHT'  WHERE TenSanPham = N'iPhone 15 Pro 256GB Titan Trắng'   AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15P-256G-BLK'  WHERE TenSanPham = N'iPhone 15 Pro 256GB Titan Đen'    AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15P-512G-NAT'  WHERE TenSanPham = N'iPhone 15 Pro 512GB Titan Tự Nhiên' AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15P-512G-BLU'  WHERE TenSanPham = N'iPhone 15 Pro 512GB Titan Xanh'    AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15P-512G-WHT'  WHERE TenSanPham = N'iPhone 15 Pro 512GB Titan Trắng'   AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15P-512G-BLK'  WHERE TenSanPham = N'iPhone 15 Pro 512GB Titan Đen'    AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15P-1T-NAT'    WHERE TenSanPham = N'iPhone 15 Pro 1TB Titan Tự Nhiên'  AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15P-1T-BLU'    WHERE TenSanPham = N'iPhone 15 Pro 1TB Titan Xanh'     AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15P-1T-WHT'    WHERE TenSanPham = N'iPhone 15 Pro 1TB Titan Trắng'    AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15P-1T-BLK'    WHERE TenSanPham = N'iPhone 15 Pro 1TB Titan Đen'     AND (SKU IS NULL OR SKU = '');
+
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15PM-256G-NAT' WHERE TenSanPham = N'iPhone 15 Pro Max 256GB Titan Tự Nhiên' AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15PM-256G-BLU' WHERE TenSanPham = N'iPhone 15 Pro Max 256GB Titan Xanh'    AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15PM-256G-WHT' WHERE TenSanPham = N'iPhone 15 Pro Max 256GB Titan Trắng'   AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15PM-256G-BLK' WHERE TenSanPham = N'iPhone 15 Pro Max 256GB Titan Đen'    AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15PM-512G-NAT' WHERE TenSanPham = N'iPhone 15 Pro Max 512GB Titan Tự Nhiên' AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15PM-512G-BLU' WHERE TenSanPham = N'iPhone 15 Pro Max 512GB Titan Xanh'    AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15PM-512G-WHT' WHERE TenSanPham = N'iPhone 15 Pro Max 512GB Titan Trắng'   AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15PM-512G-BLK' WHERE TenSanPham = N'iPhone 15 Pro Max 512GB Titan Đen'    AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15PM-1T-NAT'   WHERE TenSanPham = N'iPhone 15 Pro Max 1TB Titan Tự Nhiên'  AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15PM-1T-BLU'   WHERE TenSanPham = N'iPhone 15 Pro Max 1TB Titan Xanh'     AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15PM-1T-WHT'   WHERE TenSanPham = N'iPhone 15 Pro Max 1TB Titan Trắng'    AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'AP-IP15PM-1T-BLK'   WHERE TenSanPham = N'iPhone 15 Pro Max 1TB Titan Đen'     AND (SKU IS NULL OR SKU = '');
+
+                -- Samsung Galaxy S24 variants
+                UPDATE dbo.SanPham SET SKU = 'SS-S24-256G-YLW'    WHERE TenSanPham = N'Samsung Galaxy S24 256GB Vàng'    AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'SS-S24-256G-PUR'    WHERE TenSanPham = N'Samsung Galaxy S24 256GB Tím'     AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'SS-S24-256G-GRY'    WHERE TenSanPham = N'Samsung Galaxy S24 256GB Xám'     AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'SS-S24-256G-BLK'    WHERE TenSanPham = N'Samsung Galaxy S24 256GB Đen'     AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'SS-S24-512G-GRY'    WHERE TenSanPham = N'Samsung Galaxy S24 512GB Xám'     AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'SS-S24-512G-BLK'    WHERE TenSanPham = N'Samsung Galaxy S24 512GB Đen'     AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'SS-S24U-256G-YLW'   WHERE TenSanPham = N'Samsung Galaxy S24 Ultra 256GB Titan Vàng' AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'SS-S24U-256G-PUR'   WHERE TenSanPham = N'Samsung Galaxy S24 Ultra 256GB Titan Tím'  AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'SS-S24U-256G-GRY'   WHERE TenSanPham = N'Samsung Galaxy S24 Ultra 256GB Titan Xám'  AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'SS-S24U-256G-BLK'   WHERE TenSanPham = N'Samsung Galaxy S24 Ultra 256GB Titan Đen'  AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'SS-S24U-512G-GRY'   WHERE TenSanPham = N'Samsung Galaxy S24 Ultra 512GB Titan Xám'  AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'SS-S24U-512G-BLK'   WHERE TenSanPham = N'Samsung Galaxy S24 Ultra 512GB Titan Đen'  AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'SS-S24U-1T-GRY'     WHERE TenSanPham = N'Samsung Galaxy S24 Ultra 1TB Titan Xám'    AND (SKU IS NULL OR SKU = '');
+                UPDATE dbo.SanPham SET SKU = 'SS-S24U-1T-BLK'     WHERE TenSanPham = N'Samsung Galaxy S24 Ultra 1TB Titan Đen'    AND (SKU IS NULL OR SKU = '');
+            ");
             // Create CustomerInboxThread
             ExecuteSql(db, @"
     IF OBJECT_ID('dbo.CustomerInboxThread', 'U') IS NULL
@@ -618,6 +744,7 @@ namespace DATN64.Models
                     }
                 }
                 context.SaveChanges();
+                SeedVariants(context);
             }
             catch (Exception ex)
             {
@@ -634,6 +761,373 @@ namespace DATN64.Models
             catch (Exception ex)
             {
                 Console.WriteLine("Error creating table: " + ex.Message);
+            }
+        }
+
+        private static void SeedVariants(AppDbContext context)
+        {
+            var catId = context.DanhMucs.FirstOrDefault(d => d.TenDanhMuc == "Điện thoại")?.MaDanhMuc ?? 1;
+            var brandAppleId = context.ThuongHieus.FirstOrDefault(t => t.TenThuongHieu == "Apple")?.MaThuongHieu ?? 1;
+            var brandSamsungId = context.ThuongHieus.FirstOrDefault(t => t.TenThuongHieu == "Samsung")?.MaThuongHieu ?? 2;
+            var nccAppleId = context.NhaCungCaps.FirstOrDefault(n => n.TenNCC.Contains("Apple"))?.MaNCC ?? 3;
+            var nccSamsungId = context.NhaCungCaps.FirstOrDefault(n => n.TenNCC.Contains("Samsung"))?.MaNCC ?? 2;
+
+            // SKU Helper
+            string GetProductSKU(string model, string storage, string color)
+            {
+                string brand = model.Contains("Samsung", StringComparison.OrdinalIgnoreCase) ? "SS" : "AP";
+                string modelCode = "";
+                if (model.Contains("Pro Max", StringComparison.OrdinalIgnoreCase)) modelCode = "IP15PM";
+                else if (model.Contains("Pro", StringComparison.OrdinalIgnoreCase)) modelCode = "IP15P";
+                else if (model.Contains("Thường", StringComparison.OrdinalIgnoreCase) || model.Contains("iPhone 15", StringComparison.OrdinalIgnoreCase)) modelCode = "IP15T";
+                else if (model.Contains("Ultra", StringComparison.OrdinalIgnoreCase)) modelCode = "S24U";
+                else modelCode = "S24";
+
+                string storageCode = storage.Replace(" ", "").ToUpper();
+
+                string colorCode = "BLK";
+                if (color.Contains("Hồng")) colorCode = "PNK";
+                else if (color.Contains("Xanh Dương") || color.Contains("Xanh")) colorCode = "BLU";
+                else if (color.Contains("Xanh Lá")) colorCode = "GRN";
+                else if (color.Contains("Vàng")) colorCode = "YLW";
+                else if (color.Contains("Tự Nhiên")) colorCode = "NAT";
+                else if (color.Contains("Trắng")) colorCode = "WHT";
+                else if (color.Contains("Xám")) colorCode = "GRY";
+                else if (color.Contains("Tím")) colorCode = "PUR";
+
+                return $"{brand}-{modelCode}-{storageCode}-{colorCode}";
+            }
+
+            // Clean up duplicate base models if any exist
+            void CleanupDuplicates(string productName)
+            {
+                var list = context.SanPhams.Where(p => p.TenSanPham == productName).ToList();
+                if (list.Count > 1)
+                {
+                    for (int i = 1; i < list.Count; i++)
+                    {
+                        context.SanPhams.Remove(list[i]);
+                    }
+                    context.SaveChanges();
+                }
+            }
+            CleanupDuplicates("iPhone 15 Thường");
+            CleanupDuplicates("iPhone 15 Pro");
+            CleanupDuplicates("iPhone 15 Pro Max");
+            CleanupDuplicates("Samsung Galaxy S24");
+            CleanupDuplicates("Samsung Galaxy S24 Ultra");
+
+            // Rename and upsert original base products so they integrate cleanly
+            var originalIphone = context.SanPhams.FirstOrDefault(p => p.TenSanPham == "iPhone 15" || p.TenSanPham == "iPhone 15 128GB Đen" || p.TenSanPham == "iPhone 15 Thường");
+            if (originalIphone != null)
+            {
+                originalIphone.TenSanPham = "iPhone 15 Thường";
+                originalIphone.GiaBan = 19990000;
+                originalIphone.GiaNhap = 16000000;
+                originalIphone.HinhAnh = "/uploads/iphone15_thuong.png";
+                originalIphone.TrangThai = "Đang bán";
+                originalIphone.SKU = GetProductSKU("iPhone 15 Thường", "128GB", "Đen");
+            }
+            else
+            {
+                context.SanPhams.Add(new SanPham
+                {
+                    TenSanPham = "iPhone 15 Thường",
+                    MaDanhMuc = catId,
+                    MaThuongHieu = brandAppleId,
+                    MaNCC = nccAppleId,
+                    GiaNhap = 16000000,
+                    GiaBan = 19990000,
+                    SoLuongTon = 50,
+                    MoTa = "iPhone 15 Thường chính hãng Apple. Màn hình Dynamic Island, camera 48MP đỉnh cao, cổng kết nối USB-C.",
+                    HinhAnh = "/uploads/iphone15_thuong.png",
+                    TrangThai = "Đang bán",
+                    SKU = GetProductSKU("iPhone 15 Thường", "128GB", "Đen")
+                });
+            }
+
+            var originalS24Ultra = context.SanPhams.FirstOrDefault(p => p.TenSanPham == "Samsung Galaxy S24 Ultra" || p.TenSanPham == "Samsung Galaxy S24 Ultra 256GB Titan Xám");
+            if (originalS24Ultra != null)
+            {
+                originalS24Ultra.TenSanPham = "Samsung Galaxy S24 Ultra";
+                originalS24Ultra.GiaBan = 25990000;
+                originalS24Ultra.GiaNhap = 20000000;
+                originalS24Ultra.HinhAnh = "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=600&q=80";
+                originalS24Ultra.TrangThai = "Đang bán";
+                originalS24Ultra.SKU = GetProductSKU("Samsung Galaxy S24 Ultra", "256GB", "Titan Xám");
+            }
+            else
+            {
+                context.SanPhams.Add(new SanPham
+                {
+                    TenSanPham = "Samsung Galaxy S24 Ultra",
+                    MaDanhMuc = catId,
+                    MaThuongHieu = brandSamsungId,
+                    MaNCC = nccSamsungId,
+                    GiaNhap = 20000000,
+                    GiaBan = 25990000,
+                    SoLuongTon = 45,
+                    MoTa = "Samsung Galaxy S24 Ultra chính hãng Samsung. Màn hình Dynamic AMOLED 2X, camera 200MP tích hợp Galaxy AI và bút S-Pen.",
+                    HinhAnh = "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=600&q=80",
+                    TrangThai = "Đang bán",
+                    SKU = GetProductSKU("Samsung Galaxy S24 Ultra", "256GB", "Titan Xám")
+                });
+            }
+
+            var originalIphonePro = context.SanPhams.FirstOrDefault(p => p.TenSanPham == "iPhone 15 Pro");
+            if (originalIphonePro != null)
+            {
+                originalIphonePro.GiaBan = 24990000;
+                originalIphonePro.HinhAnh = "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=600&q=80";
+                originalIphonePro.TrangThai = "Đang bán";
+                originalIphonePro.SKU = GetProductSKU("iPhone 15 Pro", "128GB", "Titan Tự Nhiên");
+            }
+            else
+            {
+                context.SanPhams.Add(new SanPham
+                {
+                    TenSanPham = "iPhone 15 Pro",
+                    MaDanhMuc = catId,
+                    MaThuongHieu = brandAppleId,
+                    MaNCC = nccAppleId,
+                    GiaNhap = 20000000,
+                    GiaBan = 24990000,
+                    SoLuongTon = 50,
+                    MoTa = "iPhone 15 Pro chính hãng Apple. Khung Titanium siêu bền nhẹ, chip A17 Pro siêu mạnh mẽ.",
+                    HinhAnh = "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=600&q=80",
+                    TrangThai = "Đang bán",
+                    SKU = GetProductSKU("iPhone 15 Pro", "128GB", "Titan Tự Nhiên")
+                });
+            }
+
+            var originalIphoneProMax = context.SanPhams.FirstOrDefault(p => p.TenSanPham == "iPhone 15 Pro Max");
+            if (originalIphoneProMax != null)
+            {
+                originalIphoneProMax.GiaBan = 29990000;
+                originalIphoneProMax.HinhAnh = "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=600&q=80";
+                originalIphoneProMax.TrangThai = "Đang bán";
+                originalIphoneProMax.SKU = GetProductSKU("iPhone 15 Pro Max", "256GB", "Titan Tự Nhiên");
+            }
+            else
+            {
+                context.SanPhams.Add(new SanPham
+                {
+                    TenSanPham = "iPhone 15 Pro Max",
+                    MaDanhMuc = catId,
+                    MaThuongHieu = brandAppleId,
+                    MaNCC = nccAppleId,
+                    GiaNhap = 24000000,
+                    GiaBan = 29990000,
+                    SoLuongTon = 50,
+                    MoTa = "iPhone 15 Pro Max chính hãng Apple. Màn hình 6.7 inch sắc nét, camera zoom quang 5x đỉnh cao, chất liệu vỏ Titanium.",
+                    HinhAnh = "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=600&q=80",
+                    TrangThai = "Đang bán",
+                    SKU = GetProductSKU("iPhone 15 Pro Max", "256GB", "Titan Tự Nhiên")
+                });
+            }
+
+            var originalS24 = context.SanPhams.FirstOrDefault(p => p.TenSanPham == "Samsung Galaxy S24");
+            if (originalS24 != null)
+            {
+                originalS24.GiaBan = 18990000;
+                originalS24.HinhAnh = "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=600&q=80";
+                originalS24.TrangThai = "Đang bán";
+                originalS24.SKU = GetProductSKU("Samsung Galaxy S24", "256GB", "Vàng");
+            }
+            else
+            {
+                context.SanPhams.Add(new SanPham
+                {
+                    TenSanPham = "Samsung Galaxy S24",
+                    MaDanhMuc = catId,
+                    MaThuongHieu = brandSamsungId,
+                    MaNCC = nccSamsungId,
+                    GiaNhap = 15000000,
+                    GiaBan = 18990000,
+                    SoLuongTon = 45,
+                    MoTa = "Samsung Galaxy S24 chính hãng Samsung. Thiết kế trẻ trung, màn hình sắc nét tích hợp trợ lý ảo Galaxy AI.",
+                    HinhAnh = "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=600&q=80",
+                    TrangThai = "Đang bán",
+                    SKU = GetProductSKU("Samsung Galaxy S24", "256GB", "Vàng")
+                });
+            }
+            context.SaveChanges();
+
+            // Color specific images helper
+            string GetIPhone15Image(string model, string color)
+            {
+                bool isPro = model.Contains("Pro", StringComparison.OrdinalIgnoreCase);
+                if (isPro)
+                {
+                    if (color.Contains("Tự Nhiên")) return "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=600&q=80"; // Natural Titanium
+                    if (color.Contains("Xanh")) return "https://images.unsplash.com/photo-1695048065007-ee91055ca132?auto=format&fit=crop&w=600&q=80"; // Blue Titanium
+                    if (color.Contains("Trắng")) return "https://images.unsplash.com/photo-1695048132945-f09bf216b0a1?auto=format&fit=crop&w=600&q=80"; // White Titanium
+                    return "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=600&q=80"; // Black Titanium
+                }
+                else
+                {
+                    if (color.Contains("Hồng")) return "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=600&q=80"; // Pink
+                    if (color.Contains("Xanh Dương")) return "https://images.unsplash.com/photo-1695048065007-ee91055ca132?auto=format&fit=crop&w=600&q=80"; // Blue
+                    if (color.Contains("Xanh Lá")) return "https://images.unsplash.com/photo-1695048132945-f09bf216b0a1?auto=format&fit=crop&w=600&q=80"; // Green
+                    if (color.Contains("Vàng")) return "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=600&q=80"; // Yellow
+                    return "/uploads/iphone15_thuong.png"; // Black
+                }
+            }
+
+            string GetSamsungS24Image(string model, string color)
+            {
+                bool isUltra = model.Contains("Ultra", StringComparison.OrdinalIgnoreCase);
+                if (isUltra)
+                {
+                    if (color.Contains("Vàng")) return "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=600&q=80";
+                    if (color.Contains("Tím")) return "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=600&q=80";
+                    return "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=600&q=80"; // Grey/Black
+                }
+                else
+                {
+                    if (color.Contains("Vàng")) return "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=600&q=80";
+                    if (color.Contains("Tím")) return "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=600&q=80";
+                    return "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=600&q=80";
+                }
+            }
+
+            // iPhone 15 variations with market-correct prices
+            var iphone15Variants = new List<(string model, string storage, string color, decimal giaNhap, decimal giaBan)>
+            {
+                // iPhone 15 thường variations
+                ("iPhone 15 Thường", "128GB", "Đen", 16000000, 19990000),
+                ("iPhone 15 Thường", "128GB", "Hồng", 16000000, 19990000),
+                ("iPhone 15 Thường", "128GB", "Xanh Dương", 16000000, 19990000),
+                ("iPhone 15 Thường", "128GB", "Xanh Lá", 16000000, 19990000),
+                ("iPhone 15 Thường", "128GB", "Vàng", 16000000, 19990000),
+                ("iPhone 15 Thường", "256GB", "Đen", 18500000, 22990000),
+                ("iPhone 15 Thường", "256GB", "Hồng", 18500000, 22990000),
+                ("iPhone 15 Thường", "256GB", "Xanh Dương", 18500000, 22990000),
+                ("iPhone 15 Thường", "256GB", "Xanh Lá", 18500000, 22990000),
+                ("iPhone 15 Thường", "256GB", "Vàng", 18500000, 22990000),
+                ("iPhone 15 Thường", "512GB", "Đen", 23000000, 28990000),
+                ("iPhone 15 Thường", "512GB", "Hồng", 23000000, 28990000),
+                ("iPhone 15 Thường", "512GB", "Xanh Dương", 23000000, 28990000),
+
+                // iPhone 15 Pro variations
+                ("iPhone 15 Pro", "128GB", "Titan Tự Nhiên", 20000000, 24990000),
+                ("iPhone 15 Pro", "128GB", "Titan Xanh", 20000000, 24990000),
+                ("iPhone 15 Pro", "128GB", "Titan Trắng", 20000000, 24990000),
+                ("iPhone 15 Pro", "128GB", "Titan Đen", 20000000, 24990000),
+                ("iPhone 15 Pro", "256GB", "Titan Tự Nhiên", 22500000, 27990000),
+                ("iPhone 15 Pro", "256GB", "Titan Xanh", 22500000, 27990000),
+                ("iPhone 15 Pro", "256GB", "Titan Trắng", 22500000, 27990000),
+                ("iPhone 15 Pro", "256GB", "Titan Đen", 22500000, 27990000),
+                ("iPhone 15 Pro", "512GB", "Titan Tự Nhiên", 27000000, 33990000),
+                ("iPhone 15 Pro", "512GB", "Titan Xanh", 27000000, 33990000),
+                ("iPhone 15 Pro", "512GB", "Titan Trắng", 27000000, 33990000),
+                ("iPhone 15 Pro", "512GB", "Titan Đen", 27000000, 33990000),
+                ("iPhone 15 Pro", "1TB", "Titan Tự Nhiên", 32000000, 39990000),
+                ("iPhone 15 Pro", "1TB", "Titan Xanh", 32000000, 39990000),
+                ("iPhone 15 Pro", "1TB", "Titan Trắng", 32000000, 39990000),
+                ("iPhone 15 Pro", "1TB", "Titan Đen", 32000000, 39990000),
+
+                // iPhone 15 Pro Max variations
+                ("iPhone 15 Pro Max", "256GB", "Titan Tự Nhiên", 24000000, 29990000),
+                ("iPhone 15 Pro Max", "256GB", "Titan Xanh", 24000000, 29990000),
+                ("iPhone 15 Pro Max", "256GB", "Titan Trắng", 24000000, 29990000),
+                ("iPhone 15 Pro Max", "256GB", "Titan Đen", 24000000, 29990000),
+                ("iPhone 15 Pro Max", "512GB", "Titan Tự Nhiên", 29500000, 36990000),
+                ("iPhone 15 Pro Max", "512GB", "Titan Xanh", 29500000, 36990000),
+                ("iPhone 15 Pro Max", "512GB", "Titan Trắng", 29500000, 36990000),
+                ("iPhone 15 Pro Max", "512GB", "Titan Đen", 29500000, 36990000),
+                ("iPhone 15 Pro Max", "1TB", "Titan Tự Nhiên", 34000000, 42990000),
+                ("iPhone 15 Pro Max", "1TB", "Titan Xanh", 34000000, 42990000),
+                ("iPhone 15 Pro Max", "1TB", "Titan Trắng", 34000000, 42990000),
+                ("iPhone 15 Pro Max", "1TB", "Titan Đen", 34000000, 42990000)
+            };
+
+            foreach (var item in iphone15Variants)
+            {
+                string fullName = $"{item.model} {item.storage} {item.color}";
+                var img = GetIPhone15Image(item.model, item.color);
+                var sku = GetProductSKU(item.model, item.storage, item.color);
+                var existing = context.SanPhams.FirstOrDefault(p => p.TenSanPham == fullName);
+                if (existing != null)
+                {
+                    existing.GiaNhap = item.giaNhap;
+                    existing.GiaBan = item.giaBan;
+                    existing.HinhAnh = img;
+                    existing.TrangThai = "Biến thể";
+                    existing.SKU = sku;
+                }
+                else
+                {
+                    context.SanPhams.Add(new SanPham
+                    {
+                        TenSanPham = fullName,
+                        MaDanhMuc = catId,
+                        MaThuongHieu = brandAppleId,
+                        MaNCC = nccAppleId,
+                        GiaNhap = item.giaNhap,
+                        GiaBan = item.giaBan,
+                        SoLuongTon = 50,
+                        MoTa = $"{item.model} phiên bản {item.storage} màu {item.color} chính hãng Apple.",
+                        HinhAnh = img,
+                        TrangThai = "Biến thể",
+                        SKU = sku
+                    });
+                }
+            }
+
+            // Samsung variants with market-correct prices
+            var samsungVariants = new List<(string model, string storage, string color, decimal giaNhap, decimal giaBan)>
+            {
+                // Samsung Galaxy S24 thường variations
+                ("Samsung Galaxy S24", "256GB", "Vàng", 15000000, 18990000),
+                ("Samsung Galaxy S24", "256GB", "Tím", 15000000, 18990000),
+                ("Samsung Galaxy S24", "256GB", "Xám", 15000000, 18990000),
+                ("Samsung Galaxy S24", "256GB", "Đen", 15000000, 18990000),
+                ("Samsung Galaxy S24", "512GB", "Xám", 17500000, 21990000),
+                ("Samsung Galaxy S24", "512GB", "Đen", 17500000, 21990000),
+
+                // Samsung Galaxy S24 Ultra variations
+                ("Samsung Galaxy S24 Ultra", "256GB", "Titan Vàng", 20000000, 25990000),
+                ("Samsung Galaxy S24 Ultra", "256GB", "Titan Tím", 20000000, 25990000),
+                ("Samsung Galaxy S24 Ultra", "256GB", "Titan Xám", 20000000, 25990000),
+                ("Samsung Galaxy S24 Ultra", "256GB", "Titan Đen", 20000000, 25990000),
+                ("Samsung Galaxy S24 Ultra", "512GB", "Titan Xám", 23500000, 29990000),
+                ("Samsung Galaxy S24 Ultra", "512GB", "Titan Đen", 23500000, 29990000),
+                ("Samsung Galaxy S24 Ultra", "1TB", "Titan Xám", 28000000, 35990000),
+                ("Samsung Galaxy S24 Ultra", "1TB", "Titan Đen", 28000000, 35990000)
+            };
+
+            foreach (var item in samsungVariants)
+            {
+                string fullName = $"{item.model} {item.storage} {item.color}";
+                var img = GetSamsungS24Image(item.model, item.color);
+                var sku = GetProductSKU(item.model, item.storage, item.color);
+                var existing = context.SanPhams.FirstOrDefault(p => p.TenSanPham == fullName);
+                if (existing != null)
+                {
+                    existing.GiaNhap = item.giaNhap;
+                    existing.GiaBan = item.giaBan;
+                    existing.HinhAnh = img;
+                    existing.TrangThai = "Biến thể";
+                    existing.SKU = sku;
+                }
+                else
+                {
+                    context.SanPhams.Add(new SanPham
+                    {
+                        TenSanPham = fullName,
+                        MaDanhMuc = catId,
+                        MaThuongHieu = brandSamsungId,
+                        MaNCC = nccSamsungId,
+                        GiaNhap = item.giaNhap,
+                        GiaBan = item.giaBan,
+                        SoLuongTon = 45,
+                        MoTa = $"{item.model} phiên bản {item.storage} màu {item.color} chính hãng Samsung. Màn hình Dynamic AMOLED 2X, camera sắc nét tích hợp Galaxy AI.",
+                        HinhAnh = img,
+                        TrangThai = "Biến thể",
+                        SKU = sku
+                    });
+                }
             }
         }
     }
