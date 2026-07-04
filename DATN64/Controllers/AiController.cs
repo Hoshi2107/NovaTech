@@ -5,9 +5,12 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System;
 using Microsoft.AspNetCore.Http;
+using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 
 namespace DATN64.Controllers
 {
+    [Route("Ai")]
     public class AiController : Controller
     {
         private readonly AppDbContext _context;
@@ -19,6 +22,8 @@ namespace DATN64.Controllers
             _geminiService = geminiService;
         }
 
+        [HttpGet("")]
+        [HttpGet("Index")]
         public IActionResult Index()
         {
             var userEmail = HttpContext.Session.GetString("UserEmail");
@@ -28,162 +33,343 @@ namespace DATN64.Controllers
             return View(history);
         }
 
-        [HttpPost]
-        public async Task<IActionResult> AskAi(string question)
+        // ─── AJAX Chat Endpoint ─────────────────────────────────────────────────────
+        [HttpPost("ChatAsync")]
+        public async Task<IActionResult> ChatAsync([FromBody] ChatRequest req)
         {
             var userEmail = HttpContext.Session.GetString("UserEmail");
-            if (string.IsNullOrEmpty(userEmail)) return RedirectToAction("Login", "Account");
+            if (string.IsNullOrEmpty(userEmail))
+                return Unauthorized(new { error = "Chưa đăng nhập" });
 
-            if (string.IsNullOrEmpty(question)) return RedirectToAction("Index");
+            if (string.IsNullOrWhiteSpace(req?.Message))
+                return BadRequest(new { error = "Tin nhắn trống" });
 
-            // Add user message to database
+            string userName = HttpContext.Session.GetString("UserName") ?? "Nhân viên";
+            string currentTime = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
+
+            // Save user message
             _context.ChatMessages.Add(new ChatMessage
             {
                 Sender = "User",
-                Message = question,
+                Message = req.Message,
                 Timestamp = DateTime.Now
             });
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
 
-            // Fetch live data from Database
-            var orders = _context.DonHangs.ToList();
-            var products = _context.SanPhams.ToList();
+            // Fetch live data
+            var orders = await _context.DonHangs.ToListAsync();
+            var products = await _context.SanPhams.ToListAsync();
+            var suppliers = await _context.NhaCungCaps.ToListAsync();
+            var categories = await _context.DanhMucs.ToListAsync();
+            var brands = await _context.ThuongHieus.ToListAsync();
 
             decimal totalRevenue = orders.Where(o => o.TrangThai == "Hoàn thành").Sum(o => o.TongTien ?? 0);
             int totalOrdersCount = orders.Count;
             int pendingOrdersCount = orders.Count(o => o.TrangThai == "Đơn mới" || o.TrangThai == "Đã xác nhận");
             int completedOrdersCount = orders.Count(o => o.TrangThai == "Hoàn thành");
 
-            // Low stock products (stock <= 5)
-            var lowStockProductsList = products.Where(p => p.SoLuongTon <= 5).ToList();
-            string lowStockText = "";
-            if (lowStockProductsList.Any())
-            {
-                foreach (var p in lowStockProductsList)
+            // Calculate best sellers (Top 5 products based on quantity sold in completed/confirmed orders)
+            var orderDetails = await _context.ChiTietDonHangs.ToListAsync();
+            var topProductsData = orderDetails
+                .GroupBy(ct => ct.MaSanPham)
+                .Select(g => new
                 {
-                    lowStockText += $"- {p.TenSanPham} (Còn: {p.SoLuongTon} sản phẩm)\n";
-                }
-            }
-            else
-            {
-                lowStockText = "- Không có sản phẩm nào sắp hết hàng (tất cả đều tồn kho trên 5 sản phẩm).\n";
-            }
+                    MaSanPham = g.Key,
+                    QuantitySold = g.Sum(ct => ct.SoLuong)
+                })
+                .OrderByDescending(g => g.QuantitySold)
+                .Take(5)
+                .ToList();
 
-            // Current date and time
-            string currentTime = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
-            string userName = HttpContext.Session.GetString("UserName") ?? "Nhân viên";
+            string topProductsText = topProductsData.Any()
+                ? string.Join("\n", topProductsData.Select((tp, idx) => {
+                    var p = products.FirstOrDefault(prod => prod.MaSanPham == tp.MaSanPham);
+                    return $"- Top {idx + 1}: {p?.TenSanPham ?? "Sản phẩm ẩn"} (Mã SP: {tp.MaSanPham}, SKU: {p?.SKU}, Đã bán: {tp.QuantitySold} sản phẩm)";
+                }))
+                : "- Chưa có dữ liệu sản phẩm bán chạy.";
 
-            // Construct System Instruction (Developer context)
-            string systemInstruction = $@"Bạn là trợ lý AI thông minh tích hợp sẵn trong hệ thống ERP NovaTech (Cửa hàng Công nghệ NovaTech).
-Nhiệm vụ của bạn là hỗ trợ ban quản trị và nhân viên phân tích số liệu kinh doanh, kiểm tra tồn kho, đơn hàng và các thông tin khác trong hệ thống.
-Tài khoản đang thực hiện cuộc trò chuyện này: {userName}.
-Thời gian hệ thống hiện tại: {currentTime}.
+            var lowStockProducts = products.Where(p => p.SoLuongTon <= 5).ToList();
+            string lowStockText = lowStockProducts.Any()
+                ? string.Join("\n", lowStockProducts.Select(p => $"- {p.TenSanPham} (SKU: {p.SKU}, Còn: {p.SoLuongTon})"))
+                : "- Không có sản phẩm nào sắp hết hàng.";
 
-Dưới đây là số liệu thực tế được truy vấn trực tiếp từ cơ sở dữ liệu hệ thống ERP NovaTech:
-1. TỔNG QUAN DOANH THU & ĐƠN HÀNG:
-- Doanh thu hoàn thành (đã thanh toán): {totalRevenue.ToString("N0")} đ
-- Tổng số lượng đơn hàng: {totalOrdersCount} đơn
-- Số đơn chờ xử lý (mới/đã xác nhận): {pendingOrdersCount} đơn
-- Số đơn đã hoàn thành: {completedOrdersCount} đơn
+            string supplierList = string.Join(", ", suppliers.Select(s => $"{s.MaNCC}: {s.TenNCC}"));
+            string categoryList = string.Join(", ", categories.Select(c => $"{c.MaDanhMuc}: {c.TenDanhMuc}"));
+            string brandList = string.Join(", ", brands.Select(b => $"{b.MaThuongHieu}: {b.TenThuongHieu}"));
+            string productList = string.Join("\n", products.Take(30).Select(p =>
+                $"- [{p.MaSanPham}] {p.TenSanPham} | GiaNhap: {p.GiaNhap:N0}đ | GiaBan: {p.GiaBan:N0}đ | Tồn: {p.SoLuongTon}"));
 
-2. SẢN PHẨM & CẢNH BÁO TỒN KHO THẤP (tồn <= 5):
+            // ─── System Instruction for Agentic Mode ────────────────────────────────
+            string systemInstruction = $@"Bạn là trợ lý AI thông minh tích hợp trong ERP NovaTech - Cửa hàng Công nghệ.
+Người dùng: {userName} | Thời gian: {currentTime}
+
+=== DỮ LIỆU THỰC TẾ TỪ HỆ THỐNG ===
+TỔNG QUAN:
+- Doanh thu hoàn thành: {totalRevenue:N0}đ
+- Tổng đơn: {totalOrdersCount} | Chờ xử lý: {pendingOrdersCount} | Hoàn thành: {completedOrdersCount}
+
+SẢN PHẨM BÁN CHẠY NHẤT:
+{topProductsText}
+
+CẢNH BÁO TỒN KHO (≤5):
 {lowStockText}
 
-HƯỚNG DẪN TRẢ LỜI:
-- Trả lời bằng tiếng Việt, ngắn gọn, súc tích, chuyên nghiệp và lịch sự.
-- Sử dụng các biểu tượng cảm xúc (emoji) phù hợp để câu trả lời sinh động hơn.
-- Khi người dùng hỏi về doanh thu, đơn hàng, hay sản phẩm sắp hết hàng, hãy đối chiếu chính xác các số liệu trên và đưa ra lời khuyên hữu ích (ví dụ: khuyên lập phiếu nhập cho sản phẩm tồn kho thấp).
-- Ngoài việc phân tích số liệu nội bộ của ERP NovaTech, bạn ĐƯỢC PHÉP sử dụng kiến thức rộng lớn của mình để phân tích, tư vấn các xu hướng công nghệ, sản phẩm đang hot bên ngoài thị trường để giúp cửa hàng lên kế hoạch nhập hàng hoặc định hướng kinh doanh.
-- Nếu câu hỏi kết hợp cả hai (ví dụ: đối chiếu hàng tồn kho hiện tại với xu hướng thị trường), hãy đưa ra phân tích chuyên sâu để tối ưu hóa hiệu quả kinh doanh.
-- Hỗ trợ định dạng Markdown cơ bản như: **in đậm**, xuống dòng và - danh sách gạch đầu dòng.";
+DANH SÁCH SẢN PHẨM HIỆN TẠI (30 đầu):
+{productList}
 
-            // Generate AI response
-            string reply = await _geminiService.GenerateResponseAsync(systemInstruction, question);
+NHÀ CUNG CẤP: {supplierList}
+DANH MỤC: {categoryList}
+THƯƠNG HIỆU: {brandList}
 
-            // Graceful degradation / Fallback if the API key is blocked/leaked/revoked or not found
-            if (reply.StartsWith("Lỗi API Gemini") || reply.StartsWith("Lỗi kết nối AI") || reply.Contains("key") || reply.Contains("leaked") || reply.Contains("not found"))
+=== QUY TẮC TRẢ LỜI ===
+Bạn PHẢI trả về JSON object hợp lệ với cấu trúc CHÍNH XÁC như sau:
+{{
+  ""message"": ""Nội dung trả lời bằng tiếng Việt, hỗ trợ markdown: **bold**, - list"",
+  ""hasAction"": false,
+  ""actionType"": null,
+  ""actionPayload"": null
+}}
+
+Khi người dùng hỏi về sản phẩm mới muốn nhập/kinh doanh và bạn muốn đề xuất tạo phiếu nhập + thêm sản phẩm, dùng:
+{{
+  ""message"": ""📦 **Đề xuất sản phẩm mới: [TÊN]**\n\n[Mô tả, lý do, phân tích thị trường...]\n\n💰 **Chi phí ước tính:**\n- Giá nhập: X đ/cái\n- Giá bán đề xuất: Y đ/cái\n- Lợi nhuận: Z%\n\n⚠️ Bạn có muốn tôi **tự động tạo phiếu nhập** và **thêm sản phẩm này** vào hệ thống không?"",
+  ""hasAction"": true,
+  ""actionType"": ""CREATE_PRODUCT_AND_IMPORT"",
+  ""actionPayload"": {{
+    ""tenSanPham"": ""Tên sản phẩm"",
+    ""moTa"": ""Mô tả sản phẩm"",
+    ""giaNhap"": 1000000,
+    ""giaBan"": 1500000,
+    ""soLuongNhap"": 20,
+    ""maDanhMuc"": 1,
+    ""maThuongHieu"": 1,
+    ""maNCC"": 1,
+    ""sku"": ""SP-XXX"",
+    ""lyDoDeXuat"": ""Lý do ngắn gọn tại sao nên nhập mặt hàng này""
+  }}
+}}
+
+LƯU Ý QUAN TRỌNG:
+- actionPayload.maDanhMuc phải là ID hợp lệ từ danh sách: {categoryList}
+- actionPayload.maThuongHieu phải là ID hợp lệ từ danh sách: {brandList}
+- actionPayload.maNCC phải là ID hợp lệ từ danh sách: {supplierList}
+- Nếu không có NCC/danh mục phù hợp, dùng ID đầu tiên trong danh sách
+- Chỉ đề xuất tạo phiếu khi user hỏi về sản phẩm MỚI muốn nhập hoặc có câu hỏi rõ ràng về việc thêm hàng
+- Với các câu hỏi thông thường (doanh thu, tồn kho, v.v.), hasAction = false
+- KHÔNG bao giờ trả về text ngoài JSON";
+
+            string rawJson = await _geminiService.GenerateActionResponseAsync(systemInstruction, req.Message);
+
+            // Parse AI response
+            AiActionResponse? aiResp = null;
+            try
             {
-                reply = GenerateLocalResponse(question, totalRevenue, totalOrdersCount, pendingOrdersCount, completedOrdersCount, lowStockText, lowStockProductsList.Count);
+                // Strip potential markdown code fences
+                string cleanJson = rawJson.Trim();
+                if (cleanJson.StartsWith("```")) cleanJson = System.Text.RegularExpressions.Regex.Replace(cleanJson, @"```[a-z]*\n?", "").Replace("```", "").Trim();
+                aiResp = JsonSerializer.Deserialize<AiActionResponse>(cleanJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch
+            {
+                // Fallback: treat the raw text as a plain message
+                aiResp = new AiActionResponse { Message = rawJson, HasAction = false };
             }
 
-            // Add AI response message to database
+            if (aiResp == null)
+                aiResp = new AiActionResponse { Message = "Xin lỗi, tôi gặp sự cố khi xử lý yêu cầu.", HasAction = false };
+
+            // Save AI message
             _context.ChatMessages.Add(new ChatMessage
             {
                 Sender = "AI",
-                Message = reply,
+                Message = aiResp.Message ?? "",
                 Timestamp = DateTime.Now
             });
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = aiResp.Message,
+                hasAction = aiResp.HasAction,
+                actionType = aiResp.ActionType,
+                actionPayload = aiResp.ActionPayload
+            });
+        }
+
+        // ─── Execute Action Endpoint ────────────────────────────────────────────────
+        [HttpPost("ExecuteAction")]
+        public async Task<IActionResult> ExecuteAction([FromBody] ExecuteActionRequest req)
+        {
+            var userEmail = HttpContext.Session.GetString("UserEmail");
+            if (string.IsNullOrEmpty(userEmail)) return Unauthorized(new { error = "Chưa đăng nhập" });
+
+            var nhanVien = await _context.NhanViens.FirstOrDefaultAsync(nv => nv.Email == userEmail);
+            if (nhanVien == null) return BadRequest(new { error = "Không tìm thấy nhân viên" });
+
+            if (req?.ActionType == "CREATE_PRODUCT_AND_IMPORT" && req.ActionPayload != null)
+            {
+                try
+                {
+                    var payload = req.ActionPayload;
+
+                    // 1. Validate references
+                    int maNCC = payload.MaNCC > 0 ? payload.MaNCC : (_context.NhaCungCaps.FirstOrDefault()?.MaNCC ?? 1);
+                    int maDanhMuc = payload.MaDanhMuc > 0 ? payload.MaDanhMuc : (_context.DanhMucs.FirstOrDefault()?.MaDanhMuc ?? 1);
+                    int maThuongHieu = payload.MaThuongHieu > 0 ? payload.MaThuongHieu : (_context.ThuongHieus.FirstOrDefault()?.MaThuongHieu ?? 1);
+
+                    // Ensure NCC/category/brand exist
+                    if (!await _context.NhaCungCaps.AnyAsync(n => n.MaNCC == maNCC)) maNCC = (await _context.NhaCungCaps.FirstAsync()).MaNCC;
+                    if (!await _context.DanhMucs.AnyAsync(d => d.MaDanhMuc == maDanhMuc)) maDanhMuc = (await _context.DanhMucs.FirstAsync()).MaDanhMuc;
+                    if (!await _context.ThuongHieus.AnyAsync(t => t.MaThuongHieu == maThuongHieu)) maThuongHieu = (await _context.ThuongHieus.FirstAsync()).MaThuongHieu;
+
+                    // 2. Create SanPham (Khoi tao ton kho = 0, cho duyet phieu moi cong kho)
+                    var newProduct = new SanPham
+                    {
+                        TenSanPham = payload.TenSanPham ?? "Sản phẩm mới",
+                        SKU = payload.SKU ?? $"AI-{DateTime.Now:yyyyMMddHHmm}",
+                        MaDanhMuc = maDanhMuc,
+                        MaThuongHieu = maThuongHieu,
+                        MaNCC = maNCC,
+                        GiaNhap = payload.GiaNhap,
+                        GiaBan = payload.GiaBan,
+                        SoLuongTon = 0,
+                        MoTa = payload.MoTa,
+                        TrangThai = "Đang bán"
+                    };
+                    _context.SanPhams.Add(newProduct);
+                    await _context.SaveChangesAsync();
+
+                    // 3. Create PhieuNhap
+                    var phieuNhap = new PhieuNhap
+                    {
+                        MaNCC = maNCC,
+                        MaNhanVien = nhanVien.MaNhanVien,
+                        NgayNhap = DateTime.Now
+                    };
+                    _context.PhieuNhaps.Add(phieuNhap);
+                    await _context.SaveChangesAsync();
+
+                    // 4. Create ChiTietPhieuNhap
+                    var chiTiet = new ChiTietPhieuNhap
+                    {
+                        MaPhieuNhap = phieuNhap.MaPhieuNhap,
+                        MaSanPham = newProduct.MaSanPham,
+                        SoLuong = payload.SoLuongNhap,
+                        GiaNhap = payload.GiaNhap
+                    };
+                    _context.ChiTietPhieuNhaps.Add(chiTiet);
+
+                    // 5. Log InventoryTransaction (Trang thai cho duyet, ma SP luu vao SKU de parse duoc ID)
+                    int txCount = await _context.InventoryTransactions.CountAsync(t => t.Type == "Nhập kho") + 1;
+                    _context.InventoryTransactions.Add(new InventoryTransaction
+                    {
+                        Code = "AI-" + txCount.ToString("D6"),
+                        Type = "Nhập kho",
+                        ProductSKU = newProduct.MaSanPham.ToString(),
+                        ProductName = newProduct.TenSanPham,
+                        QuantityChange = payload.SoLuongNhap,
+                        Creator = $"{nhanVien.HoTen} (AI Assistant)",
+                        Date = DateTime.Now,
+                        Note = $"AI tự động tạo đề xuất. Chờ duyệt để cộng kho. Lý do: {payload.LyDoDeXuat}",
+                        TrangThai = "Chờ duyệt",
+                        SoLuongTruoc = null,
+                        SoLuongSau = null
+                    });
+                    await _context.SaveChangesAsync();
+
+                    // 6. System Notification
+                    _context.SystemNotifications.Add(new SystemNotification
+                    {
+                        Title = "🤖 Đề xuất nhập hàng từ AI đang chờ duyệt",
+                        Message = $"Sản phẩm mới \"{newProduct.TenSanPham}\" đã được tạo với số lượng tồn kho = 0. Phiếu nhập #{phieuNhap.MaPhieuNhap} | SL: {payload.SoLuongNhap} đang chờ duyệt tại Trung tâm duyệt phiếu.",
+                        Type = "Thông tin",
+                        Timestamp = DateTime.Now
+                    });
+                    await _context.SaveChangesAsync();
+
+                    decimal tongChiPhi = payload.GiaNhap * payload.SoLuongNhap;
+                    decimal loiNhuan = payload.GiaBan - payload.GiaNhap;
+                    decimal tyLeLoiNhuan = payload.GiaNhap > 0 ? (loiNhuan / payload.GiaNhap * 100) : 0;
+
+                    string confirmMsg = $@"✅ **Đã tạo sản phẩm và đề xuất nhập kho thành công!**
+
+📦 **Sản phẩm mới:** {newProduct.TenSanPham}
+🆔 **Mã SP:** #{newProduct.MaSanPham} | SKU: {newProduct.SKU}
+📋 **Phiếu nhập:** #{phieuNhap.MaPhieuNhap} (Trạng thái: **Chờ duyệt**)
+
+💰 **Chi tiết tài chính dự kiến:**
+- Số lượng nhập: **{payload.SoLuongNhap} cái**
+- Giá nhập: **{payload.GiaNhap:N0} đ/cái**
+- Giá bán: **{payload.GiaBan:N0} đ/cái**
+- **Tổng chi phí nhập dự kiến: {tongChiPhi:N0} đ**
+- Lợi nhuận mỗi cái: {loiNhuan:N0} đ ({tyLeLoiNhuan:F1}%)
+
+⚠️ **Lưu ý:** Sản phẩm đã được thêm vào hệ thống với **số lượng tồn kho ban đầu = 0**. Vui lòng vào **Trung tâm duyệt phiếu** để phê duyệt phiếu kho thì số lượng tồn kho mới được cộng vào và giao dịch mới chính thức hoàn tất.";
+
+                    _context.ChatMessages.Add(new ChatMessage
+                    {
+                        Sender = "AI",
+                        Message = confirmMsg,
+                        Timestamp = DateTime.Now
+                    });
+                    await _context.SaveChangesAsync();
+
+                    return Ok(new { success = true, message = confirmMsg, productId = newProduct.MaSanPham, phieuNhapId = phieuNhap.MaPhieuNhap });
+                }
+                catch (Exception ex)
+                {
+                    return StatusCode(500, new { error = $"Lỗi khi thực hiện: {ex.Message}" });
+                }
+            }
+
+            return BadRequest(new { error = "Action không hợp lệ hoặc chưa được hỗ trợ" });
+        }
+
+        // ─── Legacy POST (keep for fallback) ───────────────────────────────────────
+        [HttpPost("AskAi")]
+        public async Task<IActionResult> AskAi(string question)
+        {
+            var userEmail = HttpContext.Session.GetString("UserEmail");
+            if (string.IsNullOrEmpty(userEmail)) return RedirectToAction("Login", "Account");
+            if (string.IsNullOrEmpty(question)) return RedirectToAction("Index");
+
+            // Delegate to the AJAX endpoint logic by building a fake request
+            _context.ChatMessages.Add(new ChatMessage { Sender = "User", Message = question, Timestamp = DateTime.Now });
+            await _context.SaveChangesAsync();
+
+            var orders = await _context.DonHangs.ToListAsync();
+            var products = await _context.SanPhams.ToListAsync();
+
+            decimal totalRevenue = orders.Where(o => o.TrangThai == "Hoàn thành").Sum(o => o.TongTien ?? 0);
+            int totalOrdersCount = orders.Count;
+            int pendingOrdersCount = orders.Count(o => o.TrangThai == "Đơn mới" || o.TrangThai == "Đã xác nhận");
+            int completedOrdersCount = orders.Count(o => o.TrangThai == "Hoàn thành");
+
+            var lowStockProductsList = products.Where(p => p.SoLuongTon <= 5).ToList();
+            string lowStockText = lowStockProductsList.Any()
+                ? string.Join("\n", lowStockProductsList.Select(p => $"- {p.TenSanPham} (Còn: {p.SoLuongTon})"))
+                : "- Không có sản phẩm nào sắp hết hàng.";
+
+            string userName = HttpContext.Session.GetString("UserName") ?? "Nhân viên";
+            string currentTime = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
+
+            string systemInstruction = $@"Bạn là trợ lý AI thông minh tích hợp trong hệ thống ERP NovaTech. Tài khoản: {userName}. Thời gian: {currentTime}.
+Dữ liệu: Doanh thu: {totalRevenue:N0}đ | Tổng đơn: {totalOrdersCount} | Chờ: {pendingOrdersCount} | Hoàn thành: {completedOrdersCount}
+Tồn kho thấp: {lowStockText}
+Trả lời tiếng Việt, ngắn gọn, chuyên nghiệp. Hỗ trợ markdown: **bold**, - list.";
+
+            string reply = await _geminiService.GenerateResponseAsync(systemInstruction, question);
+
+            if (reply.StartsWith("Lỗi API Gemini") || reply.StartsWith("Lỗi kết nối AI"))
+                reply = GenerateLocalResponse(question, totalRevenue, totalOrdersCount, pendingOrdersCount, completedOrdersCount, lowStockText, lowStockProductsList.Count);
+
+            _context.ChatMessages.Add(new ChatMessage { Sender = "AI", Message = reply, Timestamp = DateTime.Now });
+            await _context.SaveChangesAsync();
 
             return RedirectToAction("Index");
         }
 
-        private string GenerateLocalResponse(string question, decimal totalRevenue, int totalOrders, int pendingOrders, int completedOrders, string lowStockText, int lowStockCount)
-        {
-            string q = question.ToLower();
-            
-            if (q.Contains("doanh thu") || q.Contains("tiền") || q.Contains("bán được"))
-            {
-                return $@"📊 **Báo cáo doanh thu cửa hàng:**
-
-Hiện tại, hệ thống ghi nhận tổng doanh thu hoàn thành (đã thanh toán thành công) là:
-💰 **{totalRevenue.ToString("N0")} đ**
-
-Hệ thống đang hoạt động ổn định. Nếu bạn cần phân tích chuyên sâu hơn, hãy kiểm tra mục **Báo cáo doanh thu** trong menu Hệ thống.";
-            }
-            
-            if (q.Contains("đơn hàng") || q.Contains("don hang") || q.Contains("bán hàng"))
-            {
-                return $@"📦 **Báo cáo tình trạng đơn hàng:**
-
-Tổng số đơn hàng trên hệ thống: **{totalOrders} đơn**
-- ⏳ Đơn hàng chờ xử lý (mới/đã xác nhận): **{pendingOrders} đơn**
-- ✅ Đơn hàng đã hoàn thành: **{completedOrders} đơn**
-
-Bạn nên nhanh chóng duyệt các đơn hàng chờ xử lý để đảm bảo tiến độ giao hàng cho khách nhé! 🚚";
-            }
-            
-            if (q.Contains("tồn kho") || q.Contains("kho") || q.Contains("hết hàng") || q.Contains("cảnh báo"))
-            {
-                string stockWarning = lowStockCount > 0 
-                    ? $"Hiện đang có **{lowStockCount} sản phẩm** sắp hết hàng (số lượng tồn kho từ 5 trở xuống):\n\n{lowStockText}\n⚠️ **Khuyến nghị:** Bạn nên nhanh chóng lập phiếu nhập hàng cho các sản phẩm này."
-                    : "🎉 Tuyệt vời! Hiện tại không có sản phẩm nào sắp hết hàng (tất cả đều tồn trên 5 sản phẩm).";
-
-                return $@"⚠️ **Cảnh báo tồn kho:**
-
-{stockWarning}";
-            }
-
-            if (q.Contains("đề xuất") || q.Contains("phân tích") || q.Contains("khuyên") || q.Contains("tư vấn"))
-            {
-                string stockAdvice = lowStockCount > 0 
-                    ? $"đặc biệt cần chú ý nhập thêm mặt hàng sắp hết hàng (hiện có {lowStockCount} sản phẩm tồn kho thấp)" 
-                    : "kho hàng hiện tại rất dồi dào";
-                
-                return $@"💡 **Phân tích nhanh & Đề xuất kinh doanh:**
-
-- **Doanh thu:** Cửa hàng đạt mức doanh thu hoàn thành **{totalRevenue.ToString("N0")} đ** từ **{completedOrders} đơn hàng**.
-- **Vận hành:** Có **{pendingOrders} đơn hàng** đang chờ xử lý. Cần phân bổ nhân sự duyệt đơn sớm trong ngày.
-- **Tồn kho:** {stockAdvice}.
-- **Khuyến nghị:** 
-  1. Duyệt nhanh các đơn hàng mới để tối ưu thời gian giao hàng.
-  2. Tạo yêu cầu nhập kho cho các sản phẩm cảnh báo tồn kho thấp.
-  3. Chạy thêm chương trình khuyến mãi để kích cầu đối với các dòng sản phẩm tồn kho cao.";
-            }
-
-            // General greeting fallback
-            return $@"👋 Xin chào! Tôi là **NovaTech AI Assistant**. 
-
-Hiện tại dịch vụ kết nối đám mây đang tạm thời chuyển sang chế độ offline (Local Mode). Tuy nhiên, tôi vẫn có thể hỗ trợ bạn truy vấn dữ liệu thời gian thực của cửa hàng:
-- 📊 **Doanh thu** (Hỏi về doanh thu hôm nay...)
-- 📦 **Đơn hàng** (Hỏi về số đơn hàng, đơn chờ xử lý...)
-- ⚠️ **Tồn kho thấp** (Hỏi về sản phẩm sắp hết hàng...)
-- 💡 **Đề xuất** (Yêu cầu phân tích & tư vấn...)
-
-Bạn có thể bấm vào các **Gợi ý nhanh** bên dưới hoặc gõ trực tiếp câu hỏi nhé!";
-        }
-
-        [HttpPost]
+        [HttpPost("ClearHistory")]
         public IActionResult ClearHistory()
         {
             var userEmail = HttpContext.Session.GetString("UserEmail");
@@ -197,5 +383,59 @@ Bạn có thể bấm vào các **Gợi ý nhanh** bên dưới hoặc gõ trự
             TempData["ToastType"] = "success";
             return RedirectToAction("Index");
         }
+
+        private string GenerateLocalResponse(string question, decimal totalRevenue, int totalOrders, int pendingOrders, int completedOrders, string lowStockText, int lowStockCount)
+        {
+            string q = question.ToLower();
+
+            if (q.Contains("doanh thu") || q.Contains("tiền") || q.Contains("bán được"))
+                return $"📊 **Báo cáo doanh thu:**\n\n💰 **{totalRevenue:N0} đ** doanh thu hoàn thành từ {completedOrders} đơn.";
+
+            if (q.Contains("đơn hàng") || q.Contains("don hang"))
+                return $"📦 **Đơn hàng:** Tổng {totalOrders} | ⏳ Chờ: {pendingOrders} | ✅ Hoàn thành: {completedOrders}";
+
+            if (q.Contains("tồn kho") || q.Contains("kho") || q.Contains("hết hàng"))
+            {
+                return lowStockCount > 0
+                    ? $"⚠️ **{lowStockCount} sản phẩm sắp hết:**\n{lowStockText}"
+                    : "✅ Tồn kho ổn định, không có sản phẩm nào dưới ngưỡng tối thiểu.";
+            }
+
+            return $"👋 Xin chào **{HttpContext.Session.GetString("UserName")}**! Tôi đang ở chế độ offline. Hỏi tôi về doanh thu, đơn hàng, hoặc tồn kho nhé!";
+        }
+    }
+
+    // ─── Request/Response DTOs ──────────────────────────────────────────────────
+    public class ChatRequest
+    {
+        public string? Message { get; set; }
+    }
+
+    public class ExecuteActionRequest
+    {
+        public string? ActionType { get; set; }
+        public ActionPayloadDto? ActionPayload { get; set; }
+    }
+
+    public class ActionPayloadDto
+    {
+        public string? TenSanPham { get; set; }
+        public string? MoTa { get; set; }
+        public decimal GiaNhap { get; set; }
+        public decimal GiaBan { get; set; }
+        public int SoLuongNhap { get; set; }
+        public int MaDanhMuc { get; set; }
+        public int MaThuongHieu { get; set; }
+        public int MaNCC { get; set; }
+        public string? SKU { get; set; }
+        public string? LyDoDeXuat { get; set; }
+    }
+
+    public class AiActionResponse
+    {
+        public string? Message { get; set; }
+        public bool HasAction { get; set; }
+        public string? ActionType { get; set; }
+        public JsonElement? ActionPayload { get; set; }
     }
 }

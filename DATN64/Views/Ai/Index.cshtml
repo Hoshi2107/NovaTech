@@ -5,223 +5,507 @@
     ViewData["BreadcrumbActive"] = "AI Assistant";
 }
 
-<div class="row justify-content-center animate-fade-in">
-    <div class="col-xl-9 col-lg-10 col-md-12">
-        <div class="card card-glass overflow-hidden shadow-lg border border-opacity-10 border-info">
-            
-            <!-- Header -->
-            <div class="card-header bg-glass py-3 px-4 d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="avatar bg-info bg-opacity-10 p-2.5 rounded-3 border border-info border-opacity-25 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-                        <i class="fa-solid fa-robot text-cyan fs-4"></i>
-                    </div>
-                    <div>
-                        <h5 class="m-0 fw-bold text-dark">Trợ lý ảo NovaTech AI</h5>
-                        <span class="text-xs text-success d-flex align-items-center gap-1.5 fw-semibold">
-                            <span class="d-inline-block rounded-circle bg-success animate-pulse" style="width: 8px; height: 8px;"></span>
-                            Đang trực tuyến (Gemini 1.5 Flash)
-                        </span>
+<style>
+    :root {
+        --ai-bg: #0f1117;
+        --ai-surface: #1a1d27;
+        --ai-card: #22263a;
+        --ai-border: rgba(99,179,237,0.15);
+        --ai-accent: #38bdf8;
+        --ai-accent2: #818cf8;
+        --ai-user-bg: linear-gradient(135deg, #0284c7 0%, #6366f1 100%);
+        --ai-bot-bg: #22263a;
+        --ai-action: linear-gradient(135deg, #10b981 0%, #0284c7 100%);
+        --ai-reject: #ef4444;
+    }
+
+    .ai-wrapper {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 140px);
+        min-height: 600px;
+        background: var(--ai-surface);
+        border-radius: 20px;
+        border: 1px solid var(--ai-border);
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+
+    /* Header */
+    .ai-header {
+        background: linear-gradient(135deg, #1e3a5f 0%, #2d1b69 100%);
+        padding: 16px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--ai-border);
+        flex-shrink: 0;
+    }
+    .ai-header-info { display: flex; align-items: center; gap: 14px; }
+    .ai-avatar {
+        width: 48px; height: 48px;
+        background: rgba(56,189,248,0.15);
+        border: 1.5px solid rgba(56,189,248,0.4);
+        border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 22px;
+        position: relative;
+    }
+    .ai-avatar::after {
+        content: '';
+        position: absolute; bottom: -2px; right: -2px;
+        width: 12px; height: 12px;
+        background: #10b981;
+        border-radius: 50%;
+        border: 2px solid var(--ai-surface);
+        animation: pulse-dot 2s infinite;
+    }
+    @@keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.7;transform:scale(1.2)} }
+    .ai-title { font-weight: 700; font-size: 16px; color: #f0f6ff; margin: 0; }
+    .ai-subtitle { font-size: 12px; color: #38bdf8; margin: 0; }
+
+    /* Messages */
+    .ai-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        background: radial-gradient(ellipse at top left, rgba(56,189,248,0.04) 0%, transparent 60%),
+                    radial-gradient(ellipse at bottom right, rgba(129,140,248,0.04) 0%, transparent 60%),
+                    var(--ai-bg);
+    }
+    .ai-messages::-webkit-scrollbar { width: 5px; }
+    .ai-messages::-webkit-scrollbar-track { background: transparent; }
+    .ai-messages::-webkit-scrollbar-thumb { background: rgba(99,179,237,0.2); border-radius: 10px; }
+
+    /* Message bubbles */
+    .msg-row { display: flex; gap: 12px; animation: msgIn 0.3s ease; }
+    .msg-row.user { flex-direction: row-reverse; }
+    @@keyframes msgIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+    .msg-avatar {
+        width: 36px; height: 36px; border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 16px; flex-shrink: 0; margin-top: 4px;
+    }
+    .msg-avatar.bot { background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); }
+    .msg-avatar.user-av { background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.3); }
+
+    .msg-content { max-width: 72%; display: flex; flex-direction: column; gap: 6px; }
+    .msg-row.user .msg-content { align-items: flex-end; }
+
+    .msg-bubble {
+        padding: 12px 16px;
+        border-radius: 18px;
+        font-size: 14px;
+        line-height: 1.65;
+        word-break: break-word;
+    }
+    .msg-bubble.bot {
+        background: var(--ai-card);
+        border: 1px solid var(--ai-border);
+        border-top-left-radius: 4px;
+        color: #e2e8f0;
+    }
+    .msg-bubble.user {
+        background: var(--ai-user-bg);
+        border-top-right-radius: 4px;
+        color: #fff;
+    }
+    .msg-time { font-size: 11px; color: #4a5568; }
+
+    /* Action card */
+    .action-card {
+        margin-top: 10px;
+        background: linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(2,132,199,0.08) 100%);
+        border: 1px solid rgba(16,185,129,0.3);
+        border-radius: 14px;
+        padding: 16px 18px;
+        max-width: 72%;
+        animation: msgIn 0.4s ease 0.15s both;
+    }
+    .action-card-title {
+        font-size: 13px; font-weight: 600; color: #10b981;
+        display: flex; align-items: center; gap-6px; margin-bottom: 10px;
+    }
+    .action-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+    .btn-accept {
+        background: var(--ai-action); color: #fff;
+        border: none; border-radius: 10px; padding: 9px 20px;
+        font-size: 13px; font-weight: 600; cursor: pointer;
+        display: flex; align-items: center; gap: 6px;
+        transition: all .2s; box-shadow: 0 4px 15px rgba(16,185,129,0.3);
+    }
+    .btn-accept:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16,185,129,0.4); }
+    .btn-accept:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .btn-reject {
+        background: rgba(239,68,68,0.1); color: #ef4444;
+        border: 1px solid rgba(239,68,68,0.3); border-radius: 10px; padding: 9px 20px;
+        font-size: 13px; font-weight: 600; cursor: pointer;
+        display: flex; align-items: center; gap: 6px; transition: all .2s;
+    }
+    .btn-reject:hover { background: rgba(239,68,68,0.2); }
+
+    /* Payload preview */
+    .payload-grid {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+        margin-top: 10px;
+    }
+    .payload-item { background: rgba(255,255,255,0.04); border-radius: 8px; padding: 8px 10px; }
+    .payload-label { font-size: 11px; color: #64748b; margin-bottom: 2px; }
+    .payload-value { font-size: 13px; font-weight: 600; color: #e2e8f0; }
+    .payload-value.price { color: #10b981; }
+
+    /* Footer */
+    .ai-footer { padding: 16px 20px; background: var(--ai-surface); border-top: 1px solid var(--ai-border); flex-shrink: 0; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .chip {
+        background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.2);
+        color: #94a3b8; font-size: 12px; border-radius: 20px;
+        padding: 5px 12px; cursor: pointer; transition: all .2s;
+    }
+    .chip:hover { background: rgba(56,189,248,0.15); color: #38bdf8; border-color: rgba(56,189,248,0.4); }
+
+    .input-row { display: flex; gap: 10px; }
+    .ai-input {
+        flex: 1; background: var(--ai-card); border: 1px solid var(--ai-border);
+        border-radius: 14px; padding: 12px 18px; color: #e2e8f0;
+        font-size: 14px; outline: none; transition: border-color .2s;
+    }
+    .ai-input:focus { border-color: rgba(56,189,248,0.5); box-shadow: 0 0 0 3px rgba(56,189,248,0.08); }
+    .ai-input::placeholder { color: #4a5568; }
+    .ai-send {
+        background: linear-gradient(135deg, #0284c7 0%, #6366f1 100%);
+        border: none; border-radius: 14px; width: 50px; height: 50px;
+        color: #fff; font-size: 18px; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        transition: all .2s; box-shadow: 0 4px 15px rgba(2,132,199,0.3);
+        flex-shrink: 0;
+    }
+    .ai-send:hover { transform: scale(1.05); box-shadow: 0 6px 20px rgba(2,132,199,0.4); }
+    .ai-send:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    /* Typing indicator */
+    .typing-indicator { display: none; }
+    .typing-indicator.show { display: flex; }
+    .typing-dots span {
+        width: 7px; height: 7px; background: #38bdf8;
+        border-radius: 50%; display: inline-block; margin: 0 2px;
+        animation: bounce 1.4s infinite;
+    }
+    .typing-dots span:nth-child(2) { animation-delay: .2s; }
+    .typing-dots span:nth-child(3) { animation-delay: .4s; }
+    @@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-8px)} }
+
+    /* Welcome */
+    .welcome-center {
+        flex: 1; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; text-align: center;
+        gap: 12px; padding: 40px;
+    }
+    .welcome-icon {
+        width: 80px; height: 80px;
+        background: rgba(56,189,248,0.1); border: 1.5px solid rgba(56,189,248,0.3);
+        border-radius: 24px; display: flex; align-items: center; justify-content: center;
+        font-size: 36px; animation: float 3s ease-in-out infinite;
+    }
+    @@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+
+    /* Markdown */
+    .msg-bubble strong { color: #38bdf8; font-weight: 700; }
+    .msg-bubble.user strong { color: #fff; }
+    .bullet-line { display: flex; align-items: flex-start; gap: 8px; margin: 3px 0; }
+    .bullet-dot { width: 5px; height: 5px; background: #38bdf8; border-radius: 50%; margin-top: 7px; flex-shrink: 0; }
+
+    .btn-clear-hist { background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.25); border-radius: 10px; padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all .2s; }
+    .btn-clear-hist:hover { background: rgba(239,68,68,0.2); }
+</style>
+
+<div class="ai-wrapper">
+    <!-- Header -->
+    <div class="ai-header">
+        <div class="ai-header-info">
+            <div class="ai-avatar">🤖</div>
+            <div>
+                <p class="ai-title">NovaTech AI Assistant</p>
+                <p class="ai-subtitle" id="aiStatus">⚡ Agentic Mode — Tự động tạo phiếu & thêm sản phẩm</p>
+            </div>
+        </div>
+        <form asp-action="ClearHistory" method="post" onsubmit="return confirm('Xóa toàn bộ lịch sử?')">
+            <button type="submit" class="btn-clear-hist">
+                <i class="fa-solid fa-trash-can"></i> Xóa lịch sử
+            </button>
+        </form>
+    </div>
+
+    <!-- Messages -->
+    <div class="ai-messages" id="msgBox">
+        @if (!Model.Any())
+        {
+            <div class="welcome-center" id="welcomeBox">
+                <div class="welcome-icon">✨</div>
+                <h4 style="color:#f0f6ff; font-weight:700; margin:0">Chào mừng đến với NovaTech AI</h4>
+                <p style="color:#64748b; font-size:14px; max-width:400px; margin:0">
+                    Tôi có thể phân tích kinh doanh, đề xuất sản phẩm mới và <strong style="color:#38bdf8">tự động tạo phiếu nhập</strong> khi bạn chấp nhận.
+                </p>
+            </div>
+        }
+
+        @foreach (var msg in Model)
+        {
+            if (msg.Sender == "User")
+            {
+                <div class="msg-row user">
+                    <div class="msg-avatar user-av">👤</div>
+                    <div class="msg-content">
+                        <div class="msg-bubble user" data-raw="@msg.Message">@msg.Message</div>
+                        <span class="msg-time">@msg.Timestamp.ToString("HH:mm")</span>
                     </div>
                 </div>
-                
-                <!-- Clear history button -->
-                <form asp-action="ClearHistory" method="post" onsubmit="return confirm('Bạn có chắc chắn muốn xóa toàn bộ lịch sử trò chuyện?');">
-                    <button type="submit" class="btn btn-outline-danger btn-sm text-xs rounded-pill d-flex align-items-center gap-1.5 px-3 py-1.5 hover-bg-light transition-all">
-                        <i class="fa-solid fa-trash-can"></i>
-                        Xóa lịch sử
-                    </button>
-                </form>
-            </div>
-
-            <!-- Chat box body -->
-            <div class="card-body p-4 bg-light bg-opacity-50" id="chatBoxContainer" style="height: 480px; overflow-y: auto; background-color: #fcfdfe;">
-                <div class="d-flex flex-column gap-3.5" id="chatBox">
-                    
-                    <!-- Welcome message if history is empty -->
-                    @if (!Model.Any())
-                    {
-                        <div class="welcome-box text-center py-5 my-3 animate-fade-in">
-                            <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center p-4 mb-3 border border-info border-opacity-25 animate-pulse" style="width: 80px; height: 80px;">
-                                <i class="fa-solid fa-wand-magic-sparkles text-cyan fs-1"></i>
-                            </div>
-                            <h4 class="fw-bold text-dark mb-2">Xin chào! Tôi có thể giúp gì cho bạn?</h4>
-                            <p class="text-muted-custom text-sm mx-auto" style="max-width: 480px;">
-                                Tôi là trợ lý AI được kết nối trực tiếp với dữ liệu thực tế của hệ thống ERP NovaTech. Bạn có thể hỏi tôi về doanh thu, đơn hàng cần xử lý hoặc các sản phẩm sắp hết hàng.
-                            </p>
-                        </div>
-                    }
-
-                    <!-- Messages list -->
-                    @foreach (var msg in Model)
-                    {
-                        if (msg.Sender == "User")
-                        {
-                            <!-- User Message -->
-                            <div class="d-flex justify-content-end animate-fade-in">
-                                <div class="d-flex flex-column align-items-end" style="max-width: 75%;">
-                                    <div class="p-3 text-white shadow-sm" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border-radius: 16px 16px 2px 16px;">
-                                        <p class="text-sm m-0" style="white-space: pre-wrap; line-height: 1.5;">@msg.Message</p>
-                                    </div>
-                                    <span class="text-xxs text-muted-custom mt-1.5">
-                                        <i class="fa-solid fa-user me-1"></i> Bạn • @msg.Timestamp.ToString("HH:mm")
-                                    </span>
-                                </div>
-                            </div>
-                        }
-                        else
-                        {
-                            <!-- AI Message -->
-                            <div class="d-flex justify-content-start animate-fade-in">
-                                <div class="d-flex gap-3" style="max-width: 80%;">
-                                    <div class="avatar bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center border border-info border-opacity-10" style="width: 38px; height: 38px; flex-shrink: 0;">
-                                        <i class="fa-solid fa-robot text-cyan"></i>
-                                    </div>
-                                    <div class="d-flex flex-column">
-                                        <div class="p-3 text-dark bg-white border shadow-sm ai-response-content" style="border-radius: 2px 16px 16px 16px; border-color: #e2e8f0 !important;">
-                                            <p class="text-sm m-0" style="white-space: pre-wrap; line-height: 1.6;">@msg.Message</p>
-                                        </div>
-                                        <span class="text-xxs text-muted-custom mt-1.5">
-                                            NovaTech AI • @msg.Timestamp.ToString("HH:mm")
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                    }
-                </div>
-            </div>
-
-            <!-- Suggestion Chips & Input Footer -->
-            <div class="card-footer bg-glass p-3 border-top border-secondary border-opacity-10">
-                
-                <!-- Suggestion Chips -->
-                <div class="suggestion-chips d-flex flex-wrap gap-2 mb-3">
-                    <span class="text-xs text-muted-custom d-flex align-items-center me-1.5"><i class="fa-solid fa-lightbulb text-warning me-1.5"></i> Gợi ý nhanh:</span>
-                    <button type="button" class="btn btn-outline-info btn-xs rounded-pill text-xs px-3 py-1 hover-bg-light chip-btn" data-question="Báo cáo nhanh doanh thu và tình trạng đơn hàng hôm nay">
-                        📊 Doanh thu & Đơn hàng
-                    </button>
-                    <button type="button" class="btn btn-outline-info btn-xs rounded-pill text-xs px-3 py-1 hover-bg-light chip-btn" data-question="Sản phẩm nào sắp hết hàng và số lượng tồn hiện tại thế nào?">
-                        ⚠️ Cảnh báo hết hàng
-                    </button>
-                    <button type="button" class="btn btn-outline-info btn-xs rounded-pill text-xs px-3 py-1 hover-bg-light chip-btn" data-question="Phân tích sơ lược tình hình kinh doanh hiện tại của cửa hàng và đề xuất">
-                        💡 Đề xuất & Phân tích
-                    </button>
-                </div>
-
-                <!-- Input form -->
-                <form asp-action="AskAi" method="post" id="chatForm">
-                    <div class="input-group bg-white p-1 border rounded-pill shadow-sm" style="border-color: #cbd5e1 !important;">
-                        <input type="text" name="question" id="chatInput" autocomplete="off" class="form-control border-0 px-4 rounded-pill text-sm" placeholder="Nhập câu hỏi về doanh thu, tồn kho, đơn hàng..." required style="box-shadow: none !important;" />
-                        <button class="btn btn-info rounded-pill px-4 d-flex align-items-center gap-2 fw-semibold text-sm" type="submit" id="sendBtn" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none;">
-                            <span id="btnText">Gửi đi</span>
-                            <i class="fa-solid fa-paper-plane" id="btnIcon"></i>
-                            <div class="spinner-border spinner-border-sm text-white d-none" id="btnSpinner" role="status"></div>
-                        </button>
+            }
+            else
+            {
+                <div class="msg-row">
+                    <div class="msg-avatar bot">🤖</div>
+                    <div class="msg-content">
+                        <div class="msg-bubble bot ai-md" data-raw="@msg.Message">@msg.Message</div>
+                        <span class="msg-time">NovaTech AI • @msg.Timestamp.ToString("HH:mm")</span>
                     </div>
-                </form>
-            </div>
+                </div>
+            }
+        }
 
+        <!-- Typing indicator -->
+        <div class="msg-row typing-indicator" id="typingIndicator">
+            <div class="msg-avatar bot">🤖</div>
+            <div class="msg-content">
+                <div class="msg-bubble bot" style="padding:14px 18px">
+                    <div class="typing-dots">
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="ai-footer">
+        <div class="chips">
+            <span class="chip" data-q="Báo cáo nhanh doanh thu và tình trạng đơn hàng hôm nay">📊 Doanh thu & Đơn hàng</span>
+            <span class="chip" data-q="Sản phẩm nào sắp hết hàng? Tồn kho hiện tại thế nào?">⚠️ Cảnh báo tồn kho</span>
+            <span class="chip" data-q="Đề xuất cho tôi 1 mặt hàng công nghệ đang hot trên thị trường mà cửa hàng nên nhập về kinh doanh">🛒 Đề xuất sản phẩm mới</span>
+            <span class="chip" data-q="Phân tích tình hình kinh doanh và cho tôi lời khuyên tối ưu doanh thu">💡 Phân tích & Tư vấn</span>
+        </div>
+        <div class="input-row">
+            <input type="text" class="ai-input" id="chatInput"
+                   placeholder="Hỏi về doanh thu, đề xuất sản phẩm mới để nhập hàng..." autocomplete="off" />
+            <button class="ai-send" id="sendBtn" title="Gửi">
+                <i class="fa-solid fa-paper-plane" id="sendIcon"></i>
+                <div class="spinner-border spinner-border-sm d-none" id="sendSpinner" style="width:18px;height:18px"></div>
+            </button>
         </div>
     </div>
 </div>
 
 @section Scripts {
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const chatBoxContainer = document.getElementById("chatBoxContainer");
-            const chatForm = document.getElementById("chatForm");
-            const chatInput = document.getElementById("chatInput");
-            const sendBtn = document.getElementById("sendBtn");
-            const btnText = document.getElementById("btnText");
-            const btnIcon = document.getElementById("btnIcon");
-            const btnSpinner = document.getElementById("btnSpinner");
-            const chipBtns = document.querySelectorAll(".chip-btn");
-            const aiResponses = document.querySelectorAll(".ai-response-content p");
+<script>
+const msgBox = document.getElementById('msgBox');
+const chatInput = document.getElementById('chatInput');
+const sendBtn = document.getElementById('sendBtn');
+const sendIcon = document.getElementById('sendIcon');
+const sendSpinner = document.getElementById('sendSpinner');
+const typingIndicator = document.getElementById('typingIndicator');
+const welcomeBox = document.getElementById('welcomeBox');
 
-            // Simple Markdown Parser (Regex)
-            function parseMarkdown(text) {
-                let html = text;
-                
-                // 1. Double asterisks for Bold: **bold** -> <strong>bold</strong>
-                html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="fw-bold text-dark">$1</strong>');
-                
-                // 2. Single asterisks for Italic: *italic* -> <em>italic</em>
-                html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-                
-                // 3. Bullet lists: "- Item" -> "<div class='ps-3 mb-1.5'><i class='fa-solid fa-circle text-info me-2' style='font-size: 6px; vertical-align: middle;'></i>$1</div>"
-                html = html.split('\n').map(line => {
-                    const trimmed = line.trim();
-                    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-                        const content = trimmed.substring(2);
-                        return `<div class="ps-3 mb-1.5 d-flex align-items-start"><i class="fa-solid fa-circle text-cyan mt-1.5 me-2" style="font-size: 5px; flex-shrink: 0;"></i><span>${content}</span></div>`;
-                    }
-                    return line;
-                }).join('\n');
+// ── Markdown parser ──────────────────────────────────────────────────────────
+function parseMarkdown(text) {
+    let html = text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>');
 
-                return html;
-            }
-
-            // Parse all AI messages on load
-            aiResponses.forEach(el => {
-                const rawText = el.innerHTML;
-                el.innerHTML = parseMarkdown(rawText);
-            });
-
-            // Auto-scroll to bottom of chat
-            function scrollToBottom() {
-                chatBoxContainer.scrollTop = chatBoxContainer.scrollHeight;
-            }
-            scrollToBottom();
-
-            // Handle Suggestion Chips click
-            chipBtns.forEach(btn => {
-                btn.addEventListener("click", function () {
-                    const question = this.getAttribute("data-question");
-                    chatInput.value = question;
-                    submitForm();
-                });
-            });
-
-            // Form Submit handler
-            chatForm.addEventListener("submit", function (e) {
-                if (!chatInput.value.trim()) {
-                    e.preventDefault();
-                    return;
-                }
-                submitForm();
-            });
-
-            function submitForm() {
-                // Show loading state
-                chatInput.readOnly = true;
-                sendBtn.disabled = true;
-                
-                btnText.textContent = "AI đang xử lý...";
-                btnIcon.classList.add("d-none");
-                btnSpinner.classList.remove("d-none");
-                
-                // Submit form
-                chatForm.submit();
-            }
-        });
-    </script>
+    html = html.split('\n').map(line => {
+        const t = line.trim();
+        if (t.startsWith('- ') || t.startsWith('• ')) {
+            const content = t.substring(2);
+            return `<div class="bullet-line"><span class="bullet-dot"></span><span>${content}</span></div>`;
+        }
+        if (t === '') return '<br>';
+        return `<span>${line}</span><br>`;
+    }).join('');
+    return html;
 }
 
-<style>
-    /* Custom button sizing for extra small */
-    .btn-xs {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.7rem;
-        line-height: 1.2;
-        border-radius: 0.2rem;
+// Apply markdown to all AI messages on load
+document.querySelectorAll('.ai-md').forEach(el => {
+    el.innerHTML = parseMarkdown(el.dataset.raw || el.textContent);
+});
+
+// ── Scroll helper ────────────────────────────────────────────────────────────
+function scrollBottom() {
+    setTimeout(() => { msgBox.scrollTop = msgBox.scrollHeight; }, 50);
+}
+scrollBottom();
+
+// ── Append message bubble ────────────────────────────────────────────────────
+function appendMsg(sender, text, time) {
+    if (welcomeBox) welcomeBox.style.display = 'none';
+    const isUser = sender === 'user';
+    const now = time || new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+
+    const row = document.createElement('div');
+    row.className = `msg-row ${isUser ? 'user' : ''}`;
+    row.innerHTML = `
+        <div class="msg-avatar ${isUser ? 'user-av' : 'bot'}">${isUser ? '👤' : '🤖'}</div>
+        <div class="msg-content">
+            <div class="msg-bubble ${isUser ? 'user' : 'bot ai-md'}">${isUser ? text : parseMarkdown(text)}</div>
+            <span class="msg-time">${isUser ? 'Bạn' : 'NovaTech AI'} • ${now}</span>
+        </div>`;
+    msgBox.insertBefore(row, typingIndicator);
+    scrollBottom();
+    return row;
+}
+
+// ── Append action card ───────────────────────────────────────────────────────
+function appendActionCard(payload, actionType) {
+    if (!payload) return;
+
+    const giaNhap = payload.giaNhap || 0;
+    const giaBan = payload.giaBan || 0;
+    const soLuong = payload.soLuongNhap || 0;
+    const tongChi = (giaNhap * soLuong).toLocaleString('vi-VN');
+    const loiNhuan = giaBan > 0 ? Math.round((giaBan - giaNhap) / giaNhap * 100) : 0;
+
+    const card = document.createElement('div');
+    card.className = 'action-card';
+    card.innerHTML = `
+        <div class="action-card-title" style="gap:6px">
+            <span style="font-size:18px">📋</span>
+            <span>AI đề xuất hành động — Tạo phiếu nhập & Thêm sản phẩm</span>
+        </div>
+        <div class="payload-grid">
+            <div class="payload-item">
+                <div class="payload-label">📦 Sản phẩm</div>
+                <div class="payload-value">${payload.tenSanPham || '—'}</div>
+            </div>
+            <div class="payload-item">
+                <div class="payload-label">📥 Số lượng nhập</div>
+                <div class="payload-value">${soLuong} cái</div>
+            </div>
+            <div class="payload-item">
+                <div class="payload-label">💰 Giá nhập</div>
+                <div class="payload-value price">${giaNhap.toLocaleString('vi-VN')} đ</div>
+            </div>
+            <div class="payload-item">
+                <div class="payload-label">🏷️ Giá bán đề xuất</div>
+                <div class="payload-value price">${giaBan.toLocaleString('vi-VN')} đ</div>
+            </div>
+            <div class="payload-item">
+                <div class="payload-label">🧾 Tổng chi phí</div>
+                <div class="payload-value price">${tongChi} đ</div>
+            </div>
+            <div class="payload-item">
+                <div class="payload-label">📈 Lợi nhuận/cái</div>
+                <div class="payload-value" style="color:#818cf8">+${loiNhuan}%</div>
+            </div>
+        </div>
+        <div class="payload-item" style="margin-top:8px">
+            <div class="payload-label">💡 Lý do đề xuất</div>
+            <div class="payload-value" style="font-size:12px;font-weight:400;color:#94a3b8">${payload.lyDoDeXuat || '—'}</div>
+        </div>
+        <div class="action-buttons">
+            <button class="btn-accept" id="acceptBtn">
+                ✅ Chấp nhận — Tạo ngay!
+            </button>
+            <button class="btn-reject" id="rejectBtn">
+                ❌ Từ chối
+            </button>
+        </div>`;
+
+    msgBox.insertBefore(card, typingIndicator);
+    scrollBottom();
+
+    // Accept handler
+    card.querySelector('#acceptBtn').addEventListener('click', async () => {
+        card.querySelector('#acceptBtn').disabled = true;
+        card.querySelector('#acceptBtn').innerHTML = `<div class="spinner-border spinner-border-sm" style="width:16px;height:16px"></div> Đang thực hiện...`;
+        card.querySelector('#rejectBtn').disabled = true;
+
+        try {
+            const res = await fetch('/Ai/ExecuteAction', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ actionType, actionPayload: payload })
+            });
+            const data = await res.json();
+
+            card.style.borderColor = 'rgba(16,185,129,0.5)';
+            card.style.background = 'rgba(16,185,129,0.06)';
+            card.querySelector('.action-buttons').innerHTML = `<span style="color:#10b981;font-size:13px;font-weight:600">✅ Đã thực hiện thành công!</span>`;
+
+            appendMsg('bot', data.message || '✅ Đã tạo phiếu nhập và thêm sản phẩm thành công!');
+        } catch(e) {
+            card.querySelector('.action-buttons').innerHTML = `<span style="color:#ef4444;font-size:13px">❌ Lỗi: ${e.message}</span>`;
+        }
+    });
+
+    // Reject handler
+    card.querySelector('#rejectBtn').addEventListener('click', () => {
+        card.style.opacity = '0.4';
+        card.querySelector('.action-buttons').innerHTML = `<span style="color:#64748b;font-size:13px">Đã từ chối đề xuất này.</span>`;
+        appendMsg('bot', '👍 Đã bỏ qua đề xuất. Bạn có muốn thử sản phẩm khác hoặc điều chỉnh yêu cầu không?');
+    });
+}
+
+// ── Send message ─────────────────────────────────────────────────────────────
+async function sendMessage(text) {
+    const msg = text || chatInput.value.trim();
+    if (!msg) return;
+
+    chatInput.value = '';
+    appendMsg('user', msg);
+
+    // Loading state
+    sendBtn.disabled = true;
+    sendIcon.classList.add('d-none');
+    sendSpinner.classList.remove('d-none');
+    typingIndicator.classList.add('show');
+    scrollBottom();
+
+    try {
+        const res = await fetch('/Ai/ChatAsync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: msg })
+        });
+
+        typingIndicator.classList.remove('show');
+
+        if (!res.ok) { appendMsg('bot', '❌ Lỗi kết nối server. Thử lại nhé!'); return; }
+
+        const data = await res.json();
+        appendMsg('bot', data.message || 'Không có phản hồi.');
+
+        // If AI wants to do an action → show action card
+        if (data.hasAction && data.actionType && data.actionPayload) {
+            setTimeout(() => appendActionCard(data.actionPayload, data.actionType), 300);
+        }
+    } catch(e) {
+        typingIndicator.classList.remove('show');
+        appendMsg('bot', `⚠️ Lỗi: ${e.message}`);
+    } finally {
+        sendBtn.disabled = false;
+        sendIcon.classList.remove('d-none');
+        sendSpinner.classList.add('d-none');
+        chatInput.focus();
     }
-    
-    .gap-3\.5 {
-        gap: 0.875rem !important;
-    }
-    
-    /* Animation helper */
-    .welcome-box {
-        animation: fadeInUp 0.5s ease forwards;
-    }
-</style>
+}
+
+// ── Event listeners ──────────────────────────────────────────────────────────
+sendBtn.addEventListener('click', () => sendMessage());
+chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => sendMessage(c.dataset.q)));
+</script>
+}

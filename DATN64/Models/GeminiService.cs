@@ -17,42 +17,59 @@ namespace DATN64.Models
         {
             _httpClient = new HttpClient();
             _apiKey = configuration["GeminiAI:ApiKey"] ?? "";
-            // Default to gemini-1.5-flash if not specified or empty
-            _model = string.IsNullOrEmpty(configuration["GeminiAI:Model"]) 
-                ? "gemini-1.5-flash" 
+            _model = string.IsNullOrEmpty(configuration["GeminiAI:Model"])
+                ? "gemini-1.5-flash"
                 : configuration["GeminiAI:Model"];
         }
 
         public async Task<string> GenerateResponseAsync(string systemInstruction, string prompt)
         {
             if (string.IsNullOrEmpty(_apiKey))
-            {
                 return "Lỗi: API Key cho Gemini AI chưa được cấu hình trong appsettings.json.";
-            }
 
             var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
 
             var requestBody = new
             {
-                contents = new[]
+                contents = new[] { new { parts = new[] { new { text = prompt } } } },
+                systemInstruction = new { parts = new[] { new { text = systemInstruction } } }
+            };
+
+            return await CallGeminiAsync(url, requestBody);
+        }
+
+        /// <summary>
+        /// Generates a structured agentic response. The AI is instructed to return
+        /// a raw JSON object (no markdown fences) with the shape:
+        /// {
+        ///   "message": "...",
+        ///   "hasAction": true/false,
+        ///   "actionType": "CREATE_PRODUCT_AND_IMPORT" | null,
+        ///   "actionPayload": { ... }
+        /// }
+        /// </summary>
+        public async Task<string> GenerateActionResponseAsync(string systemInstruction, string prompt)
+        {
+            if (string.IsNullOrEmpty(_apiKey))
+                return "{\"message\":\"Lỗi: API Key chưa cấu hình.\",\"hasAction\":false}";
+
+            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
+
+            var requestBody = new
+            {
+                contents = new[] { new { parts = new[] { new { text = prompt } } } },
+                systemInstruction = new { parts = new[] { new { text = systemInstruction } } },
+                generationConfig = new
                 {
-                    new
-                    {
-                        parts = new[]
-                        {
-                            new { text = prompt }
-                        }
-                    }
-                },
-                systemInstruction = new
-                {
-                    parts = new[]
-                    {
-                        new { text = systemInstruction }
-                    }
+                    responseMimeType = "application/json"
                 }
             };
 
+            return await CallGeminiAsync(url, requestBody);
+        }
+
+        private async Task<string> CallGeminiAsync(string url, object requestBody)
+        {
             var json = JsonSerializer.Serialize(requestBody);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
@@ -67,7 +84,7 @@ namespace DATN64.Models
 
                 var responseString = await response.Content.ReadAsStringAsync();
                 using var doc = JsonDocument.Parse(responseString);
-                
+
                 var reply = doc.RootElement
                     .GetProperty("candidates")[0]
                     .GetProperty("content")
