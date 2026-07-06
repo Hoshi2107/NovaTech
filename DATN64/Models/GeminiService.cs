@@ -27,7 +27,7 @@ namespace DATN64.Models
             if (string.IsNullOrEmpty(_apiKey))
                 return "Lỗi: API Key cho Gemini AI chưa được cấu hình trong appsettings.json.";
 
-            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
+            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent";
 
             var requestBody = new
             {
@@ -53,7 +53,7 @@ namespace DATN64.Models
             if (string.IsNullOrEmpty(_apiKey))
                 return "{\"message\":\"Lỗi: API Key chưa cấu hình.\",\"hasAction\":false}";
 
-            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
+            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent";
 
             var requestBody = new
             {
@@ -75,7 +75,16 @@ namespace DATN64.Models
 
             try
             {
-                var response = await _httpClient.PostAsync(url, content);
+                using var request = new HttpRequestMessage(HttpMethod.Post, url);
+                request.Content = content;
+                
+                // Clear any automatically propagated Authorization header (common in some hosting environments)
+                request.Headers.Authorization = null;
+                
+                // Pass API key via header instead of query parameter
+                request.Headers.Add("x-goog-api-key", _apiKey);
+
+                var response = await _httpClient.SendAsync(request);
                 if (!response.IsSuccessStatusCode)
                 {
                     var errorContent = await response.Content.ReadAsStringAsync();
