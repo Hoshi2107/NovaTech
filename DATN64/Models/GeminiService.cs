@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -23,23 +24,84 @@ namespace DATN64.Models
             };
             _httpClient = new HttpClient(handler);
             
-            // Lấy API Key từ nhiều nguồn: appsettings, biến môi trường (cả dạng dấu hai chấm và dấu gạch dưới đúp, hoặc chuẩn GEMINI_API_KEY)
-            _apiKey = (configuration["GeminiAI:ApiKey"] 
-                      ?? configuration["GeminiAI__ApiKey"] 
-                      ?? configuration["GEMINI_API_KEY"] 
-                      ?? Environment.GetEnvironmentVariable("GeminiAI__ApiKey") 
-                      ?? Environment.GetEnvironmentVariable("GEMINI_API_KEY") 
-                      ?? "").Trim();
+            // 1. Đọc từ file .env trước tiên
+            var keySource = LoadApiKeyFromEnvFile();
+
+            // 2. Nếu file .env trống hoặc không tồn tại, check Environment Variables hệ thống
+            if (string.IsNullOrWhiteSpace(keySource))
+            {
+                keySource = Environment.GetEnvironmentVariable("GEMINI_API_KEY") 
+                            ?? Environment.GetEnvironmentVariable("GeminiAI__ApiKey");
+            }
+
+            // 3. Nếu vẫn trống, check trong IConfiguration (bao gồm appsettings và biến môi trường được mapping tự động)
+            if (string.IsNullOrWhiteSpace(keySource))
+            {
+                keySource = configuration["GEMINI_API_KEY"] 
+                            ?? configuration["GeminiAI__ApiKey"] 
+                            ?? configuration["GeminiAI:ApiKey"];
+            }
+
+            _apiKey = (keySource ?? "").Trim();
 
             _model = string.IsNullOrEmpty(configuration["GeminiAI:Model"])
                 ? "gemini-1.5-flash"
                 : configuration["GeminiAI:Model"];
         }
 
+        private string LoadApiKeyFromEnvFile()
+        {
+            try
+            {
+                // Danh sách các đường dẫn khả thi của file ApiKey.env
+                var paths = new[]
+                {
+                    Path.Combine(Directory.GetCurrentDirectory(), "ApiKey.env"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ApiKey.env"),
+                    "ApiKey.env"
+                };
+
+                foreach (var path in paths)
+                {
+                    if (File.Exists(path))
+                    {
+                        var lines = File.ReadAllLines(path);
+                        foreach (var line in lines)
+                        {
+                            if (string.IsNullOrWhiteSpace(line) || line.Trim().StartsWith("#"))
+                                continue;
+
+                            var parts = line.Split('=', 2);
+                            if (parts.Length == 2)
+                            {
+                                var key = parts[0].Trim();
+                                var val = parts[1].Trim();
+                                
+                                // Hỗ trợ cả GEMINI_API_KEY hoặc GeminiAI__ApiKey
+                                if (key.Equals("GEMINI_API_KEY", StringComparison.OrdinalIgnoreCase) ||
+                                    key.Equals("GeminiAI__ApiKey", StringComparison.OrdinalIgnoreCase) ||
+                                    key.Equals("GeminiAI:ApiKey", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    // Loại bỏ dấu nháy đơn hoặc nháy kép nếu có (ví dụ: KEY="value")
+                                    return val.Trim('"', '\'');
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log lỗi ra Console hoặc debug, không crash ứng dụng
+                Console.WriteLine($"[GeminiService] Lỗi khi đọc file ApiKey.env: {ex.Message}");
+            }
+            return "";
+        }
+
         public async Task<string> GenerateResponseAsync(string systemInstruction, string prompt)
         {
             if (string.IsNullOrEmpty(_apiKey))
-                return "Lỗi: API Key cho Gemini AI chưa được cấu hình. Vui lòng kiểm tra appsettings.json hoặc Environment Variables.";
+                return "Lỗi: API Key cho Gemini AI chưa được cấu hình. Vui lòng kiểm tra appsettings.json, ApiKey.env hoặc Environment Variables.";
 
             var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent";
 
@@ -65,7 +127,7 @@ namespace DATN64.Models
         public async Task<string> GenerateActionResponseAsync(string systemInstruction, string prompt)
         {
             if (string.IsNullOrEmpty(_apiKey))
-                return "{\"message\":\"Lỗi: API Key chưa cấu hình. Vui lòng kiểm tra appsettings.json hoặc Environment Variables.\",\"hasAction\":false}";
+                return "{\"message\":\"Lỗi: API Key chưa cấu hình. Vui lòng kiểm tra appsettings.json, ApiKey.env hoặc Environment Variables.\",\"hasAction\":false}";
 
             var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent";
 
