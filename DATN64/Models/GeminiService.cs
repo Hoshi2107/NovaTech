@@ -15,8 +15,22 @@ namespace DATN64.Models
 
         public GeminiService(IConfiguration configuration)
         {
-            _httpClient = new HttpClient();
-            _apiKey = configuration["GeminiAI:ApiKey"] ?? "";
+            var handler = new HttpClientHandler
+            {
+                UseDefaultCredentials = false,
+                Proxy = null,
+                UseProxy = false
+            };
+            _httpClient = new HttpClient(handler);
+            
+            // Lấy API Key từ nhiều nguồn: appsettings, biến môi trường (cả dạng dấu hai chấm và dấu gạch dưới đúp, hoặc chuẩn GEMINI_API_KEY)
+            _apiKey = (configuration["GeminiAI:ApiKey"] 
+                      ?? configuration["GeminiAI__ApiKey"] 
+                      ?? configuration["GEMINI_API_KEY"] 
+                      ?? Environment.GetEnvironmentVariable("GeminiAI__ApiKey") 
+                      ?? Environment.GetEnvironmentVariable("GEMINI_API_KEY") 
+                      ?? "").Trim();
+
             _model = string.IsNullOrEmpty(configuration["GeminiAI:Model"])
                 ? "gemini-1.5-flash"
                 : configuration["GeminiAI:Model"];
@@ -25,7 +39,7 @@ namespace DATN64.Models
         public async Task<string> GenerateResponseAsync(string systemInstruction, string prompt)
         {
             if (string.IsNullOrEmpty(_apiKey))
-                return "Lỗi: API Key cho Gemini AI chưa được cấu hình trong appsettings.json.";
+                return "Lỗi: API Key cho Gemini AI chưa được cấu hình. Vui lòng kiểm tra appsettings.json hoặc Environment Variables.";
 
             var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent";
 
@@ -51,7 +65,7 @@ namespace DATN64.Models
         public async Task<string> GenerateActionResponseAsync(string systemInstruction, string prompt)
         {
             if (string.IsNullOrEmpty(_apiKey))
-                return "{\"message\":\"Lỗi: API Key chưa cấu hình.\",\"hasAction\":false}";
+                return "{\"message\":\"Lỗi: API Key chưa cấu hình. Vui lòng kiểm tra appsettings.json hoặc Environment Variables.\",\"hasAction\":false}";
 
             var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent";
 
@@ -75,14 +89,17 @@ namespace DATN64.Models
 
             try
             {
-                using var request = new HttpRequestMessage(HttpMethod.Post, url);
+                // Truyền key qua query parameter ?key=... để tránh bị reverse proxy hoặc router của host lột mất custom header
+                var urlWithKey = $"{url}?key={Uri.EscapeDataString(_apiKey)}";
+                
+                using var request = new HttpRequestMessage(HttpMethod.Post, urlWithKey);
                 request.Content = content;
                 
-                // Clear any automatically propagated Authorization header (common in some hosting environments)
+                // Clear bất kỳ Authorization header nào tự động sinh ra bởi môi trường host (vd: Azure Easy Auth, Managed Identity, IIS proxy...)
                 request.Headers.Authorization = null;
                 
-                // Pass API key via header instead of query parameter
-                request.Headers.Add("x-goog-api-key", _apiKey);
+                // Vẫn truyền kèm custom header dự phòng
+                request.Headers.TryAddWithoutValidation("x-goog-api-key", _apiKey);
 
                 var response = await _httpClient.SendAsync(request);
                 if (!response.IsSuccessStatusCode)
