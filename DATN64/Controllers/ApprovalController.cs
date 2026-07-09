@@ -148,5 +148,46 @@ namespace DATN64.Controllers
             _context.SaveChanges();
             return RedirectToAction(nameof(Index));
         }
+
+        [HttpGet]
+        public IActionResult GetOrderDetails(int id)
+        {
+            var order = _context.DonHangs
+                .Include(o => o.KhachHang)
+                .Include(o => o.ChiTietDonHangs)
+                    .ThenInclude(ct => ct.SanPham)
+                .FirstOrDefault(o => o.MaDonHang == id);
+
+            if (order == null)
+                return NotFound(new { message = "Không tìm thấy đơn hàng." });
+
+            var details = new
+            {
+                MaDonHang = order.MaDonHang,
+                NgayDat = order.NgayDat?.ToString("dd/MM/yyyy HH:mm"),
+                TongTien = order.TongTien,
+                TrangThai = order.TrangThai,
+                PhuongThucThanhToan = order.PhuongThucThanhToan,
+                GhiChu = order.GhiChu,
+                KhachHang = new
+                {
+                    HoTen = order.KhachHang?.HoTen ?? "Khách vãng lai",
+                    SoDienThoai = order.KhachHang?.SoDienThoai ?? "",
+                    Email = order.KhachHang?.Email ?? "",
+                    DiaChi = order.KhachHang?.DiaChi ?? ""
+                },
+                Items = (order.ChiTietDonHangs ?? new List<ChiTietDonHang>()).Select(ct => new
+                {
+                    MaSanPham = ct.MaSanPham,
+                    TenSanPham = ct.SanPham?.TenSanPham ?? "Sản phẩm không rõ",
+                    HinhAnh = ct.SanPham?.HinhAnh ?? "",
+                    SoLuong = ct.SoLuong,
+                    DonGia = ct.DonGia,
+                    ThanhTien = ct.SoLuong * ct.DonGia
+                }).ToList()
+            };
+
+            return Json(details);
+        }
     }
 }

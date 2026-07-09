@@ -107,6 +107,10 @@
                                     </td>
                                     <td class="text-center">
                                         <div class="d-flex gap-2 justify-content-center">
+                                            <button type="button" class="btn btn-sm btn-outline-primary btn-view-order-detail"
+                                                    data-order-id="@order.MaDonHang">
+                                                <i class="fa-solid fa-eye me-1"></i>Chi tiết
+                                            </button>
                                             <form method="post" asp-action="ApproveOrder" asp-route-id="@order.MaDonHang" class="d-inline">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="action" value="approve" />
@@ -235,6 +239,29 @@
 
 @section Modals {
     
+    <!-- Modal Chi tiết đơn hàng -->
+    <div class="modal fade" id="orderDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-0 bg-primary text-white rounded-top">
+                    <h5 class="modal-title"><i class="fa-solid fa-circle-info me-2"></i>Chi tiết đơn hàng <span id="detailOrderId"></span></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4" id="orderDetailContent">
+                    <!-- Dynamic details loading spinner -->
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Đang tải...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="rejectOrderModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
@@ -355,5 +382,128 @@
                 document.getElementById('rejectInvCode').textContent = '#' + btn.getAttribute('data-txn-code');
             });
         }
+
+        // Modal view order details
+        var orderDetailModalEl = document.getElementById('orderDetailModal');
+        var orderDetailModal = orderDetailModalEl ? new bootstrap.Modal(orderDetailModalEl) : null;
+        
+        var ordersTableBody = document.getElementById('ordersTableBody');
+        if (ordersTableBody && orderDetailModal) {
+            ordersTableBody.addEventListener('click', function(e) {
+                var btn = e.target.closest('.btn-view-order-detail');
+                if (!btn) return;
+                
+                var orderId = btn.getAttribute('data-order-id');
+                document.getElementById('detailOrderId').textContent = '#' + orderId;
+                
+                var contentEl = document.getElementById('orderDetailContent');
+                contentEl.innerHTML = 
+                    '<div class="text-center py-4">' +
+                        '<div class="spinner-border text-primary" role="status">' +
+                            '<span class="visually-hidden">Đang tải...</span>' +
+                        '</div>' +
+                    '</div>';
+                
+                orderDetailModal.show();
+
+                fetch('/Approval/GetOrderDetails?id=' + orderId)
+                    .then(function(res) {
+                        if (!res.ok) throw new Error('Không thể tải chi tiết đơn hàng');
+                        return res.json();
+                    })
+                    .then(function(data) {
+                        var itemsHtml = '';
+                        (data.items || []).forEach(function(item) {
+                            var imgHtml = item.hinhAnh 
+                                ? '<img src="' + item.hinhAnh + '" class="img-thumbnail me-2" style="width: 50px; height: 50px; object-fit: cover;" />' 
+                                : '<div class="bg-light text-muted d-inline-flex align-items-center justify-content-center me-2 border rounded" style="width: 50px; height: 50px;"><i class="fa-solid fa-image"></i></div>';
+                            
+                            itemsHtml += '<tr>' +
+                                '<td>' +
+                                    '<div class="d-flex align-items-center">' +
+                                        imgHtml +
+                                        '<div>' +
+                                            '<div class="fw-semibold">' + item.tenSanPham + '</div>' +
+                                            '<div class="text-muted small">Mã SP: ' + item.maSanPham + '</div>' +
+                                        '</div>' +
+                                    '</div>' +
+                                '</td>' +
+                                '<td class="text-end text-nowrap">' + item.donGia.toLocaleString('vi-VN') + ' VNĐ</td>' +
+                                '<td class="text-center">' + item.soLuong + '</td>' +
+                                '<td class="text-end text-success fw-bold text-nowrap">' + item.thanhTien.toLocaleString('vi-VN') + ' VNĐ</td>' +
+                            '</tr>';
+                        });
+
+                        contentEl.innerHTML = 
+                            '<div class="row g-3 mb-4">' +
+                                '<div class="col-md-6">' +
+                                    '<div class="p-3 bg-light rounded-3 h-100">' +
+                                        '<h6 class="fw-bold mb-3 text-primary"><i class="fa-solid fa-user me-2"></i>Thông tin khách hàng</h6>' +
+                                        '<div class="mb-1"><strong>Họ tên:</strong> ' + data.khachHang.hoTen + '</div>' +
+                                        '<div class="mb-1"><strong>SĐT:</strong> ' + (data.khachHang.soDienThoai || '—') + '</div>' +
+                                        '<div class="mb-1"><strong>Email:</strong> ' + (data.khachHang.email || '—') + '</div>' +
+                                        '<div><strong>Địa chỉ:</strong> ' + (data.khachHang.diaChi || '—') + '</div>' +
+                                    '</div>' +
+                                '</div>' +
+                                '<div class="col-md-6">' +
+                                    '<div class="p-3 bg-light rounded-3 h-100">' +
+                                        '<h6 class="fw-bold mb-3 text-primary"><i class="fa-solid fa-circle-info me-2"></i>Thông tin đơn hàng</h6>' +
+                                        '<div class="mb-1"><strong>Ngày đặt:</strong> ' + (data.ngayDat || '—') + '</div>' +
+                                        '<div class="mb-1">' +
+                                            '<strong>Trạng thái:</strong> ' +
+                                            '<span class="badge bg-warning text-dark">' + data.trangThai + '</span>' +
+                                        '</div>' +
+                                        '<div class="mb-1"><strong>Phương thức thanh toán:</strong> ' + (data.phuongThucThanhToan || '—') + '</div>' +
+                                        '<div><strong>Ghi chú:</strong> ' + (data.ghiChu || '—') + '</div>' +
+                                    '</div>' +
+                                '</div>' +
+                            '</div>' +
+                            
+                            '<h6 class="fw-bold mb-3 text-primary"><i class="fa-solid fa-list me-2"></i>Danh sách sản phẩm</h6>' +
+                            '<div class="table-responsive">' +
+                                '<table class="table table-bordered align-middle">' +
+                                    '<thead class="table-light">' +
+                                        '<tr>' +
+                                            '<th>Sản phẩm</th>' +
+                                            '<th class="text-end" style="width: 130px;">Đơn giá</th>' +
+                                            '<th class="text-center" style="width: 80px;">SL</th>' +
+                                            '<th class="text-end" style="width: 150px;">Thành tiền</th>' +
+                                        '</tr>' +
+                                    '</thead>' +
+                                    '<tbody>' +
+                                        itemsHtml +
+                                        '<tr class="table-light fw-bold">' +
+                                            '<td colspan="3" class="text-end">Tổng tiền thanh toán:</td>' +
+                                            '<td class="text-end text-danger fs-5">' + data.tongTien.toLocaleString('vi-VN') + ' VNĐ</td>' +
+                                        '</tr>' +
+                                    '</tbody>' +
+                                '</table>' +
+                            '</div>';
+                    })
+                    .catch(function(err) {
+                        contentEl.innerHTML = 
+                            '<div class="alert alert-danger mb-0">' +
+                                '<i class="fa-solid fa-triangle-exclamation me-2"></i>' + err.message +
+                            '</div>';
+                    });
+            });
+        }
+
+        // Preserve active tab state across reloads/redirects
+        var activeTabId = sessionStorage.getItem('activeApprovalTab');
+        if (activeTabId) {
+            var tabButton = document.getElementById(activeTabId);
+            if (tabButton) {
+                var tabInstance = bootstrap.Tab.getInstance(tabButton) || new bootstrap.Tab(tabButton);
+                tabInstance.show();
+            }
+        }
+
+        var tabButtons = document.querySelectorAll('#approvalTabs button[data-bs-toggle="tab"]');
+        tabButtons.forEach(function(btn) {
+            btn.addEventListener('shown.bs.tab', function(e) {
+                sessionStorage.setItem('activeApprovalTab', e.target.id);
+            });
+        });
     });
 </script>
