@@ -279,6 +279,20 @@ namespace FakeTikTokShop.Controllers
                     });
                 }
 
+                // Also update stock & info of active livestream products
+                var liveProducts = await _context.LivestreamProducts.ToListAsync();
+                foreach (var lp in liveProducts)
+                {
+                    var extProd = externalProducts.FirstOrDefault(ep => ep.MaSanPham == lp.ProductId);
+                    if (extProd != null)
+                    {
+                        lp.Stock = extProd.SoLuongTon;
+                        lp.Price = extProd.GiaBan;
+                        lp.Name = extProd.TenSanPham;
+                        lp.ImageUrl = extProd.HinhAnh;
+                    }
+                }
+
                 await _context.SaveChangesAsync();
                 return Ok(new { message = $"Đồng bộ thành công {externalProducts.Count} sản phẩm từ NovaTech!", productsCount = externalProducts.Count });
             }
@@ -379,6 +393,367 @@ namespace FakeTikTokShop.Controllers
 
             return isSuccess;
         }
+
+        // --- LIVESTREAM API ---
+        [HttpGet("livestream/products")]
+        public async Task<IActionResult> GetLivestreamProducts()
+        {
+            var products = await _context.LivestreamProducts.ToListAsync();
+            return Ok(products);
+        }
+
+        [HttpPost("livestream/products")]
+        public async Task<IActionResult> AddLivestreamProduct([FromBody] AddLivestreamProductRequest request)
+        {
+            var cache = await _context.ProductCaches.FirstOrDefaultAsync(p => p.ProductId == request.ProductId);
+            if (cache == null)
+            {
+                return NotFound(new { message = "Sản phẩm không có trong catalog." });
+            }
+
+            var existing = await _context.LivestreamProducts.FirstOrDefaultAsync(p => p.ProductId == request.ProductId);
+            if (existing != null)
+            {
+                return BadRequest(new { message = "Sản phẩm này đã được thêm vào livestream." });
+            }
+
+            var liveProduct = new TikTokLivestreamProduct
+            {
+                ProductId = cache.ProductId,
+                Name = cache.Name,
+                Sku = cache.Sku,
+                Price = cache.Price,
+                ImageUrl = cache.ImageUrl,
+                Stock = cache.Stock,
+                IsPinned = false,
+                SalesCount = 0
+            };
+
+            _context.LivestreamProducts.Add(liveProduct);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Đã thêm sản phẩm vào livestream thành công!", product = liveProduct });
+        }
+
+        [HttpDelete("livestream/products/{productId}")]
+        public async Task<IActionResult> DeleteLivestreamProduct(int productId)
+        {
+            var product = await _context.LivestreamProducts.FirstOrDefaultAsync(p => p.ProductId == productId);
+            if (product == null)
+            {
+                return NotFound(new { message = "Không tìm thấy sản phẩm livestream." });
+            }
+
+            _context.LivestreamProducts.Remove(product);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Đã xóa sản phẩm khỏi livestream." });
+        }
+
+        [HttpPost("livestream/products/{productId}/pin")]
+        public async Task<IActionResult> PinProduct(int productId)
+        {
+            var products = await _context.LivestreamProducts.ToListAsync();
+            var target = products.FirstOrDefault(p => p.ProductId == productId);
+            if (target == null)
+            {
+                return NotFound(new { message = "Không tìm thấy sản phẩm livestream." });
+            }
+
+            foreach (var p in products)
+            {
+                p.IsPinned = (p.ProductId == productId);
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = $"Đã ghim sản phẩm: {target.Name}", products });
+        }
+
+        [HttpPost("livestream/products/{productId}/unpin")]
+        public async Task<IActionResult> UnpinProduct(int productId)
+        {
+            var product = await _context.LivestreamProducts.FirstOrDefaultAsync(p => p.ProductId == productId);
+            if (product == null)
+            {
+                return NotFound(new { message = "Không tìm thấy sản phẩm livestream." });
+            }
+
+            product.IsPinned = false;
+            await _context.SaveChangesAsync();
+            return Ok(new { message = $"Đã bỏ ghim sản phẩm: {product.Name}", product });
+        }
+
+        [HttpPost("livestream/products/{productId}/stock")]
+        public async Task<IActionResult> UpdateLiveProductStock(int productId, [FromBody] UpdateStockRequest request)
+        {
+            var product = await _context.LivestreamProducts.FirstOrDefaultAsync(p => p.ProductId == productId);
+            if (product == null)
+            {
+                return NotFound(new { message = "Không tìm thấy sản phẩm livestream." });
+            }
+
+            product.Stock = request.Stock;
+            
+            var cachedProd = await _context.ProductCaches.FirstOrDefaultAsync(p => p.ProductId == productId);
+            if (cachedProd != null)
+            {
+                cachedProd.Stock = request.Stock;
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Cập nhật tồn kho thành công!", product });
+        }
+
+        [HttpPost("livestream/simulate-buy")]
+        public async Task<IActionResult> SimulateBuy([FromBody] SimulateBuyRequest request)
+        {
+            var liveProd = await _context.LivestreamProducts.FirstOrDefaultAsync(p => p.ProductId == request.ProductId);
+            if (liveProd == null)
+            {
+                return BadRequest(new { message = "Sản phẩm không có trong livestream." });
+            }
+
+            if (liveProd.Stock < request.Quantity)
+            {
+                return BadRequest(new { message = $"Sản phẩm chỉ còn {liveProd.Stock} trong live! Không đủ để mua {request.Quantity}." });
+            }
+
+            // Create a fake order
+            var orderId = "TT-LIVE-" + DateTime.Now.ToString("yyyyMMdd") + new Random().Next(1000, 9999);
+            var order = new TikTokOrder
+            {
+                OrderId = orderId,
+                CustomerName = request.CustomerName ?? "Khách xem Live",
+                Phone = request.Phone ?? "0987654321",
+                Address = request.Address ?? "Màn hình Livestream TikTok",
+                Note = "Mua từ Livestream",
+                PaymentMethod = "COD",
+                Status = "Awaiting Shipment",
+                CreatedAt = DateTime.Now,
+                SyncStatus = "Pending"
+            };
+
+            liveProd.Stock -= request.Quantity;
+            liveProd.SalesCount += request.Quantity;
+
+            var cachedProd = await _context.ProductCaches.FirstOrDefaultAsync(p => p.ProductId == request.ProductId);
+            if (cachedProd != null)
+            {
+                cachedProd.Stock = Math.Max(0, cachedProd.Stock - request.Quantity);
+            }
+
+            order.OrderItems.Add(new TikTokOrderItem
+            {
+                ProductId = liveProd.ProductId,
+                ProductName = liveProd.Name,
+                ProductSku = liveProd.Sku,
+                Quantity = request.Quantity,
+                Price = liveProd.Price,
+                ImageUrl = liveProd.ImageUrl
+            });
+
+            order.TotalPrice = liveProd.Price * request.Quantity;
+            _context.Orders.Add(order);
+            await _context.SaveChangesAsync();
+
+            // Add public livestream activity log
+            LiveStreamState.AddComment("Hệ thống Live", $"🎉 Khách hàng {order.CustomerName} đã đặt mua {request.Quantity} x {liveProd.Name}!", "color-teal");
+
+            var settings = await GetOrCreateSettingsAsync();
+            if (settings.AutoPushWebhook)
+            {
+                await PushWebhookInternalAsync(order, "OrderCreated", settings.NovaTechBaseUrl);
+            }
+
+            return Ok(new { message = "Giả lập mua hàng trên livestream thành công!", orderId, order });
+        }
+
+        // --- SHARED LIVE STATE ENDPOINTS ---
+        [HttpGet("livestream/state")]
+        public IActionResult GetLiveState()
+        {
+            LiveStreamState.GenerateMockCommentIfNeeded();
+            return Ok(new
+            {
+                isLive = LiveStreamState.IsLive,
+                viewerCount = LiveStreamState.ViewerCount,
+                likesCount = LiveStreamState.LikesCount,
+                comments = LiveStreamState.Comments.Select(c => new {
+                    username = c.Username,
+                    text = c.Text,
+                    color = c.Color,
+                    timestamp = c.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")
+                }).ToList()
+            });
+        }
+
+        [HttpPost("livestream/state/start")]
+        public IActionResult StartLive()
+        {
+            LiveStreamState.IsLive = true;
+            LiveStreamState.ViewerCount = new Random().Next(50) + 120;
+            LiveStreamState.LikesCount = new Random().Next(500) + 1500;
+            lock (LiveStreamState.Comments)
+            {
+                LiveStreamState.Comments.Clear();
+                LiveStreamState.AddComment("Hệ thống", "Phòng phát sóng bắt đầu. Trực tiếp từ NovaTech Shop!", "color-red");
+            }
+            return Ok(new { message = "Bắt đầu phát sóng!" });
+        }
+
+        [HttpPost("livestream/state/stop")]
+        public IActionResult StopLive()
+        {
+            LiveStreamState.Reset();
+            LiveStreamState.AddComment("Hệ thống", "Đã kết thúc phiên Live Stream.", "color-teal");
+            return Ok(new { message = "Đã dừng phát sóng!" });
+        }
+
+        [HttpPost("livestream/like")]
+        public IActionResult AddLike()
+        {
+            lock (LiveStreamState.Comments)
+            {
+                LiveStreamState.LikesCount++;
+            }
+            return Ok();
+        }
+
+        [HttpPost("livestream/comment")]
+        public IActionResult AddUserComment([FromBody] AddCommentRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Text)) return BadRequest();
+            var colors = new[] { "color-teal", "color-yellow", "color-pink", "color-green", "color-red" };
+            var color = colors[new Random().Next(colors.Length)];
+            LiveStreamState.AddComment(request.Username ?? "Khách vãng lai", request.Text, color);
+            return Ok();
+        }
+
+        [HttpPost("livestream/frame")]
+        public IActionResult UploadFrame([FromBody] UploadFrameRequest request)
+        {
+            LiveStreamState.CurrentFrame = request.Frame;
+            return Ok();
+        }
+
+        [HttpGet("livestream/frame")]
+        public IActionResult GetFrame()
+        {
+            return Ok(new { frame = LiveStreamState.CurrentFrame });
+        }
+    }
+
+    // --- LIVE STATE STORAGE ---
+    public static class LiveStreamState
+    {
+        public static bool IsLive { get; set; } = false;
+        public static int ViewerCount { get; set; } = 0;
+        public static int LikesCount { get; set; } = 0;
+        public static string? CurrentFrame { get; set; } = null;
+        public static List<LiveCommentDto> Comments { get; } = new();
+        private static readonly object _lock = new();
+
+        private static DateTime _lastMockCommentTime = DateTime.MinValue;
+        private static readonly string[] MockUsernames = { "quynh_anh99", "tung_son_gaming", "lan_huong_official", "minh_quan_erp", "linh_chi_cute", "ha_anh_tuan", "viet_anh_dev", "kieu_trang_123", "duy_manh_vip" };
+        private static readonly string[] MockTexts = {
+            "Sản phẩm đẹp quá shop ơi!",
+            "Có mã giảm giá không ạ?",
+            "Laptop này dùng ổn định không shop?",
+            "Mới đặt 1 đơn rồi nha, shop giao nhanh giúp em",
+            "Uầy, giá hạt dẻ thế nhở!",
+            "Em xin giá dell xps 13 với",
+            "Chuột logitech kia có bảo hành không ạ?",
+            "Thích cái bàn phím cơ ghê",
+            "Đồng bộ đơn hàng TikTok siêu mượt luôn",
+            "Shop dễ thương ghê, thả tim nè!"
+        };
+        private static readonly string[] MockColors = { "color-teal", "color-yellow", "color-pink", "color-green", "color-red" };
+        private static readonly Random _random = new();
+
+        static LiveStreamState()
+        {
+            Reset();
+        }
+
+        public static void Reset()
+        {
+            lock (_lock)
+            {
+                IsLive = false;
+                ViewerCount = 0;
+                LikesCount = 0;
+                CurrentFrame = null;
+                Comments.Clear();
+                Comments.Add(new LiveCommentDto
+                {
+                    Username = "Hệ thống",
+                    Text = "Chào mừng bạn đến với phòng Livestream Studio! Nhấn Bắt đầu phát sóng để live.",
+                    Color = "color-teal",
+                    Timestamp = DateTime.Now
+                });
+            }
+        }
+
+        public static void AddComment(string username, string text, string color)
+        {
+            lock (_lock)
+            {
+                Comments.Add(new LiveCommentDto
+                {
+                    Username = username,
+                    Text = text,
+                    Color = color,
+                    Timestamp = DateTime.Now
+                });
+                if (Comments.Count > 50)
+                {
+                    Comments.RemoveAt(0);
+                }
+            }
+        }
+
+        public static void GenerateMockCommentIfNeeded()
+        {
+            if (!IsLive) return;
+            lock (_lock)
+            {
+                var now = DateTime.Now;
+                if ((now - _lastMockCommentTime).TotalSeconds >= 4)
+                {
+                    _lastMockCommentTime = now;
+                    var username = MockUsernames[_random.Next(MockUsernames.Length)];
+                    var text = MockTexts[_random.Next(MockTexts.Length)];
+                    var color = MockColors[_random.Next(MockColors.Length)];
+                    AddComment(username, text, color);
+
+                    // Also randomly adjust viewer count slightly
+                    var delta = _random.Next(15) - 7;
+                    ViewerCount = Math.Max(10, ViewerCount + delta);
+
+                    // Randomly add a few likes
+                    LikesCount += _random.Next(5) + 1;
+                }
+            }
+        }
+    }
+
+    public class LiveCommentDto
+    {
+        public string Username { get; set; } = "";
+        public string Text { get; set; } = "";
+        public string Color { get; set; } = "";
+        public DateTime Timestamp { get; set; }
+    }
+
+    public class AddCommentRequest
+    {
+        public string? Username { get; set; }
+        public string Text { get; set; } = "";
+    }
+
+    public class UploadFrameRequest
+    {
+        public string? Frame { get; set; }
     }
 
     // --- HELPER REQUEST/RESPONSE DTOs ---
@@ -413,5 +788,24 @@ namespace FakeTikTokShop.Controllers
         public decimal GiaBan { get; set; }
         public string? HinhAnh { get; set; }
         public int SoLuongTon { get; set; }
+    }
+
+    public class AddLivestreamProductRequest
+    {
+        public int ProductId { get; set; }
+    }
+
+    public class UpdateStockRequest
+    {
+        public int Stock { get; set; }
+    }
+
+    public class SimulateBuyRequest
+    {
+        public int ProductId { get; set; }
+        public int Quantity { get; set; }
+        public string? CustomerName { get; set; }
+        public string? Phone { get; set; }
+        public string? Address { get; set; }
     }
 }

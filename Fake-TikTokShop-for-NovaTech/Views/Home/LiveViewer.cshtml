@@ -1,0 +1,940 @@
+@{
+    ViewData["Title"] = "TikTok Live Viewer";
+}
+
+<div id="liveviewer-app" class="w-100 min-vh-100 bg-tiktok-black position-relative" v-cloak>
+    <!-- BACK BUTTON FOR DEV/TEST -->
+    <div class="position-absolute top-0 start-0 m-3" style="z-index: 1050;">
+        <a href="/" class="btn btn-sm btn-tiktok-dark text-white bg-opacity-75 d-flex align-items-center gap-2 px-3 py-2 border border-secondary border-opacity-25 backdrop-blur">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>Seller Center</span>
+        </a>
+    </div>
+
+    <!-- MAIN RESPONSIVE CONTAINER -->
+    <div class="container-fluid min-vh-100 d-flex align-items-center justify-content-center p-0 p-lg-4">
+        <!-- WRAPPER THAT SWITCHES LAYOUT ON PC/MOBILE -->
+        <div class="viewer-main-wrapper w-100 shadow-2xl overflow-hidden d-flex flex-column flex-lg-row">
+            
+            <!-- LEFT PANEL: THE LIVE VIDEO (9:16 aspect ratio simulation on PC, full screen on mobile) -->
+            <div class="video-panel position-relative flex-grow-1 d-flex align-items-center justify-content-center">
+                
+                <!-- Video Aspect Ratio Box -->
+                <div class="video-aspect-container w-100 h-100">
+                    <div class="video-backdrop-container">
+                        <!-- Live Camera Feed -->
+                        <img :src="currentFrame" class="viewer-webcam-video" v-if="isLive && currentFrame" />
+                        
+                        <!-- Pulse neon overlay when not live or camera is off -->
+                        <div class="neon-stream-placeholder d-flex flex-column align-items-center justify-content-center text-center p-4" v-else>
+                            <div class="pulse-ring mb-4" :class="{ 'active': isLive }">
+                                <i class="fa-brands fa-tiktok text-white fs-1"></i>
+                            </div>
+                            <h5 class="fw-bold text-white mb-2 tracking-wide">
+                                ${isLive ? 'ĐANG PHÁT TRỰC TIẾP' : 'LIVESTREAM CHƯA BẮT ĐẦU'}
+                            </h5>
+                            <p class="text-muted text-xs px-4 max-w-sm">
+                                ${isLive ? 'Chào mừng bạn đến với phiên Live của NovaTech Shop! Săn ngay các deal cực hot phía dưới nhé!' : 'Vui lòng đợi Host bắt đầu phát sóng để xem các mặt hàng.'}
+                            </p>
+                            
+                            <!-- Visualizer wave bars when live but no frame -->
+                            <div class="d-flex gap-1 align-items-end mt-4" style="height: 30px;" v-if="isLive">
+                                <div class="bar bg-tiktok-teal"></div>
+                                <div class="bar bg-tiktok-red"></div>
+                                <div class="bar bg-tiktok-teal"></div>
+                                <div class="bar bg-tiktok-red"></div>
+                                <div class="bar bg-tiktok-teal"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FLOATING HEARTS CONTAINER -->
+                    <div class="hearts-container" ref="heartsContainer"></div>
+
+                    <!-- TIKTOK LIVE HUD OVERLAY (Visible on both mobile/desktop for profile, stats) -->
+                    <div class="live-hud d-flex flex-column justify-content-between p-3" v-if="isLive">
+                        <!-- TOP HUD: Host profile, viewers count -->
+                        <div class="d-flex justify-content-between align-items-start w-100">
+                            <!-- Host Badge -->
+                            <div class="d-flex align-items-center bg-dark bg-opacity-65 rounded-pill p-1 pe-3 border border-secondary border-opacity-10 backdrop-blur">
+                                <div class="host-avatar bg-tiktok-teal text-dark fw-bold rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; font-size: 0.8rem;">
+                                    NT
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 text-white fw-bold text-xs" style="line-height: 1.1;">NovaTech Shop</h6>
+                                    <small class="text-tiktok-teal text-2xs" style="font-size: 0.65rem;">@@novatech.shop</small>
+                                </div>
+                                <button class="btn btn-tiktok-primary p-0 rounded-circle ms-2 d-flex align-items-center justify-content-center animate-pulse" style="width: 18px; height: 18px; font-size: 0.6rem;">
+                                    <i class="fa-solid fa-plus text-white"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Live status and Viewer counts -->
+                            <div class="d-flex align-items-center gap-1 bg-dark bg-opacity-65 rounded-pill px-2 py-1 border border-secondary border-opacity-10 backdrop-blur">
+                                <span class="badge bg-tiktok-red px-2 py-1 text-2xs me-1 animate-pulse">LIVE</span>
+                                <div class="viewer-bubbles d-flex align-items-center me-1 d-none d-sm-flex">
+                                    <div class="viewer-bubble bg-purple">A</div>
+                                    <div class="viewer-bubble bg-danger">B</div>
+                                    <div class="viewer-bubble bg-warning">C</div>
+                                </div>
+                                <span class="text-white text-xs fw-bold ms-1"><i class="fa-regular fa-eye me-1 text-tiktok-teal"></i>${viewerCount}</span>
+                            </div>
+                        </div>
+
+                        <!-- MIDDLE: Spaced out for streaming screen -->
+                        <div class="flex-grow-1"></div>
+
+                        <!-- BOTTOM HUD OVERLAYS (Only visible on Mobile view <= 991px) -->
+                        <div class="mobile-hud-bottom w-100 d-flex flex-column gap-2 d-lg-none">
+                            
+                            <!-- MOBILE CHAT BOX -->
+                            <div class="live-chat-box" ref="chatBoxMobile">
+                                <div v-for="(chat, index) in chats" :key="index" class="chat-message animate-fade-in">
+                                    <span class="chat-username" :class="chat.color">${chat.username}:</span>
+                                    <span class="chat-text text-white">${chat.text}</span>
+                                </div>
+                            </div>
+
+                            <!-- MOBILE PINNED PRODUCT CARD -->
+                            <div class="pinned-product-card d-flex align-items-center p-2 rounded-3 animate-fade-in" v-if="pinnedProduct">
+                                <div class="pinned-badge">Đang Ghim</div>
+                                <img :src="pinnedProduct.imageUrl || 'https://via.placeholder.com/80'" class="product-img bg-secondary rounded" alt="Pinned Product">
+                                <div class="product-details ms-2 flex-grow-1">
+                                    <h6 class="product-title mb-0 text-white text-xs text-truncate">${pinnedProduct.name}</h6>
+                                    <div class="d-flex align-items-center justify-content-between mt-1">
+                                        <span class="product-price text-tiktok-teal fw-bold text-xs">${formatCurrency(pinnedProduct.price)}</span>
+                                        <span class="product-stock text-muted text-3xs" style="font-size: 0.65rem;">Kho Live: ${pinnedProduct.stock}</span>
+                                    </div>
+                                </div>
+                                <button class="btn btn-tiktok-primary btn-sm px-3 py-1 ms-2 text-xs" @@click="openBuyModal(pinnedProduct)">
+                                    Mua Ngay
+                                </button>
+                            </div>
+
+                            <!-- MOBILE ACTION FOOTER PANEL -->
+                            <div class="d-flex align-items-center justify-content-between mt-1">
+                                <!-- Shopping bag -->
+                                <div class="shopping-bag-icon position-relative cursor-pointer" @@click="toggleShoppingList">
+                                    <i class="fa-solid fa-bag-shopping text-white fs-4 bg-dark bg-opacity-65 p-2 rounded-circle border border-secondary border-opacity-10"></i>
+                                    <span class="badge bg-tiktok-red position-absolute top-0 start-100 translate-middle rounded-pill" style="font-size: 0.6rem;">
+                                        ${liveProducts.length}
+                                    </span>
+                                </div>
+
+                                <!-- Comment Input Form -->
+                                <form @@submit.prevent="sendUserComment" class="flex-grow-1 mx-2">
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" class="form-control form-control-tiktok bg-opacity-65 border-0 text-white text-xs rounded-pill px-3 py-2" v-model="myComment" placeholder="Bình luận gì đó..." style="background-color: rgba(0,0,0,0.65);">
+                                    </div>
+                                </form>
+                                
+                                <!-- Heart Like Button -->
+                                <div class="d-flex align-items-center gap-1">
+                                    <button class="btn btn-dark bg-opacity-65 rounded-circle p-2 text-white border border-secondary border-opacity-10 position-relative" @@click="likeLiveStream">
+                                        <i class="fa-solid fa-heart text-tiktok-red fs-4 animate-pulse"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- MOBILE SLIDE-UP OVERLAY SHOPPING LIST -->
+                    <div class="shopping-list-overlay p-3 text-light d-lg-none" v-if="showShoppingList && isLive">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold mb-0 text-white"><i class="fa-solid fa-store text-tiktok-teal me-2"></i>Sản phẩm đang bán (${liveProducts.length})</h6>
+                            <i class="fa-solid fa-xmark cursor-pointer fs-5" @@click="toggleShoppingList"></i>
+                        </div>
+                        
+                        <div class="shopping-items-wrapper">
+                            <div v-if="liveProducts.length === 0" class="text-center py-5">
+                                <p class="text-muted text-xs">Chưa có sản phẩm nào được đưa lên livestream.</p>
+                            </div>
+                            
+                            <div class="shopping-item d-flex align-items-center p-2 mb-2 rounded bg-dark bg-opacity-50 border border-secondary border-opacity-10" v-for="p in liveProducts" :key="p.productId">
+                                <img :src="p.imageUrl || 'https://via.placeholder.com/80'" class="rounded bg-secondary" width="55" height="55" style="object-fit: cover;">
+                                <div class="ms-2 flex-grow-1">
+                                    <div class="fw-bold text-white text-xs text-truncate" style="max-width: 150px;">${p.name}</div>
+                                    <div class="d-flex align-items-center justify-content-between mt-1">
+                                        <span class="text-tiktok-teal fw-bold text-xs">${formatCurrency(p.price)}</span>
+                                        <span class="text-muted text-3xs" style="font-size: 0.65rem;">Còn: ${p.stock}</span>
+                                    </div>
+                                </div>
+                                <button class="btn btn-tiktok-primary btn-sm px-2 py-1 text-2xs ms-2" @@click="openBuyModal(p)" :disabled="p.stock <= 0">
+                                    Mua
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT PANEL: DESKTOP SIDEBAR (Visible only on width >= 992px for PC layout) -->
+            <div class="desktop-sidebar d-none d-lg-flex flex-column bg-tiktok-card border-start border-secondary border-opacity-25" style="width: 400px; min-width: 400px; max-width: 400px;">
+                <!-- Pinned Product Section (Feature card) -->
+                <div class="p-3 border-bottom border-secondary border-opacity-25 bg-tiktok-dark bg-opacity-40" v-if="pinnedProduct && isLive">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="badge bg-tiktok-red text-white py-1 px-2 text-2xs fw-bold animate-pulse"><i class="fa-solid fa-thumbtack me-1"></i>SẢN PHẨM ĐANG GHIM</span>
+                        <span class="text-3xs text-muted">Deal hot nhất phiên Live</span>
+                    </div>
+                    <div class="desktop-pinned-card d-flex align-items-center p-2 rounded-3 border border-tiktok-teal border-opacity-35 bg-tiktok-black">
+                        <img :src="pinnedProduct.imageUrl || 'https://via.placeholder.com/80'" class="rounded bg-secondary" width="70" height="70" style="object-fit: cover;">
+                        <div class="ms-3 flex-grow-1 min-width-0">
+                            <h6 class="product-title mb-1 text-white text-xs fw-bold text-truncate" style="max-width: 170px;">${pinnedProduct.name}</h6>
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="product-price text-tiktok-teal fw-bold text-xs">${formatCurrency(pinnedProduct.price)}</span>
+                                <span class="badge bg-dark text-muted text-3xs border border-secondary border-opacity-25">Còn: ${pinnedProduct.stock}</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-tiktok-primary btn-sm px-3 py-2 ms-2 text-xs" @@click="openBuyModal(pinnedProduct)">
+                            Mua Ngay
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CHAT SECTION -->
+                <div class="desktop-chat-section d-flex flex-column border-bottom border-secondary border-opacity-25" style="height: 320px;">
+                    <div class="px-3 py-2 bg-tiktok-black bg-opacity-30 d-flex justify-content-between align-items-center">
+                        <span class="fw-bold text-white text-xs"><i class="fa-regular fa-comments text-tiktok-red me-2"></i>Trò chuyện trực tiếp</span>
+                        <span class="text-muted text-3xs d-flex align-items-center"><i class="fa-solid fa-heart text-tiktok-red me-1"></i>${likesCount} thích</span>
+                    </div>
+                    
+                    <!-- Chat Messages List -->
+                    <div class="live-chat-box flex-grow-1 p-3 overflow-y-auto" ref="chatBoxDesktop">
+                        <div v-for="(chat, index) in chats" :key="index" class="chat-message animate-fade-in mb-2 bg-tiktok-dark bg-opacity-70 border border-secondary border-opacity-5">
+                            <span class="chat-username" :class="chat.color">${chat.username}:</span>
+                            <span class="chat-text text-white">${chat.text}</span>
+                        </div>
+                    </div>
+
+                    <!-- Chat Input form -->
+                    <div class="p-3 bg-tiktok-black bg-opacity-40">
+                        <form @@submit.prevent="sendUserComment">
+                            <div class="input-group">
+                                <input type="text" class="form-control form-control-tiktok bg-tiktok-black text-xs py-2 px-3 border-secondary border-opacity-25" v-model="myComment" placeholder="Gửi bình luận...">
+                                <button class="btn btn-tiktok-primary px-3 text-xs" type="submit">
+                                    <i class="fa-solid fa-paper-plane"></i>
+                                </button>
+                                <button class="btn btn-tiktok-dark px-3 text-tiktok-red" type="button" @@click="likeLiveStream" title="Thả tim">
+                                    <i class="fa-solid fa-heart"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- SHOPPING SECTION -->
+                <div class="desktop-shopping-section d-flex flex-column flex-grow-1" style="min-height: 0;">
+                    <div class="px-3 py-2 bg-tiktok-black bg-opacity-30 d-flex justify-content-between align-items-center border-bottom border-secondary border-opacity-10">
+                        <span class="fw-bold text-white text-xs"><i class="fa-solid fa-bag-shopping text-tiktok-teal me-2"></i>Danh sách sản phẩm (${liveProducts.length})</span>
+                        <span class="text-3xs text-muted">Bấm mua để đặt đơn</span>
+                    </div>
+
+                    <div class="shopping-items-wrapper p-3 flex-grow-1 overflow-y-auto">
+                        <div v-if="!isLive" class="text-center py-5">
+                            <p class="text-muted text-xs">Phiên Live chưa diễn ra.</p>
+                        </div>
+                        <div v-else-if="liveProducts.length === 0" class="text-center py-5">
+                            <p class="text-muted text-xs"><i class="fa-solid fa-store-slash mb-2 fs-4 opacity-50 d-block"></i>Chưa có sản phẩm nào trong giỏ hàng.</p>
+                        </div>
+                        <div v-else>
+                            <!-- Product Row -->
+                            <div class="desktop-shopping-item d-flex align-items-center p-2 mb-2 rounded bg-tiktok-dark bg-opacity-60 border border-secondary border-opacity-15 hover-neon-border" v-for="(p, index) in liveProducts" :key="p.productId">
+                                <div class="position-relative">
+                                    <span class="item-number-badge">${index + 1}</span>
+                                    <img :src="p.imageUrl || 'https://via.placeholder.com/80'" class="rounded bg-secondary" width="50" height="50" style="object-fit: cover;">
+                                </div>
+                                <div class="ms-3 flex-grow-1 min-width-0">
+                                    <div class="fw-bold text-white text-xs text-truncate" :title="p.name">${p.name}</div>
+                                    <div class="d-flex align-items-center justify-content-between mt-1">
+                                        <span class="text-tiktok-teal fw-bold text-xs">${formatCurrency(p.price)}</span>
+                                        <span class="text-muted text-3xs">Tồn: <strong>${p.stock}</strong></span>
+                                    </div>
+                                </div>
+                                <div class="ms-2">
+                                    <button class="btn btn-tiktok-primary btn-sm px-3 py-1 text-2xs" @@click="openBuyModal(p)" :disabled="p.stock <= 0">
+                                        Mua
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- BUY MODAL FOR CLIENT -->
+    <div class="modal fade animate-fade-in" id="buyModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-tiktok-card text-light border border-secondary border-opacity-25 rounded-4 shadow-2xl">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold text-white d-flex align-items-center">
+                        <i class="fa-solid fa-cart-shopping text-tiktok-red me-2"></i>
+                        Đặt Mua Sản Phẩm
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-3">
+                    <div class="d-flex align-items-center p-3 mb-3 rounded bg-tiktok-dark border border-secondary border-opacity-10" v-if="modalProduct">
+                        <img :src="modalProduct.imageUrl || 'https://via.placeholder.com/80'" class="rounded bg-secondary me-3" width="70" height="70" style="object-fit: cover;">
+                        <div class="flex-grow-1 min-width-0">
+                            <h6 class="fw-bold text-white mb-1 text-truncate" :title="modalProduct.name">${modalProduct.name}</h6>
+                            <span class="text-tiktok-teal fw-bold">${formatCurrency(modalProduct.price)}</span>
+                            <small class="text-muted d-block text-2xs mt-1">Còn lại: ${modalProduct.stock}</small>
+                        </div>
+                    </div>
+
+                    <form @@submit.prevent="submitBuyOrder">
+                        <div class="mb-3">
+                            <label class="form-label text-muted text-xs fw-bold text-uppercase">Họ và Tên Khách Hàng <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-tiktok" v-model="buyForm.customerName" required placeholder="Ví dụ: Nguyễn Thị B">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted text-xs fw-bold text-uppercase">Số Điện Thoại <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-tiktok" v-model="buyForm.phone" required placeholder="09xxxxxxxx">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted text-xs fw-bold text-uppercase">Địa Chỉ Nhận Hàng <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-tiktok" v-model="buyForm.address" required placeholder="Số 10 Hai Bà Trưng, Hà Nội">
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-6">
+                                <label class="form-label text-muted text-xs fw-bold text-uppercase">Số Lượng Mua</label>
+                                <input type="number" class="form-control form-control-tiktok text-center" v-model.number="buyForm.quantity" min="1" :max="modalProduct ? modalProduct.stock : 99" required>
+                            </div>
+                            <div class="col-6 text-end d-flex flex-column justify-content-end">
+                                <span class="text-muted text-2xs d-block">Tổng tiền:</span>
+                                <h4 class="text-success fw-bold mb-0">${formatCurrency(calculateModalTotal())}</h4>
+                            </div>
+                        </div>
+
+                        <div class="border-top border-secondary border-dashed pt-3 mt-3 d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-tiktok-dark py-2 px-3" data-bs-dismiss="modal">Hủy bỏ</button>
+                            <button type="submit" class="btn btn-tiktok-primary py-2 px-4" :disabled="submittingOrder">
+                                <span v-if="submittingOrder" class="spinner-border spinner-border-sm me-2"></span>
+                                <i class="fa-solid fa-circle-check me-2"></i>Đặt Mua Ngay
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Styling for the Livestream Viewer Screen */
+    .bg-tiktok-black {
+        background-color: #0b0c10 !important;
+    }
+    .bg-tiktok-dark {
+        background-color: #12131a !important;
+    }
+    .bg-tiktok-card {
+        background-color: #161822 !important;
+    }
+    .text-tiktok-teal {
+        color: #25F4EE !important;
+    }
+    .text-tiktok-red {
+        color: #FE2C55 !important;
+    }
+
+    .backdrop-blur {
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+
+    .hover-neon-border {
+        transition: all 0.3s ease;
+    }
+    .hover-neon-border:hover {
+        border-color: rgba(37, 244, 238, 0.4) !important;
+        box-shadow: 0 0 10px rgba(37, 244, 238, 0.1);
+    }
+
+    /* Screen inner frame for both mobile & desktop */
+    .viewer-main-wrapper {
+        background-color: #000;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    @@media (min-width: 992px) {
+        .viewer-main-wrapper {
+            height: 760px;
+            max-width: 960px;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .video-panel {
+            height: 100%;
+            background-color: #050508;
+        }
+        .video-aspect-container {
+            height: 100%;
+            max-height: 760px;
+            aspect-ratio: 9/16;
+            margin: 0 auto;
+            position: relative;
+            background-color: #000;
+        }
+    }
+
+    @@media (max-width: 991px) {
+        .viewer-main-wrapper {
+            min-height: 100vh;
+            border-radius: 0;
+            border: none;
+        }
+        .video-panel {
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        .video-aspect-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+    }
+
+    .video-backdrop-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle, #200e1b 0%, #06070a 100%);
+        z-index: 1;
+        overflow: hidden;
+    }
+
+    .viewer-webcam-video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .neon-stream-placeholder {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #18081c 0%, #06090e 100%);
+        position: relative;
+        z-index: 2;
+    }
+
+    .pulse-ring {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: rgba(254, 44, 85, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 20px rgba(254, 44, 85, 0.4);
+    }
+    .pulse-ring.active {
+        animation: ring-ripple 2s infinite ease-out;
+    }
+
+    @@keyframes ring-ripple {
+        0% { box-shadow: 0 0 0 0 rgba(254, 44, 85, 0.4), 0 0 0 0 rgba(37, 244, 238, 0.4); }
+        100% { box-shadow: 0 0 0 20px rgba(254, 44, 85, 0), 0 0 0 35px rgba(37, 244, 238, 0); }
+    }
+
+    /* Sound visualizer wave bars */
+    .bar {
+        width: 4px;
+        height: 8px;
+        border-radius: 2px;
+        animation: bounce 0.8s ease-in-out infinite alternate;
+    }
+    .bar:nth-child(2) { animation-delay: 0.15s; }
+    .bar:nth-child(3) { animation-delay: 0.3s; }
+    .bar:nth-child(4) { animation-delay: 0.45s; }
+    .bar:nth-child(5) { animation-delay: 0.60s; }
+
+    @@keyframes bounce {
+        0% { height: 5px; }
+        100% { height: 28px; }
+    }
+
+    /* Live HUD layout */
+    .live-hud {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 10;
+        background: linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 20%, rgba(0,0,0,0) 65%, rgba(0,0,0,0.7) 100%);
+        pointer-events: none;
+    }
+    .live-hud > * {
+        pointer-events: auto; /* enable click for controls */
+    }
+
+    .text-2xs { font-size: 0.7rem; }
+    .text-3xs { font-size: 0.6rem; }
+
+    .viewer-bubble {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 0.6rem;
+        margin-left: -6px;
+        border: 1px solid #000;
+    }
+    .bg-purple { background-color: #9C27B0; }
+
+    /* Live Chat Box */
+    .live-chat-box {
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding-right: 5px;
+    }
+
+    @@media (max-width: 991px) {
+        .live-chat-box {
+            max-height: 150px;
+            mask-image: linear-gradient(to top, black 85%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to top, black 85%, transparent 100%);
+        }
+    }
+
+    .chat-message {
+        background: rgba(0, 0, 0, 0.4);
+        border-radius: 12px;
+        padding: 6px 12px;
+        font-size: 0.75rem;
+        word-break: break-word;
+        line-height: 1.35;
+        backdrop-filter: blur(2px);
+    }
+
+    .chat-username {
+        font-weight: 600;
+        margin-right: 4px;
+    }
+    .color-teal { color: #25F4EE; }
+    .color-red { color: #FE2C55; }
+    .color-yellow { color: #FFC107; }
+    .color-pink { color: #FF4081; }
+    .color-green { color: #4CAF50; }
+
+    /* Pinned Product Card overlay */
+    .pinned-product-card {
+        background: rgba(18, 19, 26, 0.85);
+        border: 1px solid rgba(37, 244, 238, 0.25);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        backdrop-filter: blur(10px);
+        position: relative;
+    }
+    .pinned-product-card .pinned-badge {
+        position: absolute;
+        top: -8px;
+        left: 10px;
+        background: #FE2C55;
+        color: white;
+        font-size: 0.55rem;
+        font-weight: bold;
+        padding: 2px 6px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        box-shadow: 0 2px 5px rgba(254, 44, 85, 0.3);
+    }
+    .pinned-product-card .product-img {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+    }
+
+    /* Floating Hearts container */
+    .hearts-container {
+        position: absolute;
+        bottom: 70px;
+        right: 15px;
+        width: 60px;
+        height: 250px;
+        z-index: 9;
+        pointer-events: none;
+        overflow: hidden;
+    }
+    
+    .floating-heart {
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 1.5rem;
+        opacity: 0.8;
+        animation: floatHeart 2.5s ease-out forwards;
+    }
+
+    @@keyframes floatHeart {
+        0% {
+            bottom: 0;
+            opacity: 0.8;
+            transform: translateX(-50%) scale(0.5);
+        }
+        50% {
+            transform: translateX(var(--drift-x)) scale(1.2);
+            opacity: 1;
+        }
+        100% {
+            bottom: 220px;
+            opacity: 0;
+            transform: translateX(var(--drift-x-end)) scale(0.8);
+        }
+    }
+
+    /* Mobile Overlay slide-up shopping drawer */
+    .shopping-list-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 60%;
+        background-color: rgba(18, 19, 26, 0.96);
+        border-top: 2px solid #232533;
+        z-index: 20;
+        border-top-left-radius: 20px;
+        border-top-right-radius: 20px;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 -5px 25px rgba(0,0,0,0.5);
+    }
+
+    .shopping-items-wrapper {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding-right: 2px;
+    }
+    .shopping-items-wrapper::-webkit-scrollbar {
+        width: 4px;
+    }
+    .shopping-items-wrapper::-webkit-scrollbar-thumb {
+        background: #232533;
+    }
+
+    /* Desktop Sidebar configuration */
+    .desktop-sidebar {
+        height: 100%;
+        background-color: #12131a;
+    }
+
+    .desktop-pinned-card {
+        border: 1px solid rgba(37, 244, 238, 0.25);
+    }
+
+    .item-number-badge {
+        position: absolute;
+        top: -6px;
+        left: -6px;
+        background-color: #12131a;
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        font-size: 0.6rem;
+        font-weight: bold;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+    }
+
+    .border-dashed {
+        border-style: dashed !important;
+    }
+
+    .shadow-2xl {
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+</style>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        new Vue({
+            el: '#liveviewer-app',
+            delimiters: ['${', '}'],
+            data: {
+                isLive: false,
+                viewerCount: 0,
+                likesCount: 0,
+                currentFrame: null,
+                framePollInterval: null,
+                
+                liveProducts: [],
+                chats: [],
+                myComment: '',
+                viewerName: '',
+
+                // Shopping bag overlay (mobile)
+                showShoppingList: false,
+
+                // Modal for buy order simulation
+                modalProduct: null,
+                buyForm: {
+                    customerName: '',
+                    phone: '',
+                    address: '',
+                    quantity: 1
+                },
+                submittingOrder: false,
+                pollInterval: null
+            },
+            computed: {
+                pinnedProduct() {
+                    return this.liveProducts.find(p => p.isPinned);
+                }
+            },
+            mounted() {
+                // Prompt client for a screen name to chat
+                this.viewerName = localStorage.getItem('tiktok_viewer_name') || 'Guest_' + Math.floor(Math.random() * 900 + 100);
+                
+                this.fetchLiveProducts();
+                this.pollState();
+                this.startFramePolling();
+                
+                // Poll every 2 seconds to keep in sync
+                this.pollInterval = setInterval(() => {
+                    this.pollState();
+                    this.fetchLiveProducts();
+                }, 2000);
+            },
+            beforeDestroy() {
+                if (this.pollInterval) {
+                    clearInterval(this.pollInterval);
+                }
+                this.stopFramePolling();
+            },
+            methods: {
+                formatCurrency(val) {
+                    if (!val && val !== 0) return '0 ₫';
+                    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
+                },
+                calculateModalTotal() {
+                    if (!this.modalProduct) return 0;
+                    return this.modalProduct.price * this.buyForm.quantity;
+                },
+                async fetchLiveProducts() {
+                    try {
+                        const res = await axios.get('/api/tiktok/livestream/products');
+                        this.liveProducts = res.data;
+                    } catch (err) {
+                        console.error('Lỗi tải sản phẩm live:', err);
+                    }
+                },
+                startFramePolling() {
+                    this.stopFramePolling();
+                    this.framePollInterval = setInterval(() => {
+                        if (this.isLive) {
+                            this.fetchFrame();
+                        } else {
+                            this.currentFrame = null;
+                        }
+                    }, 250);
+                },
+                stopFramePolling() {
+                    if (this.framePollInterval) {
+                        clearInterval(this.framePollInterval);
+                        this.framePollInterval = null;
+                    }
+                },
+                async fetchFrame() {
+                    try {
+                        const res = await axios.get('/api/tiktok/livestream/frame');
+                        this.currentFrame = res.data.frame;
+                    } catch (err) {
+                        console.error('Lỗi tải frame:', err);
+                    }
+                },
+                async pollState() {
+                    try {
+                        const res = await axios.get('/api/tiktok/livestream/state');
+                        const state = res.data;
+                        
+                        this.isLive = state.isLive;
+                        this.viewerCount = state.viewerCount;
+                        
+                        // Check if likes count increased and trigger floating hearts locally
+                        if (state.likesCount > this.likesCount && this.likesCount > 0) {
+                            const diff = state.likesCount - this.likesCount;
+                            for (let i = 0; i < Math.min(diff, 5); i++) {
+                                setTimeout(() => this.triggerHeartAnimation(), i * 150);
+                            }
+                        }
+                        this.likesCount = state.likesCount;
+
+                        // Check if chats changed
+                        const previousChatsCount = this.chats.length;
+                        this.chats = state.comments;
+                        
+                        // Scroll to bottom if new messages arrived (handles both mobile and desktop refs)
+                        if (this.chats.length > previousChatsCount) {
+                            this.$nextTick(() => {
+                                const chatElMobile = this.$refs.chatBoxMobile;
+                                const chatElDesktop = this.$refs.chatBoxDesktop;
+                                if (chatElMobile) {
+                                    chatElMobile.scrollTop = chatElMobile.scrollHeight;
+                                }
+                                if (chatElDesktop) {
+                                    chatElDesktop.scrollTop = chatElDesktop.scrollHeight;
+                                }
+                            });
+                        }
+                    } catch (err) {
+                        console.error('Lỗi polling trạng thái live:', err);
+                    }
+                },
+                async sendUserComment() {
+                    if (!this.myComment.trim()) return;
+                    
+                    const textToSend = this.myComment;
+                    this.myComment = '';
+                    
+                    try {
+                        await axios.post('/api/tiktok/livestream/comment', {
+                            username: this.viewerName,
+                            text: textToSend
+                        });
+                        this.pollState();
+                    } catch (err) {
+                        console.error('Lỗi gửi bình luận:', err);
+                    }
+                },
+                async likeLiveStream() {
+                    this.triggerHeartAnimation();
+                    try {
+                        await axios.post('/api/tiktok/livestream/like');
+                        this.likesCount++;
+                    } catch (err) {
+                        console.error('Lỗi thả tim:', err);
+                    }
+                },
+                triggerHeartAnimation() {
+                    const hearts = ['❤️', '💖', '🔥', '✨', '🥰', '👍'];
+                    const randomHeart = hearts[Math.floor(Math.random() * hearts.length)];
+                    const heartEl = document.createElement('div');
+                    heartEl.className = 'floating-heart';
+                    heartEl.innerText = randomHeart;
+                    
+                    const driftX = (Math.random() * 100 - 50) + 'px';
+                    const driftXEnd = (Math.random() * 140 - 70) + 'px';
+                    heartEl.style.setProperty('--drift-x', driftX);
+                    heartEl.style.setProperty('--drift-x-end', driftXEnd);
+                    
+                    const colors = ['#FE2C55', '#25F4EE', '#FFD700', '#FF69B4', '#00FF00'];
+                    heartEl.style.color = colors[Math.floor(Math.random() * colors.length)];
+                    
+                    const container = this.$refs.heartsContainer;
+                    if (container) {
+                        container.appendChild(heartEl);
+                        setTimeout(() => {
+                            heartEl.remove();
+                        }, 2500);
+                    }
+                },
+                toggleShoppingList() {
+                    this.showShoppingList = !this.showShoppingList;
+                },
+                openBuyModal(product) {
+                    if (product.stock <= 0) {
+                        Swal.fire({
+                            title: 'Hết hàng',
+                            text: 'Sản phẩm này đã hết hàng trong Livestream!',
+                            icon: 'warning',
+                            background: '#12131a',
+                            color: '#fff',
+                            confirmButtonColor: '#FE2C55'
+                        });
+                        return;
+                    }
+                    this.modalProduct = product;
+                    this.buyForm.customerName = this.viewerName.startsWith('Guest_') ? '' : this.viewerName;
+                    this.buyForm.phone = '';
+                    this.buyForm.address = '';
+                    this.buyForm.quantity = 1;
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('buyModal'));
+                    modal.show();
+                },
+                async submitBuyOrder() {
+                    if (this.buyForm.quantity > this.modalProduct.stock) {
+                        Swal.fire({
+                            title: 'Lỗi',
+                            text: 'Không đủ số lượng trong kho Live!',
+                            icon: 'warning',
+                            background: '#12131a',
+                            color: '#fff',
+                            confirmButtonColor: '#FE2C55'
+                        });
+                        return;
+                    }
+                    this.submittingOrder = true;
+                    try {
+                        // Store the name in localStorage for future orders
+                        localStorage.setItem('tiktok_viewer_name', this.buyForm.customerName);
+                        this.viewerName = this.buyForm.customerName;
+
+                        const res = await axios.post('/api/tiktok/livestream/simulate-buy', {
+                            productId: this.modalProduct.productId,
+                            quantity: this.buyForm.quantity,
+                            customerName: this.buyForm.customerName,
+                            phone: this.buyForm.phone,
+                            address: this.buyForm.address
+                        });
+                        
+                        // Close modal
+                        const modalEl = document.getElementById('buyModal');
+                        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                        if (modalInstance) modalInstance.hide();
+                        
+                        // Success notify
+                        Swal.fire({
+                            title: 'Đặt hàng thành công!',
+                            html: `Mã đơn hàng: <strong>${res.data.orderId}</strong><br>Cảm ơn bạn đã mua hàng trực tiếp trên Live!`,
+                            icon: 'success',
+                            background: '#12131a',
+                            color: '#fff',
+                            confirmButtonColor: '#25F4EE'
+                        });
+
+                        // Reload data
+                        await this.fetchLiveProducts();
+                        await this.pollState();
+                    } catch (err) {
+                        Swal.fire({
+                            title: 'Lỗi',
+                            text: err.response?.data?.message || 'Không thể tạo đơn hàng live!',
+                            icon: 'error',
+                            background: '#12131a',
+                            color: '#fff',
+                            confirmButtonColor: '#FE2C55'
+                        });
+                    } finally {
+                        this.submittingOrder = false;
+                    }
+                }
+            }
+        });
+    </script>
+}

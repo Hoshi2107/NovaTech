@@ -52,6 +52,20 @@ namespace FakeTikTokShop.Models
         public int Stock { get; set; }
     }
 
+    public class TikTokLivestreamProduct
+    {
+        [Key]
+        public int Id { get; set; }
+        public int ProductId { get; set; }
+        public string Name { get; set; } = "";
+        public string Sku { get; set; } = "";
+        public decimal Price { get; set; }
+        public string? ImageUrl { get; set; }
+        public int Stock { get; set; }
+        public bool IsPinned { get; set; } = false;
+        public int SalesCount { get; set; } = 0;
+    }
+
     public class WebhookLog
     {
         [Key]
@@ -83,6 +97,7 @@ namespace FakeTikTokShop.Models
         public DbSet<TikTokProductCache> ProductCaches { get; set; }
         public DbSet<WebhookLog> WebhookLogs { get; set; }
         public DbSet<TikTokShopSettings> Settings { get; set; }
+        public DbSet<TikTokLivestreamProduct> LivestreamProducts { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

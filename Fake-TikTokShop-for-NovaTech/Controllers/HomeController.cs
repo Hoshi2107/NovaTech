@@ -8,5 +8,15 @@ namespace FakeTikTokShop.Controllers
         {
             return View();
         }
+
+        public IActionResult Livestream()
+        {
+            return View();
+        }
+
+        public IActionResult LiveViewer()
+        {
+            return View();
+        }
     }
 }

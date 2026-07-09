@@ -25,6 +25,18 @@ using (var scope = app.Services.CreateScope())
     try
     {
         context.Database.EnsureCreated();
+        
+        // Check if LivestreamProducts table exists, if not it will throw an exception
+        try
+        {
+            _ = context.LivestreamProducts.Count();
+        }
+        catch (Exception)
+        {
+            // Table doesn't exist, let's recreate the database to apply new schema
+            context.Database.EnsureDeleted();
+            context.Database.EnsureCreated();
+        }
 
         // Seed default products if cache is empty
         if (!context.ProductCaches.Any())
