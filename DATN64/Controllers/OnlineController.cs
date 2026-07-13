@@ -13,10 +13,12 @@ namespace DATN64.Controllers
     public class OnlineController : Controller
     {
         private readonly AppDbContext _context;
+        private readonly GeminiService _geminiService;
 
-        public OnlineController(AppDbContext context)
+        public OnlineController(AppDbContext context, GeminiService geminiService)
         {
             _context = context;
+            _geminiService = geminiService;
         }
 
         public class CartItem
@@ -1112,6 +1114,104 @@ public IActionResult OrderPaymentQR(int id)
             }
 
             return RedirectToAction("Profile");
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ChatConsultAsync([FromBody] OnlineChatRequest req)
+        {
+            if (string.IsNullOrWhiteSpace(req?.Message))
+                return BadRequest(new { error = "Tin nhắn trống" });
+
+            // 1. Lấy thông tin sản phẩm trong database làm ngữ cảnh tư vấn
+            var products = await _context.SanPhams
+                .Include(p => p.DanhMuc)
+                .Include(p => p.ThuongHieu)
+                .Where(p => p.TrangThai == "Đang bán" && p.SoLuongTon > 0)
+                .Select(p => new {
+                    Ten = p.TenSanPham,
+                    Gia = p.GiaBan,
+                    MoTa = p.MoTa,
+                    DanhMuc = p.DanhMuc != null ? p.DanhMuc.TenDanhMuc : "Khác",
+                    ThuongHieu = p.ThuongHieu != null ? p.ThuongHieu.TenThuongHieu : "Khác"
+                })
+                .Take(40)
+                .ToListAsync();
+
+            string productContext = string.Join("\n", products.Select(p => 
+                $"- {p.Ten} | Giá: {p.Gia:N0}đ | Danh mục: {p.DanhMuc} | Thương hiệu: {p.ThuongHieu} | Mô tả: {p.MoTa}"));
+
+            // 2. Định nghĩa System Instruction
+            string systemInstruction = $@"Bạn là trợ lý ảo tư vấn mua sắm chuyên nghiệp và tận tâm của NovaTech (Cửa hàng Công nghệ cao cấp).
+Nhiệm vụ chính:
+- Chào hỏi thân thiện, chuyên nghiệp, hỗ trợ khách hàng tìm kiếm và lựa chọn sản phẩm phù hợp.
+- Trả lời bằng tiếng Việt lịch sự (sử dụng kính ngữ 'dạ', 'vâng', 'ạ').
+- Chỉ giới thiệu và tư vấn các dòng sản phẩm hiện đang có sẵn trong danh sách sản phẩm thực tế bên dưới.
+- Nếu khách hàng hỏi về một sản phẩm KHÔNG có trong danh sách, hãy khéo léo phản hồi: 'Dạ, hiện tại dòng sản phẩm này NovaTech chưa phân phối hoặc đang tạm hết hàng ạ. Em xin phép giới thiệu cho anh/chị dòng sản phẩm tương tự có sẵn như: [Gợi ý sản phẩm tương đương có trong danh sách]'.
+- Trả lời súc tích, ngắn gọn, trực quan, có thể sử dụng biểu tượng cảm xúc (emoji) phù hợp.
+- Sử dụng định dạng Markdown cơ bản (vd: **in đậm**, - danh sách) để văn bản hiển thị đẹp mắt.
+
+=== DANH SÁCH SẢN PHẨM THỰC TẾ CÓ SẴN ===
+{productContext}";
+
+            // 3. Quản lý lịch sử hội thoại qua Session
+            var sessionKey = "ConsultChatHistory";
+            var historyJson = HttpContext.Session.GetString(sessionKey);
+            var history = new List<ConsultMessage>();
+            if (!string.IsNullOrEmpty(historyJson))
+            {
+                try
+                {
+                    history = JsonSerializer.Deserialize<List<ConsultMessage>>(historyJson) ?? new List<ConsultMessage>();
+                }
+                catch { }
+            }
+
+            // Chỉ giữ lại tối đa 6 tin nhắn gần nhất để tránh quá tải ngữ cảnh
+            if (history.Count > 6)
+            {
+                history = history.Skip(history.Count - 6).ToList();
+            }
+
+            // Xây dựng prompt chứa lịch sử hội thoại
+            var promptBuilder = new System.Text.StringBuilder();
+            if (history.Any())
+            {
+                promptBuilder.AppendLine("Lịch sử hội thoại trước đó:");
+                foreach (var msg in history)
+                {
+                    promptBuilder.AppendLine($"{(msg.Sender == "user" ? "Khách hàng" : "AI")}: {msg.Text}");
+                }
+                promptBuilder.AppendLine();
+            }
+            promptBuilder.AppendLine($"Khách hàng hiện tại hỏi: {req.Message}");
+
+            // 4. Gọi Gemini AI
+            string reply = await _geminiService.GenerateResponseAsync(systemInstruction, promptBuilder.ToString());
+
+            // 5. Lưu tin nhắn mới vào lịch sử
+            history.Add(new ConsultMessage { Sender = "user", Text = req.Message });
+            history.Add(new ConsultMessage { Sender = "model", Text = reply });
+            HttpContext.Session.SetString(sessionKey, JsonSerializer.Serialize(history));
+
+            return Ok(new { response = reply });
+        }
+
+        [HttpPost]
+        public IActionResult ClearConsultChatHistory()
+        {
+            HttpContext.Session.Remove("ConsultChatHistory");
+            return Ok(new { success = true });
+        }
+
+        public class OnlineChatRequest
+        {
+            public string? Message { get; set; }
+        }
+
+        public class ConsultMessage
+        {
+            public string Sender { get; set; } = "";
+            public string Text { get; set; } = "";
         }
     }
 }

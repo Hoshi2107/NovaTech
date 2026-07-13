@@ -24,29 +24,66 @@ namespace DATN64.Models
             };
             _httpClient = new HttpClient(handler);
             
-            // 1. Đọc từ file .env trước tiên
-            var keySource = LoadApiKeyFromEnvFile();
+            string? keySource = null;
+            string? modelSource = null;
 
-            // 2. Nếu file .env trống hoặc không tồn tại, check Environment Variables hệ thống
+            // 1. Đọc trực tiếp từ file vật lý appsettings.json để bỏ qua đè từ Environment Variables
+            try
+            {
+                var appSettingsPath = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json");
+                if (File.Exists(appSettingsPath))
+                {
+                    var json = File.ReadAllText(appSettingsPath);
+                    using var doc = System.Text.Json.JsonDocument.Parse(json);
+                    if (doc.RootElement.TryGetProperty("GeminiAI", out var geminiSection))
+                    {
+                        if (geminiSection.TryGetProperty("ApiKey", out var apiKeyProp))
+                        {
+                            keySource = apiKeyProp.GetString();
+                        }
+                        if (geminiSection.TryGetProperty("Model", out var modelProp))
+                        {
+                            modelSource = modelProp.GetString();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GeminiService] Lỗi khi đọc trực tiếp appsettings.json: {ex.Message}");
+            }
+
+            // 2. Nếu không tìm thấy, fallback về IConfiguration
+            if (string.IsNullOrWhiteSpace(keySource))
+            {
+                keySource = configuration["GeminiAI:ApiKey"] 
+                            ?? configuration["GEMINI_API_KEY"] 
+                            ?? configuration["GeminiAI__ApiKey"];
+            }
+
+            // 3. Fallback tiếp về file .env hoặc Environment Variables hệ thống
+            if (string.IsNullOrWhiteSpace(keySource))
+            {
+                keySource = LoadApiKeyFromEnvFile();
+            }
             if (string.IsNullOrWhiteSpace(keySource))
             {
                 keySource = Environment.GetEnvironmentVariable("GEMINI_API_KEY") 
                             ?? Environment.GetEnvironmentVariable("GeminiAI__ApiKey");
             }
 
-            // 3. Nếu vẫn trống, check trong IConfiguration (bao gồm appsettings và biến môi trường được mapping tự động)
-            if (string.IsNullOrWhiteSpace(keySource))
-            {
-                keySource = configuration["GEMINI_API_KEY"] 
-                            ?? configuration["GeminiAI__ApiKey"] 
-                            ?? configuration["GeminiAI:ApiKey"];
-            }
-
             _apiKey = (keySource ?? "").Trim();
 
-            _model = string.IsNullOrEmpty(configuration["GeminiAI:Model"])
-                ? "gemini-1.5-flash"
-                : configuration["GeminiAI:Model"];
+            // Phân giải Model
+            if (string.IsNullOrWhiteSpace(modelSource))
+            {
+                modelSource = configuration["GeminiAI:Model"];
+            }
+            _model = string.IsNullOrEmpty(modelSource) ? "gemini-1.5-flash" : modelSource;
+
+            // Log ra console để chẩn đoán chính xác key và model nào đang hoạt động
+            var maskedKey = _apiKey.Length > 10 ? _apiKey.Substring(0, 10) + "..." : _apiKey;
+            Console.WriteLine($"[GeminiService] Kích hoạt thành công. Key: {maskedKey}, Model: {_model}");
         }
 
         private string LoadApiKeyFromEnvFile()
@@ -163,14 +200,22 @@ namespace DATN64.Models
                 // Vẫn truyền kèm custom header dự phòng
                 request.Headers.TryAddWithoutValidation("x-goog-api-key", _apiKey);
 
+                Console.WriteLine($"[GeminiService] CALLING URL: {url}");
+                Console.WriteLine($"[GeminiService] HEADERS: {request.Headers}");
+                Console.WriteLine($"[GeminiService] BODY: {json}");
+
                 var response = await _httpClient.SendAsync(request);
+                var responseContent = await response.Content.ReadAsStringAsync();
+                
+                Console.WriteLine($"[GeminiService] RESPONSE STATUS: {response.StatusCode}");
+                Console.WriteLine($"[GeminiService] RESPONSE BODY: {responseContent}");
+
                 if (!response.IsSuccessStatusCode)
                 {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    return $"Lỗi API Gemini ({response.StatusCode}): {errorContent}";
+                    return $"Lỗi API Gemini ({response.StatusCode}): {responseContent}";
                 }
 
-                var responseString = await response.Content.ReadAsStringAsync();
+                var responseString = responseContent;
                 using var doc = JsonDocument.Parse(responseString);
 
                 var reply = doc.RootElement
