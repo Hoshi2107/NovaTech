@@ -598,6 +598,11 @@ namespace FakeTikTokShop.Controllers
                 LiveStreamState.Comments.Clear();
                 LiveStreamState.AddComment("Hệ thống", "Phòng phát sóng bắt đầu. Trực tiếp từ NovaTech Shop!", "color-red");
             }
+            lock (LiveStreamState.AudioChunks)
+            {
+                LiveStreamState.AudioChunks.Clear();
+                LiveStreamState.NextAudioChunkId = 1;
+            }
             return Ok(new { message = "Bắt đầu phát sóng!" });
         }
 
@@ -641,6 +646,50 @@ namespace FakeTikTokShop.Controllers
         {
             return Ok(new { frame = LiveStreamState.CurrentFrame });
         }
+
+        [HttpPost("livestream/audio")]
+        public IActionResult UploadAudioChunk([FromBody] UploadAudioChunkRequest request)
+        {
+            if (string.IsNullOrEmpty(request.Audio)) return BadRequest();
+            lock (LiveStreamState.AudioChunks)
+            {
+                LiveStreamState.AudioChunks.Add(new LiveAudioChunk
+                {
+                    Id = LiveStreamState.NextAudioChunkId++,
+                    Data = request.Audio,
+                    Timestamp = DateTime.Now
+                });
+                if (LiveStreamState.AudioChunks.Count > 15)
+                {
+                    LiveStreamState.AudioChunks.RemoveAt(0);
+                }
+            }
+            return Ok();
+        }
+
+        [HttpGet("livestream/audio")]
+        public IActionResult GetAudioChunks([FromQuery] long lastId)
+        {
+            lock (LiveStreamState.AudioChunks)
+            {
+                var chunks = LiveStreamState.AudioChunks
+                    .Where(c => c.Id > lastId)
+                    .OrderBy(c => c.Id)
+                    .ToList();
+                return Ok(chunks.Select(c => new { id = c.Id, data = c.Data }));
+            }
+        }
+
+        [HttpPost("livestream/audio/clear")]
+        public IActionResult ClearAudio()
+        {
+            lock (LiveStreamState.AudioChunks)
+            {
+                LiveStreamState.AudioChunks.Clear();
+                LiveStreamState.NextAudioChunkId = 1;
+            }
+            return Ok();
+        }
     }
 
     // --- LIVE STATE STORAGE ---
@@ -651,6 +700,8 @@ namespace FakeTikTokShop.Controllers
         public static int LikesCount { get; set; } = 0;
         public static string? CurrentFrame { get; set; } = null;
         public static List<LiveCommentDto> Comments { get; } = new();
+        public static List<LiveAudioChunk> AudioChunks { get; } = new();
+        public static long NextAudioChunkId { get; set; } = 1;
         private static readonly object _lock = new();
 
         private static DateTime _lastMockCommentTime = DateTime.MinValue;
@@ -691,6 +742,8 @@ namespace FakeTikTokShop.Controllers
                     Color = "color-teal",
                     Timestamp = DateTime.Now
                 });
+                AudioChunks.Clear();
+                NextAudioChunkId = 1;
             }
         }
 
@@ -807,5 +860,17 @@ namespace FakeTikTokShop.Controllers
         public string? CustomerName { get; set; }
         public string? Phone { get; set; }
         public string? Address { get; set; }
+    }
+
+    public class LiveAudioChunk
+    {
+        public long Id { get; set; }
+        public string Data { get; set; } = "";
+        public DateTime Timestamp { get; set; }
+    }
+
+    public class UploadAudioChunkRequest
+    {
+        public string Audio { get; set; } = "";
     }
 }

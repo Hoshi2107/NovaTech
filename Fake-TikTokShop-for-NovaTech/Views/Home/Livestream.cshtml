@@ -45,7 +45,7 @@
                 <div class="tiktok-screen-inner">
                     <!-- VIDEO BACKDROP / CAMERA STREAM -->
                     <div class="video-backdrop-container">
-                        <video ref="videoPlayer" class="webcam-video" :style="mirrorCamera ? 'transform: scaleX(-1);' : ''" autoplay playsinline v-show="cameraActive && isLive"></video>
+                        <video ref="videoPlayer" class="webcam-video" :style="mirrorCamera ? 'transform: scaleX(-1);' : ''" autoplay playsinline muted v-show="cameraActive && isLive"></video>
                         <canvas ref="captureCanvas" style="display: none;"></canvas>
                         
                         <!-- Floating controls for camera -->
@@ -678,7 +678,10 @@
                     address: '',
                     quantity: 1
                 },
-                submittingOrder: false
+                submittingOrder: false,
+                mediaRecorder: null,
+                audioCaptureActive: false,
+                audioTimeout: null
             },
             computed: {
                 formattedDuration() {
@@ -896,14 +899,15 @@
                 },
                 async initCamera() {
                     try {
-                        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                         if (this.$refs.videoPlayer) {
                             this.$refs.videoPlayer.srcObject = stream;
                             this.cameraActive = true;
                             this.startFrameCapture();
+                            this.startAudioCapture(stream);
                         }
                     } catch (err) {
-                        console.warn("Camera không khả dụng hoặc bị từ chối quyền, sử dụng giả lập neon", err);
+                        console.warn("Camera/Microphone không khả dụng hoặc bị từ chối quyền, sử dụng giả lập neon", err);
                         this.cameraActive = false;
                     }
                 },
@@ -915,9 +919,86 @@
                     }
                     this.cameraActive = false;
                     this.stopFrameCapture();
+                    this.stopAudioCapture();
                 },
-                toggleMirror() {
+                 toggleMirror() {
                     this.mirrorCamera = !this.mirrorCamera;
+                },
+                startAudioCapture(stream) {
+                    this.stopAudioCapture();
+                    const audioTracks = stream.getAudioTracks();
+                    if (audioTracks.length === 0) {
+                        console.warn("Không tìm thấy micro.");
+                        return;
+                    }
+                    const audioStream = new MediaStream(audioTracks);
+                    let options = {};
+                    if (typeof MediaRecorder !== 'undefined') {
+                        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                            options = { mimeType: 'audio/webm;codecs=opus' };
+                        } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
+                            options = { mimeType: 'audio/ogg;codecs=opus' };
+                        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+                            options = { mimeType: 'audio/webm' };
+                        }
+                    }
+
+                    this.audioCaptureActive = true;
+
+                    const recordChunk = () => {
+                        if (!this.isLive || !this.audioCaptureActive) return;
+
+                        try {
+                            const chunkRecorder = new MediaRecorder(audioStream, options);
+                            let chunks = [];
+
+                            chunkRecorder.ondataavailable = (e) => {
+                                if (e.data && e.data.size > 0) {
+                                    chunks.push(e.data);
+                                }
+                            };
+
+                            chunkRecorder.onstop = () => {
+                                if (chunks.length > 0 && this.isLive && this.audioCaptureActive) {
+                                    const blob = new Blob(chunks, { type: options.mimeType });
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => {
+                                        const base64Audio = reader.result;
+                                        axios.post('/api/tiktok/livestream/audio', { audio: base64Audio })
+                                            .catch(err => console.error("Lỗi gửi audio:", err));
+                                    };
+                                    reader.readAsDataURL(blob);
+                                }
+
+                                // Schedule next chunk recording
+                                if (this.isLive && this.audioCaptureActive) {
+                                    this.audioTimeout = setTimeout(recordChunk, 10);
+                                }
+                            };
+
+                            chunkRecorder.start();
+
+                            // Stop after 1 second to pack the chunk
+                            this.audioTimeout = setTimeout(() => {
+                                if (chunkRecorder && chunkRecorder.state === 'recording') {
+                                    chunkRecorder.stop();
+                                }
+                            }, 1000);
+
+                        } catch (err) {
+                            console.error("Lỗi ghi âm chunk:", err);
+                        }
+                    };
+
+                    recordChunk();
+                },
+                stopAudioCapture() {
+                    this.audioCaptureActive = false;
+                    if (this.audioTimeout) {
+                        clearTimeout(this.audioTimeout);
+                        this.audioTimeout = null;
+                    }
+                    axios.post('/api/tiktok/livestream/audio/clear').catch(err => {});
                 },
                 startFrameCapture() {
                     this.stopFrameCapture();

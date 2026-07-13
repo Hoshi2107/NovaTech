@@ -70,7 +70,7 @@
                             </div>
                             
                             <!-- Live status and Viewer counts -->
-                            <div class="d-flex align-items-center gap-1 bg-dark bg-opacity-65 rounded-pill px-2 py-1 border border-secondary border-opacity-10 backdrop-blur">
+                            <div class="d-flex align-items-center gap-2 bg-dark bg-opacity-65 rounded-pill px-2 py-1 border border-secondary border-opacity-10 backdrop-blur">
                                 <span class="badge bg-tiktok-red px-2 py-1 text-2xs me-1 animate-pulse">LIVE</span>
                                 <div class="viewer-bubbles d-flex align-items-center me-1 d-none d-sm-flex">
                                     <div class="viewer-bubble bg-purple">A</div>
@@ -78,6 +78,9 @@
                                     <div class="viewer-bubble bg-warning">C</div>
                                 </div>
                                 <span class="text-white text-xs fw-bold ms-1"><i class="fa-regular fa-eye me-1 text-tiktok-teal"></i>${viewerCount}</span>
+                                <button class="btn btn-sm p-0 border-0 bg-transparent ms-1" @@click="toggleMute" :title="isMuted ? 'Bật âm thanh' : 'Tắt âm thanh'" style="width:28px;height:28px;">
+                                    <i class="fa-solid text-white" :class="isMuted ? 'fa-volume-xmark text-danger' : 'fa-volume-high text-tiktok-teal'"></i>
+                                </button>
                             </div>
                         </div>
 
@@ -321,6 +324,7 @@
             </div>
         </div>
     </div>
+    <audio ref="audioStreamPlayer" playsinline style="display: none;"></audio>
 </div>
 
 <style>
@@ -699,7 +703,14 @@
                     quantity: 1
                 },
                 submittingOrder: false,
-                pollInterval: null
+                pollInterval: null,
+
+                // Audio playback
+                isMuted: false,
+                audioContext: null,
+                lastAudioChunkId: 0,
+                audioPollActive: false,
+                audioPollTimeout: null
             },
             computed: {
                 pinnedProduct() {
@@ -713,18 +724,38 @@
                 this.fetchLiveProducts();
                 this.pollState();
                 this.startFramePolling();
+                this.startAudioPolling();
                 
                 // Poll every 2 seconds to keep in sync
                 this.pollInterval = setInterval(() => {
                     this.pollState();
                     this.fetchLiveProducts();
                 }, 2000);
+
+                // Auto-resume or create AudioContext on first user interaction to bypass autoplay restrictions
+                const resumeHandler = () => {
+                    if (!this.audioContext) {
+                        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    }
+                    if (this.audioContext.state === 'suspended') {
+                        this.audioContext.resume();
+                    }
+                    document.removeEventListener('click', resumeHandler);
+                    document.removeEventListener('keydown', resumeHandler);
+                };
+                document.addEventListener('click', resumeHandler);
+                document.addEventListener('keydown', resumeHandler);
             },
             beforeDestroy() {
                 if (this.pollInterval) {
                     clearInterval(this.pollInterval);
                 }
                 this.stopFramePolling();
+                this.stopAudioPolling();
+                if (this.audioContext) {
+                    this.audioContext.close();
+                    this.audioContext = null;
+                }
             },
             methods: {
                 formatCurrency(val) {
@@ -765,6 +796,107 @@
                         this.currentFrame = res.data.frame;
                     } catch (err) {
                         console.error('Lỗi tải frame:', err);
+                    }
+                },
+                startAudioPolling() {
+                    this.stopAudioPolling();
+                    this.lastAudioChunkId = 0;
+                    this.audioPollActive = true;
+
+                    const poll = async () => {
+                        if (!this.audioPollActive) return;
+
+                        if (this.isLive && !this.isMuted) {
+                            try {
+                                const res = await axios.get(`/api/tiktok/livestream/audio?lastId=${this.lastAudioChunkId}`);
+                                const chunks = res.data;
+                                if (chunks && chunks.length > 0) {
+                                    this.lastAudioChunkId = chunks[chunks.length - 1].id;
+                                    // If there are many chunks, only play the last 2 to keep minimal latency
+                                    const chunksToPlay = chunks.slice(-2);
+                                    for (const chunk of chunksToPlay) {
+                                        if (!this.audioPollActive || this.isMuted || !this.isLive) break;
+                                        await this.playAudioChunk(chunk.data);
+                                    }
+                                }
+                            } catch (err) {
+                                // silent fail
+                            }
+                        }
+
+                        if (this.audioPollActive) {
+                            this.audioPollTimeout = setTimeout(poll, 1000);
+                        }
+                    };
+
+                    poll();
+                },
+                stopAudioPolling() {
+                    this.audioPollActive = false;
+                    if (this.audioPollTimeout) {
+                        clearTimeout(this.audioPollTimeout);
+                        this.audioPollTimeout = null;
+                    }
+                },
+                async playAudioChunk(base64DataUrl) {
+                    if (this.isMuted) return;
+                    try {
+                        if (!this.audioContext) {
+                            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        }
+                        if (this.audioContext.state === 'suspended') {
+                            await this.audioContext.resume();
+                        }
+                        // Convert base64 data URL to ArrayBuffer
+                        const base64 = base64DataUrl.split(',')[1];
+                        const binaryStr = atob(base64);
+                        const bytes = new Uint8Array(binaryStr.length);
+                        for (let i = 0; i < binaryStr.length; i++) {
+                            bytes[i] = binaryStr.charCodeAt(i);
+                        }
+                        
+                        const audioBuffer = await this.audioContext.decodeAudioData(bytes.buffer);
+                        const source = this.audioContext.createBufferSource();
+                        source.buffer = audioBuffer;
+                        source.connect(this.audioContext.destination);
+                        
+                        await new Promise((resolve) => {
+                            let resolved = false;
+                            const timeout = setTimeout(() => {
+                                if (!resolved) {
+                                    resolved = true;
+                                    resolve();
+                                }
+                            }, 1500); // 1.5s fallback
+                            
+                            source.onended = () => {
+                                if (!resolved) {
+                                    resolved = true;
+                                    clearTimeout(timeout);
+                                    resolve();
+                                }
+                            };
+                            
+                            try {
+                                source.start(0);
+                            } catch (e) {
+                                if (!resolved) {
+                                    resolved = true;
+                                    clearTimeout(timeout);
+                                    resolve();
+                                }
+                            }
+                        });
+                    } catch (err) {
+                        // Decoding errors are expected if chunk is incomplete or corrupted
+                    }
+                },
+                toggleMute() {
+                    this.isMuted = !this.isMuted;
+                    if (this.isMuted && this.audioContext) {
+                        this.audioContext.suspend();
+                    } else if (!this.isMuted && this.audioContext) {
+                        this.audioContext.resume();
                     }
                 },
                 async pollState() {
