@@ -38,6 +38,11 @@ var app = new Vue({
         sortBy: 'default',
         activeTab: 'products',
 
+        showAdvancedFilter: false,
+        selectedBrands: [],
+        selectedPriceRanges: [],
+        onlyInStock: false,
+
         user: null,
         cashReceived: 0,
         heldCarts: [],
@@ -69,7 +74,10 @@ var app = new Vue({
         searchQuery() { this.currentPage = 1; },
         activeCategory() { this.currentPage = 1; },
         activeBrand() { this.currentPage = 1; },
-        sortBy() { this.currentPage = 1; }
+        sortBy() { this.currentPage = 1; },
+        selectedBrands() { this.currentPage = 1; },
+        selectedPriceRanges() { this.currentPage = 1; },
+        onlyInStock() { this.currentPage = 1; }
     },
     computed: {
         subtotalAmount() {
@@ -108,9 +116,32 @@ var app = new Vue({
                 list = list.filter(p => p.category === this.activeCategory);
             }
 
-            // Brand filter
+            // Brand filter dropdown
             if (this.activeBrand !== 'Tất cả') {
                 list = list.filter(p => p.brand === this.activeBrand);
+            }
+
+            // Brand checkboxes (Advanced filter)
+            if (this.selectedBrands.length > 0) {
+                list = list.filter(p => this.selectedBrands.includes(p.brand));
+            }
+
+            // Price range checkboxes (Advanced filter)
+            if (this.selectedPriceRanges.length > 0) {
+                list = list.filter(p => {
+                    const price = p.price;
+                    for (let range of this.selectedPriceRanges) {
+                        if (range === 'under-5' && price < 5000000) return true;
+                        if (range === '5-15' && price >= 5000000 && price <= 15000000) return true;
+                        if (range === 'over-15' && price > 15000000) return true;
+                    }
+                    return false;
+                });
+            }
+
+            // Stock status filter (Advanced filter)
+            if (this.onlyInStock) {
+                list = list.filter(p => p.stock > 0);
             }
 
             // Search filter
@@ -138,7 +169,7 @@ var app = new Vue({
             return this.allFilteredProducts.slice(start, start + this.itemsPerPage);
         },
         totalPages() {
-            return Math.max(15, Math.ceil(this.allFilteredProducts.length / this.itemsPerPage));
+            return Math.max(1, Math.ceil(this.allFilteredProducts.length / this.itemsPerPage));
         },
         displayedPages() {
             const total = this.totalPages;
@@ -209,6 +240,17 @@ var app = new Vue({
                 const c = this.customers[idx];
                 this.customerName = c.name;
                 this.customerPhone = c.phone;
+            }
+        },
+        onCustomerPhoneInput() {
+            const phone = (this.customerPhone || '').trim();
+            const idx = this.customers.findIndex(c => c.phone === phone);
+            if (idx !== -1) {
+                this.customerIndex = idx.toString();
+                this.customerName = this.customers[idx].name;
+            } else {
+                this.customerIndex = "-1";
+                this.customerName = "Khách Hàng Vãng Lai";
             }
         },
         addToCart(product) {
@@ -527,6 +569,15 @@ var app = new Vue({
             if (confirmDelete) {
                 this.heldCarts = this.heldCarts.filter(c => c.id !== id);
             }
+        },
+        resetFilters() {
+            this.selectedBrands = [];
+            this.selectedPriceRanges = [];
+            this.onlyInStock = false;
+            this.activeCategory = 'Tất cả';
+            this.activeBrand = 'Tất cả';
+            this.searchQuery = '';
+            this.currentPage = 1;
         },
         handleGlobalShortcuts(e) {
             if (e.key === 'F8') {
