@@ -1,3 +1,4 @@
+using FakeTikTokShop.Hubs;
 using FakeTikTokShop.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,6 +11,13 @@ builder.Services.AddControllersWithViews()
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     });
+
+// Add SignalR for real-time livestream streaming (replaces HTTP polling)
+builder.Services.AddSignalR(options =>
+{
+    options.MaximumReceiveMessageSize = 1024 * 1024 * 5; // 5MB - enough for video frames + audio
+    options.EnableDetailedErrors = true;
+});
 
 // SQLite Database Configuration
 var connectionString = builder.Configuration.GetConnectionString("SQLiteConnection") ?? "Data Source=tiktok_shop_fake.db";
@@ -71,6 +79,9 @@ app.UseStaticFiles();
 app.UseRouting();
 
 app.UseAuthorization();
+
+// SignalR Hub route
+app.MapHub<LivestreamHub>("/hubs/livestream");
 
 // Route mappings
 app.MapControllerRoute(

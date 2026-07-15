@@ -674,6 +674,7 @@
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@8.0.7/dist/browser/signalr.min.js"></script>
 
     <script>
         new Vue({
@@ -684,7 +685,6 @@
                 viewerCount: 0,
                 likesCount: 0,
                 currentFrame: null,
-                framePollInterval: null,
                 
                 liveProducts: [],
                 chats: [],
@@ -703,14 +703,15 @@
                     quantity: 1
                 },
                 submittingOrder: false,
-                pollInterval: null,
 
                 // Audio playback
                 isMuted: false,
                 audioContext: null,
-                lastAudioChunkId: 0,
-                audioPollActive: false,
-                audioPollTimeout: null
+                audioQueue: [],
+                audioPlaying: false,
+
+                // SignalR
+                hubConnection: null
             },
             computed: {
                 pinnedProduct() {
@@ -721,18 +722,14 @@
                 // Prompt client for a screen name to chat
                 this.viewerName = localStorage.getItem('tiktok_viewer_name') || 'Guest_' + Math.floor(Math.random() * 900 + 100);
                 
+                // Load initial data via HTTP
                 this.fetchLiveProducts();
-                this.pollState();
-                this.startFramePolling();
-                this.startAudioPolling();
-                
-                // Poll every 2 seconds to keep in sync
-                this.pollInterval = setInterval(() => {
-                    this.pollState();
-                    this.fetchLiveProducts();
-                }, 2000);
+                this.pollState(); // One-time initial state load
 
-                // Auto-resume or create AudioContext on first user interaction to bypass autoplay restrictions
+                // Connect SignalR - replaces all polling intervals!
+                this.initSignalR();
+
+                // Auto-resume or create AudioContext on first user interaction
                 const resumeHandler = () => {
                     if (!this.audioContext) {
                         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -747,17 +744,130 @@
                 document.addEventListener('keydown', resumeHandler);
             },
             beforeDestroy() {
-                if (this.pollInterval) {
-                    clearInterval(this.pollInterval);
+                if (this.hubConnection) {
+                    this.hubConnection.stop();
                 }
-                this.stopFramePolling();
-                this.stopAudioPolling();
                 if (this.audioContext) {
                     this.audioContext.close();
                     this.audioContext = null;
                 }
             },
             methods: {
+                // ===== SIGNALR CORE =====
+                async initSignalR() {
+                    try {
+                        this.hubConnection = new signalR.HubConnectionBuilder()
+                            .withUrl('/hubs/livestream')
+                            .withAutomaticReconnect()
+                            .build();
+
+                        // Real-time frame receive (replaces 250ms frame polling!)
+                        this.hubConnection.on('ReceiveFrame', (frameData) => {
+                            this.currentFrame = frameData;
+                        });
+
+                        // Real-time audio receive (replaces 1s audio polling!)
+                        this.hubConnection.on('ReceiveAudio', (audioData) => {
+                            if (!this.isMuted) {
+                                this.enqueueAudio(audioData);
+                            }
+                        });
+
+                        // Real-time live state changes (start/stop)
+                        this.hubConnection.on('LiveStateChanged', (isLive, viewerCount, likesCount) => {
+                            const wasLive = this.isLive;
+                            this.isLive = isLive;
+                            this.viewerCount = viewerCount;
+                            this.likesCount = likesCount;
+                            if (!isLive) {
+                                this.currentFrame = null;
+                            }
+                        });
+
+                        // Real-time comments (replaces polling for chats!)
+                        this.hubConnection.on('ReceiveComment', (username, text, color) => {
+                            this.chats.push({ username, text, color });
+                            if (this.chats.length > 50) this.chats.shift();
+                            this.$nextTick(() => {
+                                const chatElMobile = this.$refs.chatBoxMobile;
+                                const chatElDesktop = this.$refs.chatBoxDesktop;
+                                if (chatElMobile) chatElMobile.scrollTop = chatElMobile.scrollHeight;
+                                if (chatElDesktop) chatElDesktop.scrollTop = chatElDesktop.scrollHeight;
+                            });
+                        });
+
+                        // Real-time product updates (after sales, pin changes, etc.)
+                        this.hubConnection.on('ProductsUpdated', (products) => {
+                            this.liveProducts = products;
+                        });
+
+                        // Real-time stats (likes, viewer count)
+                        this.hubConnection.on('StatsUpdated', (viewerCount, likesCount) => {
+                            if (likesCount > this.likesCount) {
+                                const diff = likesCount - this.likesCount;
+                                for (let i = 0; i < Math.min(diff, 5); i++) {
+                                    setTimeout(() => this.triggerHeartAnimation(), i * 150);
+                                }
+                            }
+                            this.viewerCount = viewerCount;
+                            this.likesCount = likesCount;
+                        });
+
+                        await this.hubConnection.start();
+                        console.log('[SignalR] Viewer connected - real-time streaming active!');
+                    } catch (err) {
+                        console.warn('[SignalR] Connection failed, falling back to polling:', err);
+                        // Fallback: restart legacy polling if SignalR fails
+                        this.pollInterval = setInterval(() => {
+                            this.pollState();
+                            this.fetchLiveProducts();
+                        }, 2000);
+                        this.startFramePolling();
+                    }
+                },
+
+                // ===== AUDIO QUEUE (smooth sequential playback) =====
+                enqueueAudio(base64DataUrl) {
+                    this.audioQueue.push(base64DataUrl);
+                    if (!this.audioPlaying) {
+                        this.drainAudioQueue();
+                    }
+                },
+                async drainAudioQueue() {
+                    if (this.audioQueue.length === 0) {
+                        this.audioPlaying = false;
+                        return;
+                    }
+                    this.audioPlaying = true;
+                    // If queue is growing too fast (latency), drop old chunks and keep only latest
+                    if (this.audioQueue.length > 3) {
+                        this.audioQueue = this.audioQueue.slice(-2);
+                    }
+                    const chunk = this.audioQueue.shift();
+                    await this.playAudioChunk(chunk);
+                    this.drainAudioQueue();
+                },
+
+                // ===== LEGACY POLLING (fallback only) =====
+                startFramePolling() {
+                    this.framePollInterval = setInterval(() => {
+                        if (this.isLive) this.fetchFrame();
+                        else this.currentFrame = null;
+                    }, 250);
+                },
+                stopFramePolling() {
+                    if (this.framePollInterval) {
+                        clearInterval(this.framePollInterval);
+                        this.framePollInterval = null;
+                    }
+                },
+                async fetchFrame() {
+                    try {
+                        const res = await axios.get('/api/tiktok/livestream/frame');
+                        this.currentFrame = res.data.frame;
+                    } catch (err) { /* silent */ }
+                },
+                // ===== UTILITY METHODS =====
                 formatCurrency(val) {
                     if (!val && val !== 0) return '0 ₫';
                     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
@@ -774,70 +884,7 @@
                         console.error('Lỗi tải sản phẩm live:', err);
                     }
                 },
-                startFramePolling() {
-                    this.stopFramePolling();
-                    this.framePollInterval = setInterval(() => {
-                        if (this.isLive) {
-                            this.fetchFrame();
-                        } else {
-                            this.currentFrame = null;
-                        }
-                    }, 250);
-                },
-                stopFramePolling() {
-                    if (this.framePollInterval) {
-                        clearInterval(this.framePollInterval);
-                        this.framePollInterval = null;
-                    }
-                },
-                async fetchFrame() {
-                    try {
-                        const res = await axios.get('/api/tiktok/livestream/frame');
-                        this.currentFrame = res.data.frame;
-                    } catch (err) {
-                        console.error('Lỗi tải frame:', err);
-                    }
-                },
-                startAudioPolling() {
-                    this.stopAudioPolling();
-                    this.lastAudioChunkId = 0;
-                    this.audioPollActive = true;
 
-                    const poll = async () => {
-                        if (!this.audioPollActive) return;
-
-                        if (this.isLive && !this.isMuted) {
-                            try {
-                                const res = await axios.get(`/api/tiktok/livestream/audio?lastId=${this.lastAudioChunkId}`);
-                                const chunks = res.data;
-                                if (chunks && chunks.length > 0) {
-                                    this.lastAudioChunkId = chunks[chunks.length - 1].id;
-                                    // If there are many chunks, only play the last 2 to keep minimal latency
-                                    const chunksToPlay = chunks.slice(-2);
-                                    for (const chunk of chunksToPlay) {
-                                        if (!this.audioPollActive || this.isMuted || !this.isLive) break;
-                                        await this.playAudioChunk(chunk.data);
-                                    }
-                                }
-                            } catch (err) {
-                                // silent fail
-                            }
-                        }
-
-                        if (this.audioPollActive) {
-                            this.audioPollTimeout = setTimeout(poll, 1000);
-                        }
-                    };
-
-                    poll();
-                },
-                stopAudioPolling() {
-                    this.audioPollActive = false;
-                    if (this.audioPollTimeout) {
-                        clearTimeout(this.audioPollTimeout);
-                        this.audioPollTimeout = null;
-                    }
-                },
                 async playAudioChunk(base64DataUrl) {
                     if (this.isMuted) return;
                     try {
