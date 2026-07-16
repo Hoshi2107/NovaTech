@@ -44,10 +44,21 @@ namespace DATN64.Controllers
                 _context.SaveChanges();
             }
 
+            // Chỉ load sản phẩm cha (Đang bán) - biến thể sẽ chỉ hiện trong modal
             var products = _context.SanPhams
                 .Include(p => p.DanhMuc)
                 .Include(p => p.ThuongHieu)
                 .Where(p => p.TrangThai == "Đang bán").ToList();
+
+            // Tính hasVariants: kiểm tra xem sản phẩm nào có "Biến thể" cùng prefix
+            var variantPrefixes = _context.SanPhams
+                .Where(p => p.TrangThai == "Biến thể")
+                .Select(p => p.TenSanPham)
+                .ToList()
+                .Select(n => { var w = n.Trim().Split(' '); return string.Join(" ", w.Take(2)); })
+                .ToHashSet();
+            ViewBag.VariantPrefixes = variantPrefixes;
+
             var customers = _context.KhachHangs.ToList();
 
             // Lấy nhân viên hiện tại
@@ -80,11 +91,25 @@ namespace DATN64.Controllers
         [HttpGet]
         public IActionResult GetProducts()
         {
-            var products = _context.SanPhams
+            // Chỉ load sản phẩm cha (Đang bán)
+            var mainProducts = _context.SanPhams
                 .Include(p => p.DanhMuc)
                 .Include(p => p.ThuongHieu)
                 .Where(p => p.TrangThai == "Đang bán")
-                .Select(p => new {
+                .ToList();
+
+            // Tính hasVariants từ danh sách biến thể
+            var variantPrefixes = _context.SanPhams
+                .Where(p => p.TrangThai == "Biến thể")
+                .Select(p => p.TenSanPham)
+                .ToList()
+                .Select(n => { var w = n.Trim().Split(' '); return string.Join(" ", w.Take(2)); })
+                .ToHashSet();
+
+            var result = mainProducts.Select(p => {
+                var words = p.TenSanPham.Trim().Split(' ');
+                var prefix = string.Join(" ", words.Take(2));
+                return new {
                     id = p.MaSanPham,
                     name = p.TenSanPham,
                     price = p.GiaBan,
@@ -92,9 +117,55 @@ namespace DATN64.Controllers
                     image = p.HinhAnh ?? "https://images.unsplash.com/photo-1531297484001-80022131f5a1?q=80&w=300",
                     category = p.DanhMuc != null ? p.DanhMuc.TenDanhMuc : "Khác",
                     brand = p.ThuongHieu != null ? p.ThuongHieu.TenThuongHieu : "Khác",
+                    sku = "SP-" + p.MaSanPham.ToString("D4"),
+                    hasVariants = variantPrefixes.Contains(prefix),
+                    categoryId = p.MaDanhMuc
+                };
+            }).ToList();
+
+            return Json(result);
+        }
+
+        [HttpGet]
+        public IActionResult GetVariants(int productId)
+        {
+            var product = _context.SanPhams.FirstOrDefault(p => p.MaSanPham == productId);
+            if (product == null) return Json(new List<object>());
+
+            var parentName = product.TenSanPham.Trim();
+
+            // Lấy tất cả candidate theo prefix (StartsWith)
+            var allCandidates = _context.SanPhams
+                .Where(p => p.MaDanhMuc == product.MaDanhMuc
+                         && p.TrangThai == "Biến thể"
+                         && p.TenSanPham.StartsWith(parentName))
+                .OrderBy(p => p.GiaBan)
+                .ToList();
+
+            // Các từ mở rộng model — nếu từ tiếp theo sau tên cha là các từ này thì bỏ qua
+            // VD: "iPhone 15 Pro" bấm vào không được ra "iPhone 15 Pro Max ..."
+            // VD: "Samsung Galaxy S24" bấm vào không ra "Samsung Galaxy S24 Ultra ..."
+            var modelExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                { "Max", "Ultra", "Plus", "FE", "Edge" };
+
+            var variants = allCandidates
+                .Where(p => {
+                    if (p.TenSanPham.Length <= parentName.Length) return false;
+                    var rest = p.TenSanPham.Substring(parentName.Length).TrimStart();
+                    var nextWord = rest.Split(' ')[0];
+                    // nextWord phải không phải model extension
+                    return !modelExtensions.Contains(nextWord);
+                })
+                .Select(p => new {
+                    id = p.MaSanPham,
+                    name = p.TenSanPham,
+                    price = p.GiaBan,
+                    stock = p.SoLuongTon,
+                    image = p.HinhAnh ?? "https://images.unsplash.com/photo-1531297484001-80022131f5a1?q=80&w=300",
                     sku = "SP-" + p.MaSanPham.ToString("D4")
                 }).ToList();
-            return Json(products);
+
+            return Json(variants);
         }
 
         [HttpGet]
@@ -106,6 +177,31 @@ namespace DATN64.Controllers
                 phone = c.SoDienThoai ?? ""
             }).ToList();
             return Json(customers);
+        }
+
+        [HttpPost]
+        public IActionResult CreateWalkInCustomer([FromBody] WalkInCustomerDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.SoDienThoai))
+                return BadRequest(new { message = "Số điện thoại không được để trống!" });
+
+            // Kiểm tra SĐT đã tồn tại chưa
+            var existing = _context.KhachHangs.FirstOrDefault(c => c.SoDienThoai == dto.SoDienThoai.Trim());
+            if (existing != null)
+                return Ok(new { id = existing.MaKhachHang, name = existing.HoTen, phone = existing.SoDienThoai ?? "" });
+
+            var newCustomer = new KhachHang
+            {
+                HoTen = string.IsNullOrWhiteSpace(dto.HoTen) ? "Khách Hàng" : dto.HoTen.Trim(),
+                SoDienThoai = dto.SoDienThoai.Trim(),
+                DiemTichLuy = 0,
+                TrangThai = "Hoạt động",
+                NgayTao = DateTime.Now
+            };
+            _context.KhachHangs.Add(newCustomer);
+            _context.SaveChanges();
+
+            return Ok(new { id = newCustomer.MaKhachHang, name = newCustomer.HoTen, phone = newCustomer.SoDienThoai ?? "" });
         }
 
         // ── CHECK IN ─────────────────────────────────────────────────
@@ -360,5 +456,11 @@ namespace DATN64.Controllers
 
             return RedirectToAction("Index");
         }
+    }
+
+    public class WalkInCustomerDto
+    {
+        public string HoTen { get; set; } = "";
+        public string SoDienThoai { get; set; } = "";
     }
 }

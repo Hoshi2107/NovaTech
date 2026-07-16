@@ -817,6 +817,34 @@ namespace DATN64.Models
             CleanupDuplicates("Samsung Galaxy S24");
             CleanupDuplicates("Samsung Galaxy S24 Ultra");
 
+            // ── Fix sản phẩm dạng cũ: "iPhone 15 128GB Hồng" → "iPhone 15 Thường 128GB Hồng" + Biến thể ──
+            // Các sản phẩm có tên cũ chứa "GB" hoặc "TB" nhưng TrangThai = "Đang bán" cần được reclassify
+            var oldFormatProducts = context.SanPhams
+                .Where(p => p.TrangThai == "Đang bán"
+                         && (p.TenSanPham.Contains("128GB") || p.TenSanPham.Contains("256GB")
+                          || p.TenSanPham.Contains("512GB") || p.TenSanPham.Contains("1TB")))
+                .ToList();
+
+            foreach (var old in oldFormatProducts)
+            {
+                // "iPhone 15 128GB Hồng" → "iPhone 15 Thường 128GB Hồng"
+                if (old.TenSanPham.StartsWith("iPhone 15 ") &&
+                    !old.TenSanPham.StartsWith("iPhone 15 Thường") &&
+                    !old.TenSanPham.StartsWith("iPhone 15 Pro") &&
+                    !old.TenSanPham.StartsWith("iPhone 15 Plus"))
+                {
+                    var suffix = old.TenSanPham.Substring("iPhone 15 ".Length); // "128GB Hồng"
+                    var newName = "iPhone 15 Thường " + suffix;
+                    // Chỉ đổi tên nếu chưa có sản phẩm cùng tên mới
+                    if (!context.SanPhams.Any(p => p.TenSanPham == newName && p.MaSanPham != old.MaSanPham))
+                    {
+                        old.TenSanPham = newName;
+                    }
+                }
+                old.TrangThai = "Biến thể";
+            }
+            context.SaveChanges();
+
             // Rename and upsert original base products so they integrate cleanly
             var originalIphone = context.SanPhams.FirstOrDefault(p => p.TenSanPham == "iPhone 15" || p.TenSanPham == "iPhone 15 128GB Đen" || p.TenSanPham == "iPhone 15 Thường");
             if (originalIphone != null)

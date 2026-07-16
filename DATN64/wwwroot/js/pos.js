@@ -8,10 +8,19 @@ var app = new Vue({
         loading: true,
         checkingOut: false,
 
-        // Form inputs
+        // Customer autocomplete
+        customerSearchQuery: "",
+        customerSearchResults: [],
+        showCustomerDropdown: false,
+        customerNavIndex: -1,
+        selectedCustomer: null,  // { id, name, phone } or null for walk-in
+
+        // Legacy / checkout fields (still used internally)
         customerIndex: "-1",
         customerName: "Khách Hàng Vãng Lai",
-        customerPhone: "",
+        newCustomerName: '',  // Tên KH mới khi đăng ký từ POS
+        showNewCustomerForm: false, // Hiện form đăng ký KH mới
+        newCustomerPhone: '', // SĐT KH mới
         paymentMethod: "Tiền mặt",
 
         // Voucher inputs
@@ -56,7 +65,13 @@ var app = new Vue({
             accountNo: '108602210708',
             accountName: 'CONG TY NOVATECH',
             template: 'qr_only'
-        }
+        },
+
+        // Variant modal
+        showVariantModal: false,
+        variantProduct: null,
+        variantList: [],
+        variantLoading: false
     },
     watch: {
         isDarkMode(newVal) {
@@ -231,29 +246,139 @@ var app = new Vue({
                 console.error('Error fetching POS customers:', err);
             }
         },
+        // ── Customer Autocomplete ──────────────────────────────────────────
+        onCustomerSearch() {
+            const q = (this.customerSearchQuery || '').trim().toLowerCase();
+            this.customerNavIndex = -1;
+            if (!q) {
+                this.customerSearchResults = [];
+                this.showCustomerDropdown = true;
+                return;
+            }
+            this.customerSearchResults = this.customers
+                .filter(c => {
+                    const nameMatch = (c.name || '').toLowerCase().includes(q);
+                    const phoneMatch = (c.phone || '').includes(q);
+                    return nameMatch || phoneMatch;
+                })
+                .slice(0, 8);
+            this.showCustomerDropdown = true;
+        },
+        onCustomerSearchFocus() {
+            this.showCustomerDropdown = true;
+            if (!this.customerSearchQuery) this.customerSearchResults = [];
+        },
+        getInitial(name) {
+            if (!name || name.length === 0) return '?';
+            return name[0].toUpperCase();
+        },
+        selectCustomer(c) {
+            this.selectedCustomer = c;
+            this.customerName = c.name;
+            this.customerPhone = c.phone || '';
+            this.customerIndex = this.customers.findIndex(x => x.id === c.id).toString();
+            this.customerSearchQuery = '';
+            this.showCustomerDropdown = false;
+        },
+        selectWalkIn() {
+            this.selectedCustomer = { id: null, name: 'Khách Hàng Vãng Lai', phone: '' };
+            this.customerName = 'Khách Hàng Vãng Lai';
+            this.customerPhone = '';
+            this.customerIndex = '-1';
+            this.showCustomerDropdown = false;
+            this.showNewCustomerForm = false;
+        },
+        clearCustomer() {
+            this.selectedCustomer = null;
+            this.customerName = 'Khách Hàng Vãng Lai';
+            this.customerPhone = '';
+            this.customerIndex = '-1';
+            this.customerSearchQuery = '';
+            this.showCustomerDropdown = false;
+            this.showNewCustomerForm = false;
+            this.newCustomerName = '';
+            this.newCustomerPhone = '';
+        },
+        showRegisterForm() {
+            // Hiện form đăng ký KH mới với SĐT đã nhập sẵn
+            this.newCustomerPhone = this.customerSearchQuery;
+            this.newCustomerName = '';
+            this.showNewCustomerForm = true;
+            this.showCustomerDropdown = false;
+        },
+        cancelRegister() {
+            this.showNewCustomerForm = false;
+            this.newCustomerName = '';
+            this.newCustomerPhone = '';
+        },
+        async registerNewCustomer() {
+            if (!this.newCustomerPhone.trim()) {
+                alert('Vui lòng nhập số điện thoại!');
+                return;
+            }
+            // Tạo KH mới qua API
+            try {
+                const res = await fetch('/POS/CreateWalkInCustomer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    body: JSON.stringify({ hoTen: this.newCustomerName || 'Khách Hàng', soDienThoai: this.newCustomerPhone })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const newC = { id: data.id, name: data.name, phone: data.phone };
+                    this.customers.push(newC);
+                    this.selectCustomer(newC);
+                    this.showNewCustomerForm = false;
+                    this.newCustomerName = '';
+                    this.newCustomerPhone = '';
+                } else {
+                    const err = await res.json();
+                    alert(err.message || 'Lỗi khi tạo khách hàng!');
+                }
+            } catch(e) {
+                alert('Lỗi kết nối, thử lại!');
+            }
+        },
+        closeCustomerSearch() {
+            this.showCustomerDropdown = false;
+        },
+        customerNavDown() {
+            if (!this.showCustomerDropdown) return;
+            const max = this.customerSearchResults.length > 0 ? this.customerSearchResults.length - 1 : 0;
+            if (this.customerNavIndex < max) this.customerNavIndex++;
+        },
+        customerNavUp() {
+            if (this.customerNavIndex > 0) this.customerNavIndex--;
+        },
+        customerNavSelect() {
+            if (this.customerNavIndex >= 0 && this.customerSearchResults[this.customerNavIndex]) {
+                this.selectCustomer(this.customerSearchResults[this.customerNavIndex]);
+            } else if (this.customerSearchResults.length > 0) {
+                this.selectCustomer(this.customerSearchResults[0]);
+            } else {
+                this.selectWalkIn();
+            }
+        },
+        // Legacy stubs (kept for compatibility)
         onCustomerChange() {
             const idx = parseInt(this.customerIndex);
             if (idx === -1) {
-                this.customerName = "Khách Hàng Vãng Lai";
-                this.customerPhone = "";
+                this.customerName = 'Khách Hàng Vãng Lai';
+                this.customerPhone = '';
             } else {
                 const c = this.customers[idx];
                 this.customerName = c.name;
                 this.customerPhone = c.phone;
             }
         },
-        onCustomerPhoneInput() {
-            const phone = (this.customerPhone || '').trim();
-            const idx = this.customers.findIndex(c => c.phone === phone);
-            if (idx !== -1) {
-                this.customerIndex = idx.toString();
-                this.customerName = this.customers[idx].name;
-            } else {
-                this.customerIndex = "-1";
-                this.customerName = "Khách Hàng Vãng Lai";
-            }
-        },
+        onCustomerPhoneInput() {},
         addToCart(product) {
+            // If product has variants, open variant selection modal
+            if (product.hasVariants) {
+                this.openVariantModal(product);
+                return;
+            }
+
             if (product.stock <= 0) {
                 alert('Sản phẩm đã hết hàng trong kho!');
                 return;
@@ -276,6 +401,46 @@ var app = new Vue({
                     maxStock: product.stock
                 });
             }
+        },
+        async openVariantModal(product) {
+            this.variantProduct = product;
+            this.variantList = [];
+            this.variantLoading = true;
+            this.showVariantModal = true;
+            try {
+                const res = await axios.get('/POS/GetVariants?productId=' + product.id);
+                this.variantList = res.data;
+            } catch (e) {
+                console.error('GetVariants error:', e);
+            } finally {
+                this.variantLoading = false;
+            }
+        },
+        closeVariantModal() {
+            this.showVariantModal = false;
+            this.variantProduct = null;
+            this.variantList = [];
+        },
+        addVariantToCart(variant) {
+            if (variant.stock <= 0) return;
+            const existing = this.cart.find(i => i.id === variant.id);
+            if (existing) {
+                if (existing.quantity >= variant.stock) {
+                    alert('Số lượng chọn vượt quá tồn kho khả dụng!');
+                    return;
+                }
+                existing.quantity++;
+            } else {
+                this.cart.push({
+                    id: variant.id,
+                    name: variant.name,
+                    sku: variant.sku,
+                    price: variant.price,
+                    quantity: 1,
+                    maxStock: variant.stock
+                });
+            }
+            this.closeVariantModal();
         },
         removeFromCart(id) {
             this.cart = this.cart.filter(i => i.id !== id);
@@ -363,12 +528,7 @@ var app = new Vue({
         async handleCheckout() {
             if (this.cart.length === 0) return;
 
-            // 1. Validation for Walk-in Customer SĐT
-            if (this.customerIndex === "-1" && !this.customerPhone.trim()) {
-                this.errorMsg = "Cảnh báo: Khách hàng vãng lai bắt buộc phải có số điện thoại!";
-                alert("Cảnh báo: Khách hàng vãng lai bắt buộc phải nhập số điện thoại!");
-                return;
-            }
+            // Bỏ validation bắt buộc SĐT — khách vãng lai có thể checkout không cần SĐT
 
             // 2. Validation for Cash Payment under-payment
             if (this.paymentMethod === 'Tiền mặt' && this.cashReceived > 0 && this.cashReceived < this.totalAmount) {
@@ -631,5 +791,20 @@ var app = new Vue({
         this.user = {
             fullName: window.sellerName || 'Nhân viên'
         };
+    }
+});
+
+// v-click-outside directive for closing customer autocomplete dropdown
+Vue.directive('click-outside', {
+    bind(el, binding, vnode) {
+        el._clickOutsideHandler = function(event) {
+            if (!(el === event.target || el.contains(event.target))) {
+                vnode.context[binding.expression]();
+            }
+        };
+        document.addEventListener('click', el._clickOutsideHandler);
+    },
+    unbind(el) {
+        document.removeEventListener('click', el._clickOutsideHandler);
     }
 });

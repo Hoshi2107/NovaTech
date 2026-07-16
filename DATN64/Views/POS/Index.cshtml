@@ -96,11 +96,13 @@
               <span class="position-absolute start-0 top-50 translate-middle-y ms-3 text-muted-custom text-xs pointer-events-none" style="z-index: 5;">
                 <i class="fa-solid fa-magnifying-glass text-slate-500"></i>
               </span>
-              <span v-if="searchQuery" @@click="searchQuery = ''" class="position-absolute end-0 top-50 translate-middle-y me-12 cursor-pointer text-slate-400 hover-text-slate-100 text-xs px-2 py-1" style="z-index: 5;" title="Xóa tìm kiếm">
-                &times;
-              </span>
-              <button class="btn btn-search-pos d-flex align-items-center justify-content-center" type="button" style="border-radius: 0 22px 22px 0; min-width: 44px; font-size: 0.9rem;">
-                <i class="fa-solid fa-magnifying-glass"></i>
+              <!-- Nút kính lúp / xóa: khi có text thì hiện × để xóa, khi trống hiện kính lúp -->
+              <button class="btn btn-search-pos d-flex align-items-center justify-content-center" type="button"
+                      @@click="searchQuery ? searchQuery = '' : null"
+                      style="border-radius: 0 22px 22px 0; min-width: 44px; font-size: 0.9rem;"
+                      :title="searchQuery ? 'Xóa tìm kiếm' : 'Tìm kiếm'">
+                <i v-if="!searchQuery" class="fa-solid fa-magnifying-glass"></i>
+                <i v-else class="fa-solid fa-xmark"></i>
               </button>
             </div>
           </div>
@@ -231,25 +233,24 @@
                 <div class="card product-card h-100 cursor-pointer" @@click="addToCart(p)">
                   <div class="position-relative overflow-hidden rounded-top-3 p-2 bg-white d-flex align-items-center justify-content-center" style="height: 120px;">
                     <img :src="p.image" class="card-img-top h-100 w-auto object-fit-contain" :alt="p.name">
-                    <span class="position-absolute top-0 start-0 m-2 badge bg-success" v-if="p.stock > 0">
+                    <span class="position-absolute top-0 start-0 m-2 badge bg-success" v-if="p.stock > 0 && !p.hasVariants">
                       Tồn: ${ p.stock }
                     </span>
-                    <span class="position-absolute top-0 start-0 m-2 badge bg-danger" v-else>
+                    <span class="position-absolute top-0 start-0 m-2 badge bg-danger" v-else-if="p.stock <= 0 && !p.hasVariants">
                       Hết hàng
+                    </span>
+                    <span class="position-absolute top-0 start-0 m-2 badge variant-badge" v-if="p.hasVariants">
+                      <i class="fa-solid fa-layer-group me-1" style="font-size:0.6rem;"></i>Biến thể
+                    </span>
+                    <span class="position-absolute top-0 end-0 m-2" v-if="p.hasVariants">
+                      <i class="fa-solid fa-chevron-right text-white" style="font-size:0.65rem; opacity:0.7;"></i>
                     </span>
                   </div>
                   <div class="card-body p-2.5 d-flex flex-column">
                     <div class="text-xxs text-uppercase fw-bold text-muted mb-1" style="font-size: 0.65rem;">${ p.category }</div>
                     <h6 class="text-xs text-truncate mb-1 fw-bold product-name-highlight" :title="p.name">${ p.name }</h6>
-                    <div class="text-xxs mb-1 text-slate-400">SKU: ${ p.sku }</div>
-                    <div class="d-flex align-items-center gap-1 mb-2 text-warning" style="font-size: 8px;">
-                      <i class="fa-solid fa-star"></i>
-                      <i class="fa-solid fa-star"></i>
-                      <i class="fa-solid fa-star"></i>
-                      <i class="fa-solid fa-star"></i>
-                      <i class="fa-solid fa-star"></i>
-                      <span class="text-xxs text-muted ms-1">(5.0)</span>
-                    </div>
+                    <div class="mb-1"><span class="sku-badge"><i class="fa-solid fa-barcode me-1" style="font-size:0.55rem;"></i>${ p.sku }</span></div>
+
                     <div class="d-flex align-items-center justify-content-between mt-auto">
                       <div class="text-xs text-emerald fw-extrabold" style="font-size: 0.85rem;">${ formatMoney(p.price) }</div>
                       <button type="button" class="btn-add-to-cart-quick" @@click.stop="addToCart(p)">
@@ -308,72 +309,75 @@
       </div>
 
       <!-- Right Panel: Cart & Checkout Form -->
-      <div class="col-lg-4 d-flex flex-column h-100 p-4 pos-checkout-panel overflow-y-auto" :class="{ 'd-none d-lg-flex': activeTab !== 'cart' }">
-        <div class="d-flex justify-content-between align-items-center mb-3 flex-shrink-0">
-          <h5 class="fw-bold m-0 d-flex align-items-center gap-2 text-cyan">
-            <i class="fa-solid fa-basket-shopping text-cyan"></i> Giỏ hàng thanh toán
-          </h5>
-          <button type="button" class="btn btn-xs btn-outline-warning rounded-pill px-2.5 py-1 text-xxs fw-bold d-flex align-items-center gap-1" @@click="holdCurrentCart" :disabled="cart.length === 0">
-            <i class="fa-solid fa-clock"></i> Lưu đơn tạm
-          </button>
-        </div>
+      <div class="col-lg-4 d-flex flex-column h-100 pos-checkout-panel" :class="{ 'd-none d-lg-flex': activeTab !== 'cart' }">
+        <!-- ═══ ZONE 1: Cart Items (Scrollable) ═══ -->
+        <div class="cart-zone-top d-flex flex-column">
+          <!-- Cart Header -->
+          <div class="d-flex justify-content-between align-items-center px-4 pt-3 pb-2 flex-shrink-0">
+            <h5 class="fw-bold m-0 d-flex align-items-center gap-2" style="font-size: 0.9rem;">
+              <i class="fa-solid fa-basket-shopping text-cyan"></i>
+              <span style="color: var(--text-primary);">Giỏ hàng</span>
+              <span class="badge rounded-pill ms-1" style="background: rgba(0,242,254,0.15); color: var(--accent-color); font-size: 0.65rem;" v-if="cart.length > 0">${ cart.reduce((s,i)=>s+i.quantity,0) } món</span>
+            </h5>
+            <button type="button" class="btn btn-xs btn-outline-warning rounded-pill px-2 py-1 text-xxs fw-bold d-flex align-items-center gap-1" @@click="holdCurrentCart" :disabled="cart.length === 0">
+              <i class="fa-solid fa-clock"></i> Tạm lưu
+            </button>
+          </div>
 
-        <!-- Suspended/Held Carts List -->
-        <div class="held-carts-section mb-3 p-3 rounded-3" v-if="heldCarts.length > 0">
-          <h6 class="text-xs fw-bold text-cyan mb-2 d-flex align-items-center gap-1.5">
-            <i class="fa-solid fa-clock-rotate-left"></i> Đơn hàng đang tạm lưu (${ heldCarts.length })
-          </h6>
-          <div class="d-flex flex-column gap-2" style="max-height: 150px; overflow-y: auto;">
-            <div class="held-cart-item d-flex align-items-center justify-content-between p-2 rounded-2 text-xxs" v-for="hc in heldCarts" :key="hc.id" style="background: var(--input-bg); border: 1px solid var(--border-color);">
-              <div class="min-w-0 flex-grow-1">
-                <div class="fw-bold text-truncate text-slate-100" style="color: var(--text-primary) !important;">${ hc.customerName } (${ hc.time })</div>
-                <div class="text-secondary mt-0.5" style="color: var(--text-secondary) !important;">${ hc.cart.length } món | ${ formatMoney(hc.total) } đ</div>
+          <!-- Held Carts -->
+          <div class="held-carts-section mx-3 mb-2 p-2 rounded-3" v-if="heldCarts.length > 0">
+            <h6 class="text-xs fw-bold text-cyan mb-2 d-flex align-items-center gap-1">
+              <i class="fa-solid fa-clock-rotate-left"></i> Đơn tạm lưu (${ heldCarts.length })
+            </h6>
+            <div class="d-flex flex-column gap-1" style="max-height: 100px; overflow-y: auto;">
+              <div class="d-flex align-items-center justify-content-between p-1.5 rounded-2 text-xxs" v-for="hc in heldCarts" :key="hc.id" style="background: var(--input-bg); border: 1px solid var(--border-color);">
+                <div class="min-w-0 flex-grow-1">
+                  <div class="fw-bold text-truncate" style="color: var(--text-primary);">${ hc.customerName } (${ hc.time })</div>
+                  <div style="color: var(--text-secondary);">${ hc.cart.length } món | ${ formatMoney(hc.total) } đ</div>
+                </div>
+                <div class="d-flex gap-1 align-items-center ms-2">
+                  <button type="button" class="btn btn-xs btn-info text-white px-2 py-0.5 rounded text-xxs fw-bold" @@click="restoreHeldCart(hc.id)">Phục hồi</button>
+                  <button type="button" class="btn btn-xs btn-outline-danger px-1 py-0.5 rounded" @@click="deleteHeldCart(hc.id)"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
               </div>
-              <div class="d-flex gap-1.5 align-items-center">
-                <button type="button" class="btn btn-xs btn-info text-white px-2 py-0.5 rounded text-xxs fw-bold" @@click="restoreHeldCart(hc.id)">
-                  Khôi phục
-                </button>
-                <button type="button" class="btn btn-xs btn-outline-danger px-1.5 py-0.5 rounded" @@click="deleteHeldCart(hc.id)">
-                  <i class="fa-solid fa-trash-can"></i>
-                </button>
+            </div>
+          </div>
+
+          <!-- Cart Items Scrollable -->
+          <div class="cart-items-scroll px-3 pb-2">
+            <!-- Empty state -->
+            <div class="d-flex flex-column align-items-center justify-content-center text-muted-custom py-4" v-if="cart.length === 0">
+              <i class="fa-solid fa-cart-flatbed fs-2 mb-2 text-slate-500"></i>
+              <p class="text-xs text-slate-400 m-0">Chưa có sản phẩm nào</p>
+              <p class="text-xxs text-slate-600 m-0 mt-1">Click vào sản phẩm bên trái để thêm</p>
+            </div>
+            <!-- Items -->
+            <div class="d-flex flex-column gap-2" v-else>
+              <div v-for="item in cart" :key="item.id" class="cart-item d-flex align-items-center gap-2 p-2 rounded-3">
+                <div class="flex-grow-1 min-w-0">
+                  <div class="text-xs fw-bold cart-item-name text-truncate" :title="item.name">${ item.name }</div>
+                  <div class="d-flex align-items-center gap-1 mt-0.5">
+                    <span class="sku-badge-mini">${ item.sku }</span>
+                    <span class="text-xxs text-emerald fw-bold">${ formatMoney(item.price) }đ</span>
+                  </div>
+                </div>
+                <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                  <button type="button" class="qty-btn" @@click="updateQty(item.id, -1)"><i class="fa-solid fa-minus"></i></button>
+                  <span class="text-xs fw-bold px-1" style="min-width: 18px; text-align: center; color: var(--text-primary);">${ item.quantity }</span>
+                  <button type="button" class="qty-btn" @@click="updateQty(item.id, 1)"><i class="fa-solid fa-plus"></i></button>
+                  <button type="button" class="trash-btn" @@click="removeFromCart(item.id)"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Cart items list (Scrollable) -->
-        <div class="cart-items-wrapper mb-3 pe-1">
-          <div class="d-flex flex-column align-items-center justify-content-center text-muted-custom py-5 h-100" v-if="cart.length === 0">
-            <i class="fa-solid fa-cart-flatbed fs-2 mb-2 text-slate-500 animate-bounce"></i>
-            <p class="text-xs text-slate-400">Chưa có sản phẩm nào được chọn</p>
-          </div>
+        <!-- ═══ DIVIDER ═══ -->
+        <div class="cart-zone-divider flex-shrink-0"></div>
 
-          <div class="d-flex flex-column gap-2" v-else>
-            <div v-for="item in cart" :key="item.id" class="cart-item d-flex align-items-center justify-content-between p-2.5 rounded-3">
-              <div class="flex-grow-1 min-w-0 me-2">
-                <div class="text-xs fw-bold cart-item-name text-truncate" :title="item.name">${ item.name }</div>
-                <div class="text-xxs cart-item-info mt-0.5">${ item.sku } | ${ formatMoney(item.price) } đ</div>
-              </div>
-              
-              <!-- Quantity Controls -->
-              <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                <button type="button" class="qty-btn" @@click="updateQty(item.id, -1)">
-                  <i class="fa-solid fa-minus"></i>
-                </button>
-                <span class="text-xs fw-bold cart-item-qty px-1" style="min-width: 15px; text-align: center;">${ item.quantity }</span>
-                <button type="button" class="qty-btn" @@click="updateQty(item.id, 1)">
-                  <i class="fa-solid fa-plus"></i>
-                </button>
-                <button type="button" class="trash-btn ms-1" @@click="removeFromCart(item.id)">
-                  <i class="fa-solid fa-trash-can"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Checkout Form & Pay Info -->
-        <form @@submit.prevent="handleCheckout" class="checkout-form border-top border-slate-800 pt-3 flex-shrink-0">
+        <!-- ═══ ZONE 2: Checkout (Sticky / Fixed Bottom) ═══ -->
+        <div class="cart-zone-bottom flex-shrink-0">
+        <form @@submit.prevent="handleCheckout" class="checkout-form px-4 pt-3">
           <div v-if="successMsg" class="alert alert-success text-xs py-2 px-3 mb-3 d-flex align-items-center gap-2">
             <i class="fa-solid fa-circle-check fs-6"></i>
             <span>${ successMsg }</span>
@@ -383,35 +387,111 @@
             <span>${ errorMsg }</span>
           </div>
 
-          <!-- Customer Selection and Phone Info -->
-          <div class="mb-3">
-            <label class="form-label text-xxs voucher-label fw-semibold mb-1.5">Khách hàng</label>
-            <div class="input-group input-group-sm position-relative">
-              <span class="input-group-text bg-transparent border-end-0 text-slate-500" style="border: 1px solid var(--border-color); border-radius: 20px 0 0 20px; min-width: 40px; justify-content: center;">
-                <i class="fa-solid fa-user" style="font-size:0.75rem;"></i>
-              </span>
-              <select v-model="customerIndex" class="form-select text-xs input-pos border-start-0" style="border-radius: 0 20px 20px 0; border: 1px solid var(--border-color);" @@change="onCustomerChange">
-                <option value="-1">Khách Hàng Vãng Lai</option>
-                <option v-for="(c, idx) in customers" :key="c.id" :value="idx">${ c.name }</option>
-              </select>
+          <!-- Customer Smart Search (Autocomplete) -->
+          <div class="mb-3 customer-search-wrapper" v-click-outside="closeCustomerSearch">
+            <label class="form-label text-xxs voucher-label fw-semibold mb-1.5">
+              <i class="fa-solid fa-user-tag me-1 text-cyan"></i>Khách hàng
+            </label>
+
+            <!-- Selected customer chip (shown after selection) -->
+            <div class="customer-selected-chip d-flex align-items-center gap-2 px-3 py-2 rounded-pill" v-if="selectedCustomer" @@click="clearCustomer">
+              <div class="customer-avatar-mini" v-text="getInitial(selectedCustomer.name)"></div>
+              <div class="flex-grow-1 min-w-0">
+                <div class="text-xs fw-bold text-truncate" style="color: var(--text-primary);">${ selectedCustomer.name }</div>
+                <div class="text-xxs" style="color: var(--text-secondary);" v-if="selectedCustomer.phone"><i class="fa-solid fa-phone me-1" style="font-size:0.6rem;"></i>${ selectedCustomer.phone }</div>
+                <div class="text-xxs text-slate-500" v-else>Khách vãng lai</div>
+              </div>
+              <i class="fa-solid fa-xmark text-slate-400 hover-text-white flex-shrink-0" style="font-size: 0.7rem; cursor:pointer;" title="Đổi khách hàng"></i>
+            </div>
+
+            <!-- Search input (shown when no customer selected) -->
+            <div class="position-relative" v-else>
+              <div class="customer-search-input-wrap d-flex align-items-center">
+                <i class="fa-solid fa-magnifying-glass customer-search-icon"></i>
+                <input
+                  type="text"
+                  v-model="customerSearchQuery"
+                  @@input="onCustomerSearch"
+                  @@focus="onCustomerSearchFocus"
+                  @@keydown.down.prevent="customerNavDown"
+                  @@keydown.up.prevent="customerNavUp"
+                  @@keydown.enter.prevent="customerNavSelect"
+                  @@keydown.escape="closeCustomerSearch"
+                  class="customer-search-input"
+                  placeholder="Nhập tên hoặc SĐT khách hàng..."
+                  autocomplete="off"
+                >
+                <button type="button" class="customer-search-clear" v-if="customerSearchQuery" @@click="customerSearchQuery = ''; showCustomerDropdown = false">&times;</button>
+              </div>
+
+              <!-- Autocomplete dropdown -->
+              <div class="customer-autocomplete-dropdown" v-if="showCustomerDropdown">
+                <!-- Results list -->
+                <div v-if="customerSearchResults.length > 0">
+                  <div
+                    v-for="(c, i) in customerSearchResults"
+                    :key="c.id"
+                    class="customer-autocomplete-item"
+                    :class="{ 'customer-autocomplete-item-active': i === customerNavIndex }"
+                    @@click="selectCustomer(c)"
+                    @@mouseenter="customerNavIndex = i"
+                  >
+                    <div class="customer-avatar-mini" v-text="getInitial(c.name)"></div>
+                    <div class="flex-grow-1 min-w-0">
+                      <div class="text-xs fw-bold text-truncate" style="color: var(--text-primary);">${ c.name }</div>
+                      <div class="text-xxs" style="color: var(--text-secondary);" v-if="c.phone">
+                        <i class="fa-solid fa-phone me-1" style="font-size:0.55rem;"></i>${ c.phone }
+                      </div>
+                    </div>
+                    <i class="fa-solid fa-arrow-turn-down-left text-slate-500" style="font-size:0.65rem; transform: scaleX(-1);"></i>
+                  </div>
+                </div>
+                <!-- No results -->
+                <div class="px-3 py-2 text-xxs text-slate-400" v-else-if="customerSearchQuery.length > 0">
+                  <i class="fa-solid fa-circle-info me-1 text-slate-500"></i>
+                  Không tìm thấy —
+                  <span class="text-cyan fw-semibold cursor-pointer" @@click="showRegisterForm()" style="cursor:pointer;">Đăng ký khách mới</span>
+                </div>
+                <!-- Default: walk-in shortcut -->
+                <div class="customer-autocomplete-item" @@click="selectWalkIn" v-if="customerSearchResults.length === 0 && customerSearchQuery.length === 0">
+                  <div class="customer-avatar-mini" style="background: rgba(148,163,184,0.15); color: #64748b;">?</div>
+                  <div>
+                    <div class="text-xs fw-semibold" style="color: var(--text-primary);">Khách Hàng Vãng Lai</div>
+                    <div class="text-xxs text-slate-500">Không cần đăng ký</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form đăng ký khách mới (tùy chọn) -->
+            <div v-if="showNewCustomerForm" class="mt-2 p-3 rounded-3" style="background: rgba(6,182,212,0.07); border: 1px solid rgba(6,182,212,0.2);">
+              <div class="text-xxs fw-bold text-cyan mb-2">
+                <i class="fa-solid fa-user-plus me-1"></i>Đăng ký khách hàng mới
+              </div>
+              <div class="mb-2">
+                <input type="text" v-model="newCustomerName" class="form-control form-control-sm input-pos text-xs"
+                       placeholder="Họ và Tên (tùy chọn)" autocomplete="off">
+              </div>
+              <div class="mb-2">
+                <input type="tel" v-model="newCustomerPhone" class="form-control form-control-sm input-pos text-xs"
+                       placeholder="Số điện thoại *" autocomplete="off"
+                       @@keydown.enter.prevent="registerNewCustomer">
+              </div>
+              <div class="d-flex gap-2">
+                <button type="button" class="btn btn-sm flex-grow-1 text-xxs fw-bold"
+                        style="background: linear-gradient(135deg,#06b6d4,#0e7490); color:#fff; border-radius:8px;"
+                        @@click="registerNewCustomer">
+                  <i class="fa-solid fa-check me-1"></i>Lưu & chọn
+                </button>
+                <button type="button" class="btn btn-sm text-xxs text-slate-400"
+                        style="border: 1px solid rgba(100,116,139,0.3); border-radius:8px;"
+                        @@click="cancelRegister">
+                  Hủy
+                </button>
+              </div>
             </div>
           </div>
 
-          <div class="mb-3">
-            <label class="form-label text-xxs voucher-label fw-semibold mb-1.5">Số điện thoại</label>
-            <div class="input-group input-group-sm position-relative">
-              <span class="input-group-text bg-transparent border-end-0 text-slate-500" style="border: 1px solid var(--border-color); border-radius: 20px 0 0 20px; min-width: 40px; justify-content: center;">
-                <i class="fa-solid fa-phone" style="font-size:0.75rem;"></i>
-              </span>
-              <input type="text" v-model="customerPhone" class="form-control text-xs input-pos border-start-0" style="border-radius: 0 20px 20px 0; border: 1px solid var(--border-color);" placeholder="Nhập SĐT..." @@input="onCustomerPhoneInput">
-            </div>
-          </div>
-
-          <!-- Walk-in Customer Name Input -->
-          <div class="mb-3" v-if="customerIndex === '-1'">
-            <label class="form-label text-xxs voucher-label fw-semibold mb-1.5">Tên khách vãng lai</label>
-            <input type="text" v-model="customerName" class="form-control text-xs input-pos" placeholder="Nhập tên khách vãng lai...">
-          </div>
 
           <!-- Voucher Section (NEW) -->
           <div class="voucher-section mb-3">
@@ -508,6 +588,7 @@
             <i class="fa-solid fa-circle-check me-2" v-if="!checkingOut"></i> Xác nhận & In hóa đơn
           </button>
         </form>
+        </div><!-- /cart-zone-bottom -->
       </div>
     </div>
 
@@ -613,6 +694,64 @@
       </div>
     </div>
 
+    <!-- ═══ Variant Selection Modal ═══ -->
+    <div class="variant-modal-overlay d-flex align-items-end align-items-md-center justify-content-center"
+         v-if="showVariantModal"
+         @@click.self="closeVariantModal"
+         style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9998;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);">
+      <div class="variant-modal-panel">
+        <!-- Header -->
+        <div class="d-flex align-items-center justify-content-between px-4 pt-4 pb-3" style="border-bottom:1px solid var(--border-color);">
+          <div>
+            <div class="text-xxs text-cyan fw-semibold mb-0.5"><i class="fa-solid fa-layer-group me-1"></i>CHỌN BIẾN THỂ</div>
+            <div class="text-sm fw-bold" style="color:var(--text-primary);" v-if="variantProduct">${ variantProduct.name.split(' ').slice(0,2).join(' ') }</div>
+          </div>
+          <button type="button" class="btn-variant-close" @@click="closeVariantModal">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <!-- Loading -->
+        <div class="d-flex align-items-center justify-content-center py-5" v-if="variantLoading">
+          <div class="spinner-border spinner-border-sm text-info me-2"></div>
+          <span class="text-xs text-slate-400">Đang tải biến thể...</span>
+        </div>
+
+        <!-- Variant Grid -->
+        <div class="variant-grid px-4 py-3" v-else>
+          <div
+            v-for="v in variantList"
+            :key="v.id"
+            class="variant-card"
+            :class="{ 'variant-card-out': v.stock <= 0 }"
+            @@click="addVariantToCart(v)"
+          >
+            <div class="variant-card-img">
+              <img :src="v.image" :alt="v.name" class="img-fluid">
+            </div>
+            <div class="variant-card-body">
+              <div class="variant-card-name">${ v.name }</div>
+              <div class="variant-card-sku"><i class="fa-solid fa-barcode me-1" style="font-size:0.5rem;"></i>${ v.sku }</div>
+              <div class="variant-card-price">${ formatMoney(v.price) }đ</div>
+              <div class="variant-card-stock" :class="v.stock > 5 ? 'text-emerald' : (v.stock > 0 ? 'text-warning' : 'text-danger')">
+                <span v-if="v.stock > 0"><i class="fa-solid fa-circle-check me-1"></i>Tồn: ${ v.stock }</span>
+                <span v-else><i class="fa-solid fa-circle-xmark me-1"></i>Hết hàng</span>
+              </div>
+            </div>
+            <div class="variant-card-add" v-if="v.stock > 0">
+              <i class="fa-solid fa-plus"></i>
+            </div>
+          </div>
+
+          <!-- Empty -->
+          <div class="text-center py-4 text-slate-400 text-xs" v-if="variantList.length === 0">
+            <i class="fa-solid fa-box-open fs-4 mb-2 d-block text-slate-600"></i>
+            Không tìm thấy biến thể nào
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Zoomed QR Code Overlay Modal -->
     <div class="qr-zoom-overlay d-flex align-items-center justify-content-center" v-if="zoomQR" @@click="zoomQR = false" style="background: rgba(0,0,0,0.85); position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999; cursor: zoom-out;">
       <div class="qr-zoom-card p-4 bg-white rounded-4 shadow-lg text-center" @@click.stop style="max-width: 90%; width: 380px; cursor: default; border-radius: 16px;">
@@ -640,16 +779,25 @@
     </div>
 </div>
 
+@{
+    var vPrefixes = ViewBag.VariantPrefixes as HashSet<string> ?? new HashSet<string>();
+}
 <script>
-    window.posProducts = @Html.Raw(JsonSerializer.Serialize(Model.Select(p => new {
-        id = p.MaSanPham,
-        name = p.TenSanPham,
-        price = p.GiaBan,
-        stock = p.SoLuongTon,
-        image = p.HinhAnh ?? "https://images.unsplash.com/photo-1531297484001-80022131f5a1?q=80&w=300",
-        category = p.DanhMuc != null ? p.DanhMuc.TenDanhMuc : "Khác",
-        brand = p.ThuongHieu != null ? p.ThuongHieu.TenThuongHieu : "Khác",
-        sku = "SP-" + p.MaSanPham.ToString("D4")
+    window.posProducts = @Html.Raw(JsonSerializer.Serialize(Model.Select(p => {
+        var w = p.TenSanPham.Trim().Split(' ');
+        var pfx = string.Join(" ", w.Take(2));
+        return new {
+            id = p.MaSanPham,
+            name = p.TenSanPham,
+            price = p.GiaBan,
+            stock = p.SoLuongTon,
+            image = p.HinhAnh ?? "https://images.unsplash.com/photo-1531297484001-80022131f5a1?q=80&w=300",
+            category = p.DanhMuc != null ? p.DanhMuc.TenDanhMuc : "Khác",
+            brand = p.ThuongHieu != null ? p.ThuongHieu.TenThuongHieu : "Khác",
+            sku = "SP-" + p.MaSanPham.ToString("D4"),
+            hasVariants = vPrefixes.Contains(pfx),
+            categoryId = p.MaDanhMuc
+        };
     })));
 
     window.posCustomers = @Html.Raw(JsonSerializer.Serialize(((List<DATN64.Models.KhachHang>)ViewBag.Customers).Select(c => new {
