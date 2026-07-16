@@ -628,6 +628,7 @@
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@8.0.7/dist/browser/signalr.min.js"></script>
 
     <script>
         new Vue({
@@ -681,7 +682,9 @@
                 submittingOrder: false,
                 mediaRecorder: null,
                 audioCaptureActive: false,
-                audioTimeout: null
+                audioTimeout: null,
+                // SignalR connection
+                hubConnection: null
             },
             computed: {
                 formattedDuration() {
@@ -705,12 +708,41 @@
             mounted() {
                 this.fetchCatalogProducts();
                 this.fetchLiveProducts();
+                // Init SignalR connection for receiving state updates (streamer side just connects, no heavy subscription)
+                this.initSignalRConnection();
             },
             beforeDestroy() {
                 this.stopTimer();
                 this.stopChatSimulation();
+                if (this.hubConnection) {
+                    this.hubConnection.stop();
+                }
             },
             methods: {
+                async initSignalRConnection() {
+                    try {
+                        this.hubConnection = new signalR.HubConnectionBuilder()
+                            .withUrl('/hubs/livestream')
+                            .withAutomaticReconnect()
+                            .build();
+
+                        // Listen for product updates pushed from server (e.g. after a sale)
+                        this.hubConnection.on('ProductsUpdated', (products) => {
+                            this.liveProducts = products;
+                        });
+
+                        // Listen for stats updates
+                        this.hubConnection.on('StatsUpdated', (viewerCount, likesCount) => {
+                            this.viewerCount = viewerCount;
+                            this.likesCount = likesCount;
+                        });
+
+                        await this.hubConnection.start();
+                        console.log('[SignalR] Streamer connected to hub!');
+                    } catch (err) {
+                        console.warn('[SignalR] Kết nối hub thất bại, fallback về polling:', err);
+                    }
+                },
                 formatCurrency(val) {
                     if (!val && val !== 0) return '0 ₫';
                     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);

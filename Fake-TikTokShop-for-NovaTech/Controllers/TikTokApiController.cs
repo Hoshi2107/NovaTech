@@ -5,8 +5,10 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using FakeTikTokShop.Hubs;
 using FakeTikTokShop.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace FakeTikTokShop.Controllers
@@ -17,11 +19,13 @@ namespace FakeTikTokShop.Controllers
     {
         private readonly TikTokDbContext _context;
         private readonly HttpClient _httpClient;
+        private readonly IHubContext<LivestreamHub> _hub;
 
-        public TikTokApiController(TikTokDbContext context)
+        public TikTokApiController(TikTokDbContext context, IHubContext<LivestreamHub> hub)
         {
             _context = context;
             _httpClient = new HttpClient();
+            _hub = hub;
         }
 
         // --- ORDERS API (PULL FOR NOVATECH) ---
@@ -558,6 +562,11 @@ namespace FakeTikTokShop.Controllers
 
             // Add public livestream activity log
             LiveStreamState.AddComment("Hệ thống Live", $"🎉 Khách hàng {order.CustomerName} đã đặt mua {request.Quantity} x {liveProd.Name}!", "color-teal");
+            // Push the order notification via SignalR to all connected viewers
+            await _hub.Clients.All.SendAsync("ReceiveComment", "Hệ thống Live", $"🎉 Khách hàng {order.CustomerName} đã đặt mua {request.Quantity} x {liveProd.Name}!", "color-teal");
+            // Also push updated products to all viewers
+            var updatedProducts = await _context.LivestreamProducts.ToListAsync();
+            await _hub.Clients.All.SendAsync("ProductsUpdated", updatedProducts);
 
             var settings = await GetOrCreateSettingsAsync();
             if (settings.AutoPushWebhook)
@@ -588,7 +597,7 @@ namespace FakeTikTokShop.Controllers
         }
 
         [HttpPost("livestream/state/start")]
-        public IActionResult StartLive()
+        public async Task<IActionResult> StartLive()
         {
             LiveStreamState.IsLive = true;
             LiveStreamState.ViewerCount = new Random().Next(50) + 120;
@@ -603,41 +612,55 @@ namespace FakeTikTokShop.Controllers
                 LiveStreamState.AudioChunks.Clear();
                 LiveStreamState.NextAudioChunkId = 1;
             }
+            // Broadcast via SignalR so viewers know immediately
+            await _hub.Clients.All.SendAsync("LiveStateChanged", true, LiveStreamState.ViewerCount, LiveStreamState.LikesCount);
+            await _hub.Clients.All.SendAsync("ReceiveComment", "Hệ thống", "Phòng phát sóng bắt đầu. Trực tiếp từ NovaTech Shop!", "color-red");
             return Ok(new { message = "Bắt đầu phát sóng!" });
         }
 
         [HttpPost("livestream/state/stop")]
-        public IActionResult StopLive()
+        public async Task<IActionResult> StopLive()
         {
             LiveStreamState.Reset();
             LiveStreamState.AddComment("Hệ thống", "Đã kết thúc phiên Live Stream.", "color-teal");
+            // Broadcast stop state via SignalR
+            await _hub.Clients.All.SendAsync("LiveStateChanged", false, 0, LiveStreamState.LikesCount);
+            await _hub.Clients.All.SendAsync("ReceiveComment", "Hệ thống", "Đã kết thúc phiên Live Stream.", "color-teal");
             return Ok(new { message = "Đã dừng phát sóng!" });
         }
 
         [HttpPost("livestream/like")]
-        public IActionResult AddLike()
+        public async Task<IActionResult> AddLike()
         {
             lock (LiveStreamState.Comments)
             {
                 LiveStreamState.LikesCount++;
             }
+            await _hub.Clients.All.SendAsync("StatsUpdated", LiveStreamState.ViewerCount, LiveStreamState.LikesCount);
             return Ok();
         }
 
         [HttpPost("livestream/comment")]
-        public IActionResult AddUserComment([FromBody] AddCommentRequest request)
+        public async Task<IActionResult> AddUserComment([FromBody] AddCommentRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Text)) return BadRequest();
             var colors = new[] { "color-teal", "color-yellow", "color-pink", "color-green", "color-red" };
             var color = colors[new Random().Next(colors.Length)];
             LiveStreamState.AddComment(request.Username ?? "Khách vãng lai", request.Text, color);
+            // Push comment to all viewers instantly via SignalR
+            await _hub.Clients.All.SendAsync("ReceiveComment", request.Username ?? "Khách vãng lai", request.Text, color);
             return Ok();
         }
 
         [HttpPost("livestream/frame")]
-        public IActionResult UploadFrame([FromBody] UploadFrameRequest request)
+        public async Task<IActionResult> UploadFrame([FromBody] UploadFrameRequest request)
         {
             LiveStreamState.CurrentFrame = request.Frame;
+            // Push frame instantly to all viewers via SignalR (no more polling!)
+            if (request.Frame != null)
+            {
+                await _hub.Clients.All.SendAsync("ReceiveFrame", request.Frame);
+            }
             return Ok();
         }
 
@@ -648,7 +671,7 @@ namespace FakeTikTokShop.Controllers
         }
 
         [HttpPost("livestream/audio")]
-        public IActionResult UploadAudioChunk([FromBody] UploadAudioChunkRequest request)
+        public async Task<IActionResult> UploadAudioChunk([FromBody] UploadAudioChunkRequest request)
         {
             if (string.IsNullOrEmpty(request.Audio)) return BadRequest();
             lock (LiveStreamState.AudioChunks)
@@ -664,6 +687,8 @@ namespace FakeTikTokShop.Controllers
                     LiveStreamState.AudioChunks.RemoveAt(0);
                 }
             }
+            // Push audio instantly to all viewers via SignalR (no more polling!)
+            await _hub.Clients.All.SendAsync("ReceiveAudio", request.Audio);
             return Ok();
         }
 
