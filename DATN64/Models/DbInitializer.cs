@@ -966,11 +966,7 @@ namespace DATN64.Models
                 }
                 else
                 {
-                    if (color.Contains("Hồng")) return "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=600&q=80"; // Pink
-                    if (color.Contains("Xanh Dương")) return "https://images.unsplash.com/photo-1695048065007-ee91055ca132?auto=format&fit=crop&w=600&q=80"; // Blue
-                    if (color.Contains("Xanh Lá")) return "https://images.unsplash.com/photo-1695048132945-f09bf216b0a1?auto=format&fit=crop&w=600&q=80"; // Green
-                    if (color.Contains("Vàng")) return "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=600&q=80"; // Yellow
-                    return "/uploads/iphone15_thuong.png"; // Black
+                    return "/uploads/iphone15_thuong.png"; // Use standard iPhone 15 image for all colors
                 }
             }
 

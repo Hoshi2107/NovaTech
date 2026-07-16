@@ -82,4 +82,17 @@ namespace DATN64.Helpers
             return roles.Contains(roleName);
         }
     }
+
+    public static class ImageHelper
+    {
+        public static string AppendVersion(string? url, string version = "2")
+        {
+            if (string.IsNullOrEmpty(url)) return "";
+            if (url.Contains("?"))
+            {
+                return $"{url}&v={version}";
+            }
+            return $"{url}?v={version}";
+        }
+    }
 }

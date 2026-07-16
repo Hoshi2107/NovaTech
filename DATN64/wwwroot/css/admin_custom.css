@@ -849,11 +849,41 @@ body[data-theme="dark"] .modal-content {
 
 body[data-theme="dark"] .table {
     color: var(--nt-text) !important;
+    background-color: transparent !important;
+    --bs-table-bg: transparent !important;
+    --bs-table-color: var(--nt-text) !important;
 }
 
 body[data-theme="dark"] .table th,
-body[data-theme="dark"] .table td {
+body[data-theme="dark"] .table td,
+body[data-theme="dark"] .table tr {
+    background-color: transparent !important;
+    color: var(--nt-text) !important;
     border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+body[data-theme="dark"] .table-light,
+body[data-theme="dark"] .table-light th,
+body[data-theme="dark"] .table-light td,
+body[data-theme="dark"] thead.table-light,
+body[data-theme="dark"] thead.table-light th {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    color: var(--nt-text) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+body[data-theme="dark"] .quantity-picker {
+    border-color: rgba(255, 255, 255, 0.15) !important;
+}
+body[data-theme="dark"] .quantity-picker button {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    color: var(--nt-text) !important;
+}
+body[data-theme="dark"] .quantity-picker button:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+body[data-theme="dark"] .quantity-picker input {
+    color: var(--nt-text) !important;
 }
 
 body[data-theme="dark"] .dropdown-menu {
