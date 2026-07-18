@@ -744,6 +744,37 @@ namespace DATN64.Models
                     }
                 }
                 context.SaveChanges();
+
+                // Idempotently seed all permissions for Admin role
+                try
+                {
+                    var adminRole = context.Roles.FirstOrDefault(r => r.Name == "Admin");
+                    if (adminRole != null)
+                    {
+                        var existingAdminPerms = context.RolePermissions
+                            .Where(rp => rp.RoleName == "Admin")
+                            .Select(rp => rp.PermissionName)
+                            .ToList();
+
+                        foreach (var perm in DATN64.Helpers.PermissionConstants.All)
+                        {
+                            if (!existingAdminPerms.Contains(perm))
+                            {
+                                context.RolePermissions.Add(new RolePermission
+                                {
+                                    RoleName = "Admin",
+                                    PermissionName = perm
+                                });
+                            }
+                        }
+                        context.SaveChanges();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error seeding Admin permissions: " + ex.Message);
+                }
+
                 SeedVariants(context);
             }
             catch (Exception ex)

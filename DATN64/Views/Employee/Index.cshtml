@@ -714,14 +714,7 @@
                         </div>
 
                         @{
-                            var permGroups = new Dictionary<string, List<string>> {
-                                { "Sản phẩm", new List<string>{"View_Product","Create_Product","Edit_Product","Delete_Product"} },
-                                { "Đơn hàng", new List<string>{"View_Order","Create_Order","Edit_Order","Delete_Order"} },
-                                { "Khách hàng", new List<string>{"View_Customer","Create_Customer","Edit_Customer","Delete_Customer"} },
-                                { "Kho bãi", new List<string>{"View_Inventory","Create_Inventory","Edit_Inventory"} },
-                                { "Nhân sự", new List<string>{"View_Employee","Create_Employee","Assign_Role"} },
-                                { "Hệ thống", new List<string>{"View_Report","View_TikTok","View_Promotion","View_Setting"} }
-                            };
+                            var permGroups = DATN64.Helpers.PermissionConstants.Groups;
                         }
 
                         <div class="row g-3">
