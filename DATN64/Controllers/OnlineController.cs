@@ -2042,7 +2042,7 @@ Quy tắc JSON:
         }
 
         private class AiConsultStructuredResponse
-        {
+        {cd 
             public string? Message { get; set; }
             public List<int>? RecommendedProductIds { get; set; }
             public List<string>? VoucherCodes { get; set; }

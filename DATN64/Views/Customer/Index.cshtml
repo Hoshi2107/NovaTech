@@ -12,6 +12,17 @@
     var pageSize = ViewBag.PageSize as int? ?? 20;
     var totalItems = ViewBag.TotalItems as int? ?? 0;
     var totalPages = ViewBag.TotalPages as int? ?? 1;
+
+    if (totalPages <= 0)
+    {
+        totalPages = 1;
+    }
+
+    var fromItem = totalItems == 0 ? 0 : ((currentPage - 1) * pageSize) + 1;
+    var toItem = Math.Min(currentPage * pageSize, totalItems);
+
+    var startPage = Math.Max(1, currentPage - 2);
+    var endPage = Math.Min(totalPages, currentPage + 2);
 }
 
 @functions {
@@ -52,6 +63,132 @@
         return "bg-danger text-white";
     }
 }
+
+<style>
+    .nt-pagination-wrap {
+        margin-top: 20px;
+        padding: 14px 16px;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        border: 1px solid #e2e8f0;
+        border-radius: 18px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+
+    .nt-page-summary {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        color: #475569;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .nt-page-summary strong {
+        color: #0f172a;
+        font-size: 14px;
+    }
+
+    .nt-pagination {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    .nt-page-btn,
+    .nt-page-number,
+    .nt-page-dots {
+        min-width: 36px;
+        height: 36px;
+        padding: 0 12px;
+        border-radius: 999px;
+        border: 1px solid #dbeafe;
+        background: #ffffff;
+        color: #0369a1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 700;
+        text-decoration: none;
+        transition: all 0.18s ease;
+        box-shadow: 0 2px 6px rgba(2, 132, 199, 0.06);
+    }
+
+    .nt-page-btn:hover,
+    .nt-page-number:hover {
+        background: #e0f2fe;
+        color: #075985;
+        border-color: #7dd3fc;
+        transform: translateY(-1px);
+        text-decoration: none;
+    }
+
+    .nt-page-number.active {
+        background: linear-gradient(135deg, #0284c7, #06b6d4);
+        color: #ffffff;
+        border-color: transparent;
+        box-shadow: 0 8px 18px rgba(6, 182, 212, 0.28);
+        pointer-events: none;
+    }
+
+    .nt-page-btn.disabled {
+        background: #f1f5f9;
+        color: #94a3b8;
+        border-color: #e2e8f0;
+        pointer-events: none;
+        box-shadow: none;
+    }
+
+    .nt-page-dots {
+        border: none;
+        background: transparent;
+        box-shadow: none;
+        color: #94a3b8;
+        min-width: 24px;
+        padding: 0 4px;
+    }
+
+    .nt-page-size-pill {
+        height: 36px;
+        padding: 0 14px;
+        border-radius: 999px;
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        color: #475569;
+        font-size: 13px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    @@media (max-width: 768px) {
+        .nt-pagination-wrap {
+            justify-content: center;
+            text-align: center;
+        }
+
+        .nt-page-summary {
+            width: 100%;
+            align-items: center;
+        }
+
+        .nt-pagination {
+            justify-content: center;
+        }
+
+        .nt-page-size-pill {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
 
 <div class="row g-4">
     <div class="col-md-4">
@@ -181,6 +318,8 @@
             </div>
 
             <form method="get" class="row g-2 mb-4">
+                <input type="hidden" name="page" value="1" />
+
                 <div class="col-md-4">
                     <input type="text"
                            name="keyword"
@@ -223,13 +362,13 @@
                 </div>
             </form>
 
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <div class="text-muted small">
                     Tổng số khách hàng: <strong>@totalItems</strong>
                 </div>
 
                 <div class="text-muted small">
-                    Trang <strong>@currentPage</strong> / <strong>@(totalPages <= 0 ? 1 : totalPages)</strong>
+                    Hiển thị <strong>@fromItem</strong> - <strong>@toItem</strong> / <strong>@totalItems</strong>
                 </div>
             </div>
 
@@ -318,56 +457,94 @@
 
             @if (totalPages > 1)
             {
-                <div class="d-flex justify-content-between align-items-center mt-4">
-                    <div class="text-muted small">
-                        Hiển thị @pageSize dòng / trang
+                <div class="nt-pagination-wrap">
+                    <div class="nt-page-summary">
+                        <strong>Trang @currentPage / @totalPages</strong>
+                        <span>Hiển thị @fromItem - @toItem trong tổng @totalItems khách hàng</span>
                     </div>
 
-                    <nav>
-                        <ul class="pagination pagination-sm mb-0">
-                            <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
-                                <a class="page-link"
-                                   href="@Url.Action("Index", new {
-                                       page = currentPage - 1,
-                                       pageSize = pageSize,
-                                       keyword = keyword,
-                                       rank = rankFilter,
-                                       status = statusFilter
-                                   })">
-                                    Trước
-                                </a>
-                            </li>
+                    <div class="nt-pagination">
+                        <a class="nt-page-btn @(currentPage <= 1 ? "disabled" : "")"
+                           href="@Url.Action("Index", new {
+                               page = currentPage - 1,
+                               pageSize = pageSize,
+                               keyword = keyword,
+                               rank = rankFilter,
+                               status = statusFilter
+                           })"
+                           title="Trang trước">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </a>
 
-                            @for (int p = Math.Max(1, currentPage - 2); p <= Math.Min(totalPages, currentPage + 2); p++)
+                        @if (startPage > 1)
+                        {
+                            <a class="nt-page-number"
+                               href="@Url.Action("Index", new {
+                                   page = 1,
+                                   pageSize = pageSize,
+                                   keyword = keyword,
+                                   rank = rankFilter,
+                                   status = statusFilter
+                               })">
+                                1
+                            </a>
+
+                            if (startPage > 2)
                             {
-                                <li class="page-item @(p == currentPage ? "active" : "")">
-                                    <a class="page-link"
-                                       href="@Url.Action("Index", new {
-                                           page = p,
-                                           pageSize = pageSize,
-                                           keyword = keyword,
-                                           rank = rankFilter,
-                                           status = statusFilter
-                                       })">
-                                        @p
-                                    </a>
-                                </li>
+                                <span class="nt-page-dots">...</span>
+                            }
+                        }
+
+                        @for (int p = startPage; p <= endPage; p++)
+                        {
+                            <a class="nt-page-number @(p == currentPage ? "active" : "")"
+                               href="@Url.Action("Index", new {
+                                   page = p,
+                                   pageSize = pageSize,
+                                   keyword = keyword,
+                                   rank = rankFilter,
+                                   status = statusFilter
+                               })">
+                                @p
+                            </a>
+                        }
+
+                        @if (endPage < totalPages)
+                        {
+                            if (endPage < totalPages - 1)
+                            {
+                                <span class="nt-page-dots">...</span>
                             }
 
-                            <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
-                                <a class="page-link"
-                                   href="@Url.Action("Index", new {
-                                       page = currentPage + 1,
-                                       pageSize = pageSize,
-                                       keyword = keyword,
-                                       rank = rankFilter,
-                                       status = statusFilter
-                                   })">
-                                    Sau
-                                </a>
-                            </li>
-                        </ul>
-                    </nav>
+                            <a class="nt-page-number"
+                               href="@Url.Action("Index", new {
+                                   page = totalPages,
+                                   pageSize = pageSize,
+                                   keyword = keyword,
+                                   rank = rankFilter,
+                                   status = statusFilter
+                               })">
+                                @totalPages
+                            </a>
+                        }
+
+                        <a class="nt-page-btn @(currentPage >= totalPages ? "disabled" : "")"
+                           href="@Url.Action("Index", new {
+                               page = currentPage + 1,
+                               pageSize = pageSize,
+                               keyword = keyword,
+                               rank = rankFilter,
+                               status = statusFilter
+                           })"
+                           title="Trang sau">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </a>
+                    </div>
+
+                    <div class="nt-page-size-pill">
+                        <i class="fa-solid fa-table-list"></i>
+                        @pageSize dòng / trang
+                    </div>
                 </div>
             }
         </div>
