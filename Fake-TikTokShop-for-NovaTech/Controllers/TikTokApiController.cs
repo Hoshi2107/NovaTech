@@ -897,10 +897,7 @@ namespace FakeTikTokShop.Controllers
                 if ((now - _lastMockCommentTime).TotalSeconds >= 4)
                 {
                     _lastMockCommentTime = now;
-                    var username = MockUsernames[_random.Next(MockUsernames.Length)];
-                    var text = MockTexts[_random.Next(MockTexts.Length)];
-                    var color = MockColors[_random.Next(MockColors.Length)];
-                    AddComment(username, text, color);
+                    // Do not add mock comments anymore as per user request
 
                     // Also randomly adjust viewer count slightly
                     var delta = _random.Next(15) - 7;

@@ -737,6 +737,16 @@
                             this.likesCount = likesCount;
                         });
 
+                        // Listen for real-time comments from viewers
+                        this.hubConnection.on('ReceiveComment', (username, text, color) => {
+                            this.chats.push({ username, text, color });
+                            if (this.chats.length > 50) this.chats.shift();
+                            this.$nextTick(() => {
+                                const chatEl = this.$refs.chatBox;
+                                if (chatEl) chatEl.scrollTop = chatEl.scrollHeight;
+                            });
+                        });
+
                         await this.hubConnection.start();
                         console.log('[SignalR] Streamer connected to hub!');
                     } catch (err) {
@@ -1089,29 +1099,6 @@
                 },
                 startChatSimulation() {
                     this.chatInterval = setInterval(() => {
-                        const randomUser = this.mockUsernames[Math.floor(Math.random() * this.mockUsernames.length)];
-                        const randomText = this.mockTexts[Math.floor(Math.random() * this.mockTexts.length)];
-                        const colors = ['color-teal', 'color-yellow', 'color-pink', 'color-green', 'color-red'];
-                        const randomColor = colors[Math.floor(Math.random() * colors.length)];
-                        
-                        this.chats.push({
-                            username: randomUser,
-                            text: randomText,
-                            color: randomColor
-                        });
-
-                        // Keep chat box small
-                        if (this.chats.length > 25) {
-                            this.chats.shift();
-                        }
-
-                        this.$nextTick(() => {
-                            const chatEl = this.$refs.chatBox;
-                            if (chatEl) {
-                                chatEl.scrollTop = chatEl.scrollHeight;
-                            }
-                        });
-
                         // Occasionally simulate a random heart fly
                         if (Math.random() > 0.4) {
                             this.sendHeart();
@@ -1207,12 +1194,7 @@
                             confirmButtonColor: '#25F4EE'
                         });
 
-                        // Show chat message about buyer
-                        this.chats.push({
-                            username: 'Hệ thống Live',
-                            text: `🎉 Khách hàng ${this.buyForm.customerName} đã đặt mua thành công ${this.buyForm.quantity} x ${this.modalProduct.name}!`,
-                            color: 'color-teal'
-                        });
+                        // Reload data will happen, comment is pushed via SignalR automatically
 
                         // Reload data
                         await this.fetchLiveProducts();
@@ -1261,12 +1243,7 @@
                             title: `Giả lập bán thành công cho ${customerName}!`
                         });
 
-                        // Show chat comment
-                        this.chats.push({
-                            username: 'Hệ thống Live',
-                            text: `🎉 Khách hàng ${customerName} đã đặt mua 1 x ${product.name}!`,
-                            color: 'color-teal'
-                        });
+                        // Reload data will happen, comment is pushed via SignalR automatically
 
                         await this.fetchLiveProducts();
                         await this.fetchCatalogProducts();

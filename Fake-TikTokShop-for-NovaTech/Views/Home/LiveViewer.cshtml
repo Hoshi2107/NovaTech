@@ -720,7 +720,7 @@
             },
             mounted() {
                 // Prompt client for a screen name to chat
-                this.viewerName = localStorage.getItem('tiktok_viewer_name') || 'Guest_' + Math.floor(Math.random() * 900 + 100);
+                this.viewerName = localStorage.getItem('tiktok_viewer_name') || '';
                 
                 // Load initial data via HTTP
                 this.fetchLiveProducts();
@@ -987,6 +987,31 @@
                 async sendUserComment() {
                     if (!this.myComment.trim()) return;
                     
+                    if (!this.viewerName || this.viewerName.trim() === '') {
+                        const { value: name } = await Swal.fire({
+                            title: 'Nhập tên của bạn',
+                            input: 'text',
+                            inputLabel: 'Vui lòng nhập tên để bắt đầu trò chuyện',
+                            inputPlaceholder: 'Nhập tên hiển thị...',
+                            background: '#12131a',
+                            color: '#fff',
+                            confirmButtonColor: '#FE2C55',
+                            allowOutsideClick: false,
+                            inputValidator: (value) => {
+                                if (!value || !value.trim()) {
+                                    return 'Bạn phải nhập tên!';
+                                }
+                            }
+                        });
+                        
+                        if (name) {
+                            this.viewerName = name.trim();
+                            localStorage.setItem('tiktok_viewer_name', this.viewerName);
+                        } else {
+                            return; // User cancelled
+                        }
+                    }
+
                     const textToSend = this.myComment;
                     this.myComment = '';
                     
