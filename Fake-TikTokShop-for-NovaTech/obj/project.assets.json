@@ -2405,11 +2405,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Admin\\Desktop\\NovaTech\\Fake-TikTokShop-for-NovaTech\\FakeTikTokShop.csproj",
+      "projectUniqueName": "C:\\Users\\Admin\\Desktop\\NovaTech\\Fake-TikTokShop-for-Novatech\\FakeTikTokShop.csproj",
       "projectName": "FakeTikTokShop",
-      "projectPath": "C:\\Users\\Admin\\Desktop\\NovaTech\\Fake-TikTokShop-for-NovaTech\\FakeTikTokShop.csproj",
+      "projectPath": "C:\\Users\\Admin\\Desktop\\NovaTech\\Fake-TikTokShop-for-Novatech\\FakeTikTokShop.csproj",
       "packagesPath": "C:\\Users\\Admin\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Admin\\Desktop\\NovaTech\\Fake-TikTokShop-for-NovaTech\\obj\\",
+      "outputPath": "C:\\Users\\Admin\\Desktop\\NovaTech\\Fake-TikTokShop-for-Novatech\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

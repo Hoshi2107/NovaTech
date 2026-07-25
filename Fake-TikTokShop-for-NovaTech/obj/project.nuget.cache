@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "zQN5Tecl5Hg=",
+  "dgSpecHash": "Lb/mvUX+Jac=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Admin\\Desktop\\NovaTech\\Fake-TikTokShop-for-NovaTech\\FakeTikTokShop.csproj",
+  "projectFilePath": "C:\\Users\\Admin\\Desktop\\NovaTech\\Fake-TikTokShop-for-Novatech\\FakeTikTokShop.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Admin\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
     "C:\\Users\\Admin\\.nuget\\packages\\microsoft.build.framework\\18.0.2\\microsoft.build.framework.18.0.2.nupkg.sha512",
@@ -41,9 +41,9 @@
       "code": "NU1903",
       "level": "Warning",
       "message": "Package 'SQLitePCLRaw.lib.e_sqlite3' 2.1.11 has a known high severity vulnerability, https://github.com/advisories/GHSA-2m69-gcr7-jv3q",
-      "projectPath": "C:\\Users\\Admin\\Desktop\\NovaTech\\Fake-TikTokShop-for-NovaTech\\FakeTikTokShop.csproj",
+      "projectPath": "C:\\Users\\Admin\\Desktop\\NovaTech\\Fake-TikTokShop-for-Novatech\\FakeTikTokShop.csproj",
       "warningLevel": 1,
-      "filePath": "C:\\Users\\Admin\\Desktop\\NovaTech\\Fake-TikTokShop-for-NovaTech\\FakeTikTokShop.csproj",
+      "filePath": "C:\\Users\\Admin\\Desktop\\NovaTech\\Fake-TikTokShop-for-Novatech\\FakeTikTokShop.csproj",
       "libraryId": "SQLitePCLRaw.lib.e_sqlite3",
       "targetGraphs": [
         "net10.0"

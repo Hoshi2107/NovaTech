@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("FakeTikTokShop")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7e44ea9cdf2ff433e9fd8e1c628520512d9cc9aa")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4e793f5b03932bbbff12110a561b00f61d515c40")]
 [assembly: System.Reflection.AssemblyProductAttribute("FakeTikTokShop")]
 [assembly: System.Reflection.AssemblyTitleAttribute("FakeTikTokShop")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

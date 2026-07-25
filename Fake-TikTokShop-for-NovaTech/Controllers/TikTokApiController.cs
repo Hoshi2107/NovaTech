@@ -239,7 +239,12 @@ namespace FakeTikTokShop.Controllers
         [HttpGet("products-cache")]
         public async Task<IActionResult> GetProductsCache()
         {
-            var products = await _context.ProductCaches.ToListAsync();
+            var settings = await GetOrCreateSettingsAsync();
+            var products = await _context.ProductCaches.AsNoTracking().ToListAsync();
+            foreach (var p in products)
+            {
+                p.ImageUrl = FormatImageUrl(p.ImageUrl, settings.NovaTechBaseUrl);
+            }
             return Ok(products);
         }
 
@@ -398,11 +403,32 @@ namespace FakeTikTokShop.Controllers
             return isSuccess;
         }
 
+        private string FormatImageUrl(string? imageUrl, string baseUrl)
+        {
+            if (string.IsNullOrEmpty(imageUrl))
+            {
+                return "";
+            }
+            if (imageUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || 
+                imageUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                return imageUrl;
+            }
+            
+            string relativePath = imageUrl.StartsWith("/") ? imageUrl : "/" + imageUrl;
+            return baseUrl.TrimEnd('/') + relativePath;
+        }
+
         // --- LIVESTREAM API ---
         [HttpGet("livestream/products")]
         public async Task<IActionResult> GetLivestreamProducts()
         {
-            var products = await _context.LivestreamProducts.ToListAsync();
+            var settings = await GetOrCreateSettingsAsync();
+            var products = await _context.LivestreamProducts.AsNoTracking().ToListAsync();
+            foreach (var p in products)
+            {
+                p.ImageUrl = FormatImageUrl(p.ImageUrl, settings.NovaTechBaseUrl);
+            }
             return Ok(products);
         }
 
@@ -436,6 +462,20 @@ namespace FakeTikTokShop.Controllers
             _context.LivestreamProducts.Add(liveProduct);
             await _context.SaveChangesAsync();
 
+            var settings = await GetOrCreateSettingsAsync();
+            
+            // Broadcast updated products list to all clients
+            var liveProducts = await _context.LivestreamProducts.AsNoTracking().ToListAsync();
+            foreach (var p in liveProducts)
+            {
+                p.ImageUrl = FormatImageUrl(p.ImageUrl, settings.NovaTechBaseUrl);
+            }
+            await _hub.Clients.All.SendAsync("ProductsUpdated", liveProducts);
+
+            // Detach and format for response
+            _context.Entry(liveProduct).State = EntityState.Detached;
+            liveProduct.ImageUrl = FormatImageUrl(liveProduct.ImageUrl, settings.NovaTechBaseUrl);
+
             return Ok(new { message = "Đã thêm sản phẩm vào livestream thành công!", product = liveProduct });
         }
 
@@ -450,6 +490,14 @@ namespace FakeTikTokShop.Controllers
 
             _context.LivestreamProducts.Remove(product);
             await _context.SaveChangesAsync();
+
+            var settings = await GetOrCreateSettingsAsync();
+            var liveProducts = await _context.LivestreamProducts.AsNoTracking().ToListAsync();
+            foreach (var p in liveProducts)
+            {
+                p.ImageUrl = FormatImageUrl(p.ImageUrl, settings.NovaTechBaseUrl);
+            }
+            await _hub.Clients.All.SendAsync("ProductsUpdated", liveProducts);
 
             return Ok(new { message = "Đã xóa sản phẩm khỏi livestream." });
         }
@@ -470,21 +518,54 @@ namespace FakeTikTokShop.Controllers
             }
 
             await _context.SaveChangesAsync();
-            return Ok(new { message = $"Đã ghim sản phẩm: {target.Name}", products });
+
+            var settings = await GetOrCreateSettingsAsync();
+            var broadcastProducts = products.Select(p => new TikTokLivestreamProduct
+            {
+                ProductId = p.ProductId,
+                Name = p.Name,
+                Sku = p.Sku,
+                Price = p.Price,
+                ImageUrl = FormatImageUrl(p.ImageUrl, settings.NovaTechBaseUrl),
+                Stock = p.Stock,
+                IsPinned = p.IsPinned,
+                SalesCount = p.SalesCount
+            }).ToList();
+
+            await _hub.Clients.All.SendAsync("ProductsUpdated", broadcastProducts);
+
+            return Ok(new { message = $"Đã ghim sản phẩm: {target.Name}", products = broadcastProducts });
         }
 
         [HttpPost("livestream/products/{productId}/unpin")]
         public async Task<IActionResult> UnpinProduct(int productId)
         {
-            var product = await _context.LivestreamProducts.FirstOrDefaultAsync(p => p.ProductId == productId);
-            if (product == null)
+            var products = await _context.LivestreamProducts.ToListAsync();
+            var target = products.FirstOrDefault(p => p.ProductId == productId);
+            if (target == null)
             {
                 return NotFound(new { message = "Không tìm thấy sản phẩm livestream." });
             }
 
-            product.IsPinned = false;
+            target.IsPinned = false;
             await _context.SaveChangesAsync();
-            return Ok(new { message = $"Đã bỏ ghim sản phẩm: {product.Name}", product });
+
+            var settings = await GetOrCreateSettingsAsync();
+            var broadcastProducts = products.Select(p => new TikTokLivestreamProduct
+            {
+                ProductId = p.ProductId,
+                Name = p.Name,
+                Sku = p.Sku,
+                Price = p.Price,
+                ImageUrl = FormatImageUrl(p.ImageUrl, settings.NovaTechBaseUrl),
+                Stock = p.Stock,
+                IsPinned = p.IsPinned,
+                SalesCount = p.SalesCount
+            }).ToList();
+
+            await _hub.Clients.All.SendAsync("ProductsUpdated", broadcastProducts);
+
+            return Ok(new { message = $"Đã bỏ ghim sản phẩm: {target.Name}", product = broadcastProducts.FirstOrDefault(p => p.ProductId == productId) });
         }
 
         [HttpPost("livestream/products/{productId}/stock")]
@@ -505,6 +586,18 @@ namespace FakeTikTokShop.Controllers
             }
 
             await _context.SaveChangesAsync();
+
+            var settings = await GetOrCreateSettingsAsync();
+            var liveProducts = await _context.LivestreamProducts.AsNoTracking().ToListAsync();
+            foreach (var p in liveProducts)
+            {
+                p.ImageUrl = FormatImageUrl(p.ImageUrl, settings.NovaTechBaseUrl);
+            }
+            await _hub.Clients.All.SendAsync("ProductsUpdated", liveProducts);
+
+            _context.Entry(product).State = EntityState.Detached;
+            product.ImageUrl = FormatImageUrl(product.ImageUrl, settings.NovaTechBaseUrl);
+
             return Ok(new { message = "Cập nhật tồn kho thành công!", product });
         }
 
@@ -564,11 +657,16 @@ namespace FakeTikTokShop.Controllers
             LiveStreamState.AddComment("Hệ thống Live", $"🎉 Khách hàng {order.CustomerName} đã đặt mua {request.Quantity} x {liveProd.Name}!", "color-teal");
             // Push the order notification via SignalR to all connected viewers
             await _hub.Clients.All.SendAsync("ReceiveComment", "Hệ thống Live", $"🎉 Khách hàng {order.CustomerName} đã đặt mua {request.Quantity} x {liveProd.Name}!", "color-teal");
+            
             // Also push updated products to all viewers
-            var updatedProducts = await _context.LivestreamProducts.ToListAsync();
+            var settings = await GetOrCreateSettingsAsync();
+            var updatedProducts = await _context.LivestreamProducts.AsNoTracking().ToListAsync();
+            foreach (var p in updatedProducts)
+            {
+                p.ImageUrl = FormatImageUrl(p.ImageUrl, settings.NovaTechBaseUrl);
+            }
             await _hub.Clients.All.SendAsync("ProductsUpdated", updatedProducts);
 
-            var settings = await GetOrCreateSettingsAsync();
             if (settings.AutoPushWebhook)
             {
                 await PushWebhookInternalAsync(order, "OrderCreated", settings.NovaTechBaseUrl);
