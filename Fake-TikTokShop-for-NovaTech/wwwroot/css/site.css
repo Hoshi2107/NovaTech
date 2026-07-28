@@ -20,6 +20,53 @@ body {
     background: #45f3ff;
 }
 
+/* =====================================================
+   DARK THEME TEXT COLOR OVERRIDES
+   Override Bootstrap's default muted colors for dark UI
+   ===================================================== */
+
+/* Override Bootstrap text-muted — quá tối trên nền dark */
+.text-muted {
+    color: #a8adc4 !important;
+}
+
+/* Secondary text — subtitle, meta info */
+.text-muted-custom {
+    color: #b0b8d4 !important;
+}
+
+/* Form labels uppercase (dùng cho các label trong form) */
+.form-label.text-muted,
+label.text-muted {
+    color: #c0c6de !important;
+    letter-spacing: 0.04em;
+}
+
+/* Table headers — cần rõ hơn */
+thead .text-muted,
+tr.text-muted th,
+.table thead th {
+    color: #b8bdd6 !important;
+}
+
+/* Small / hint text dưới form input */
+small.text-muted,
+.small.text-muted {
+    color: #9ea5c0 !important;
+}
+
+/* Badge với text-muted bên trong */
+.badge.text-muted,
+span.badge.bg-secondary-subtle {
+    color: #c4c9e0 !important;
+}
+
+/* text-xs + text-muted combo — thường là label phụ */
+.text-xs.text-muted,
+.text-3xs.text-muted {
+    color: #a0a8c4 !important;
+}
+
 /* Theme Colors */
 .bg-dark-custom {
     background-color: #0b0c10;
@@ -33,6 +80,17 @@ body {
 }
 .text-tiktok-teal {
     color: #25F4EE;
+}
+
+/* Accent text colors cho các thông tin phụ */
+.text-accent-blue {
+    color: #7eb8f7;
+}
+.text-accent-purple {
+    color: #c084fc;
+}
+.text-accent-orange {
+    color: #fb923c;
 }
 
 .bg-tiktok-card {
@@ -103,6 +161,9 @@ body {
     color: white;
     box-shadow: 0 0 8px rgba(37, 244, 238, 0.2);
 }
+.form-control-tiktok::placeholder {
+    color: #5c6280;
+}
 
 .form-select-tiktok {
     background-color: #161822;
@@ -115,6 +176,13 @@ body {
     border-color: #25F4EE;
     color: white;
     box-shadow: 0 0 8px rgba(37, 244, 238, 0.2);
+}
+
+/* Form labels — uppercase accent style */
+.form-label.text-uppercase {
+    color: #c4c9e0;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
 }
 
 /* Badges */
@@ -143,21 +211,30 @@ body {
 }
 .badge-cancelled {
     background-color: rgba(108, 117, 125, 0.15);
-    color: #6c757d;
+    color: #9aa0b8;
     border: 1px solid rgba(108, 117, 125, 0.3);
 }
 
 .badge-sync-success {
     background-color: rgba(40, 167, 69, 0.15);
-    color: #28a745;
+    color: #4ade80;
 }
 .badge-sync-failed {
     background-color: rgba(220, 53, 69, 0.15);
-    color: #dc3545;
+    color: #f87171;
 }
 .badge-sync-pending {
     background-color: rgba(108, 117, 125, 0.15);
-    color: #6c757d;
+    color: #a0a8c4;
+}
+
+/* Badge secondary-subtle text override */
+.bg-secondary-subtle {
+    background-color: rgba(100, 108, 155, 0.2) !important;
+}
+.bg-secondary-subtle.text-muted,
+.badge.bg-secondary-subtle {
+    color: #c4c9e0 !important;
 }
 
 /* Tabs */
@@ -165,12 +242,16 @@ body {
     border-bottom: 1px solid #1f2230;
 }
 .nav-tabs-tiktok .nav-link {
-    color: #8c90a6;
+    color: #a0a6c0;
     border: none;
     background: none;
     padding: 12px 20px;
     font-weight: 500;
     position: relative;
+    transition: color 0.2s ease;
+}
+.nav-tabs-tiktok .nav-link:hover {
+    color: #d0d6f0;
 }
 .nav-tabs-tiktok .nav-link.active {
     color: white;
@@ -186,6 +267,20 @@ body {
     background: linear-gradient(90deg, #FE2C55 0%, #25F4EE 100%);
 }
 
+/* Table styling cho dark theme */
+.table.text-light thead th,
+.table thead tr.text-muted th {
+    color: #b8bdd6 !important;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-color: rgba(50, 55, 80, 0.5) !important;
+}
+.table.text-light tbody td {
+    border-color: rgba(35, 40, 65, 0.5) !important;
+}
+
 /* Animations */
 .animate-fade-in {
     animation: fadeIn 0.4s ease-out;
@@ -193,6 +288,21 @@ body {
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+/* Metric cards text */
+.card-body .text-muted.text-xs {
+    color: #b0b8d4 !important;
+    font-weight: 600;
+}
+
+/* Code tags */
+code {
+    color: #25F4EE;
+    background-color: rgba(37, 244, 238, 0.08);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.85em;
 }
 
 [v-cloak] {
