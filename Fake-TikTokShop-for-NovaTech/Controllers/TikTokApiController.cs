@@ -698,7 +698,8 @@ namespace FakeTikTokShop.Controllers
         public async Task<IActionResult> StartLive()
         {
             LiveStreamState.IsLive = true;
-            LiveStreamState.ViewerCount = new Random().Next(50) + 120;
+            // Use real viewer count from hub instead of random fake number
+            LiveStreamState.ViewerCount = Hubs.LivestreamHub.GetViewerCount();
             LiveStreamState.LikesCount = new Random().Next(500) + 1500;
             lock (LiveStreamState.Comments)
             {
@@ -712,6 +713,7 @@ namespace FakeTikTokShop.Controllers
             }
             // Broadcast via SignalR so viewers know immediately
             await _hub.Clients.All.SendAsync("LiveStateChanged", true, LiveStreamState.ViewerCount, LiveStreamState.LikesCount);
+            await _hub.Clients.All.SendAsync("StatsUpdated", LiveStreamState.ViewerCount, LiveStreamState.LikesCount);
             await _hub.Clients.All.SendAsync("ReceiveComment", "Hệ thống", "Phòng phát sóng bắt đầu. Trực tiếp từ NovaTech Shop!", "color-red");
             return Ok(new { message = "Bắt đầu phát sóng!" });
         }
@@ -719,10 +721,12 @@ namespace FakeTikTokShop.Controllers
         [HttpPost("livestream/state/stop")]
         public async Task<IActionResult> StopLive()
         {
+            var finalLikes = LiveStreamState.LikesCount;
             LiveStreamState.Reset();
             LiveStreamState.AddComment("Hệ thống", "Đã kết thúc phiên Live Stream.", "color-teal");
-            // Broadcast stop state via SignalR
-            await _hub.Clients.All.SendAsync("LiveStateChanged", false, 0, LiveStreamState.LikesCount);
+            // Broadcast stop state via SignalR (viewer count is 0 after session ends, likes preserved for display)
+            await _hub.Clients.All.SendAsync("LiveStateChanged", false, 0, finalLikes);
+            await _hub.Clients.All.SendAsync("StatsUpdated", 0, finalLikes);
             await _hub.Clients.All.SendAsync("ReceiveComment", "Hệ thống", "Đã kết thúc phiên Live Stream.", "color-teal");
             return Ok(new { message = "Đã dừng phát sóng!" });
         }
@@ -908,9 +912,8 @@ namespace FakeTikTokShop.Controllers
                     _lastMockCommentTime = now;
                     // Do not add mock comments anymore as per user request
 
-                    // Also randomly adjust viewer count slightly
-                    var delta = _random.Next(15) - 7;
-                    ViewerCount = Math.Max(10, ViewerCount + delta);
+                    // Keep ViewerCount in sync with real hub connections (no random drift)
+                    ViewerCount = FakeTikTokShop.Hubs.LivestreamHub.GetViewerCount();
 
                     // Randomly add a few likes
                     LikesCount += _random.Next(5) + 1;

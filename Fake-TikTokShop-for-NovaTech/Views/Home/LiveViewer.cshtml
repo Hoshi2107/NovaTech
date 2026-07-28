@@ -961,6 +961,8 @@
                         });
 
                         await this.hubConnection.start();
+                        // Declare this connection as a VIEWER so it's counted in viewerCount
+                        await this.hubConnection.invoke('SetRole', 'viewer');
                         console.log('[SignalR] Viewer connected - real-time streaming active!');
                     } catch (err) {
                         console.warn('[SignalR] Connection failed, falling back to polling:', err);

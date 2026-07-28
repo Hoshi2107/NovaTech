@@ -834,6 +834,8 @@
                         });
 
                         await this.hubConnection.start();
+                        // Declare this connection as the HOST so it's excluded from viewer count
+                        await this.hubConnection.invoke('SetRole', 'host');
                         console.log('[SignalR] Streamer connected to hub!');
                     } catch (err) {
                         console.warn('[SignalR] Kết nối hub thất bại, fallback về polling:', err);
@@ -982,9 +984,7 @@
                         this.startTimer();
                         this.startChatSimulation();
                         this.initCamera();
-                        this.viewerCount = Math.floor(Math.random() * 50) + 120;
-                        this.likesCount = Math.floor(Math.random() * 500) + 1200;
-                        
+                        // viewerCount is now driven by real SignalR connections via StatsUpdated events
                         this.chats.push({
                             username: 'Hệ thống',
                             text: 'Phòng phát sóng bắt đầu. Trực tiếp từ NovaTech Shop!',
@@ -1012,11 +1012,7 @@
                     this.liveDurationSeconds = 0;
                     this.timerInterval = setInterval(() => {
                         this.liveDurationSeconds++;
-                        // random shift view counts
-                        if (this.liveDurationSeconds % 10 === 0) {
-                            const delta = Math.floor(Math.random() * 15) - 7;
-                            this.viewerCount = Math.max(10, this.viewerCount + delta);
-                        }
+                        // viewerCount is driven by real SignalR StatsUpdated events — no local mutation here
                     }, 1000);
                 },
                 stopTimer() {
