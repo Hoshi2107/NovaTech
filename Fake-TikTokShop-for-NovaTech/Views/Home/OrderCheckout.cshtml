@@ -1,0 +1,581 @@
+@{
+    ViewData["Title"] = "TikTok Shop Checkout";
+}
+
+<div id="checkout-app" class="w-100 min-vh-100 bg-tiktok-black text-light py-4 px-2 px-md-3" v-cloak>
+    <div class="checkout-container mx-auto">
+        <!-- HEADER -->
+        <div class="d-flex align-items-center mb-4 gap-3">
+            <button class="back-btn" @@click="goBack">
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <h4 class="mb-0 fw-bold tracking-wide">Xác nhận đơn hàng</h4>
+            <span class="badge bg-tiktok-red ms-auto text-2xs px-2 py-1 uppercase font-bold tracking-wider">TikTok Shop</span>
+        </div>
+
+        <div class="row g-4">
+            <!-- LEFT SECTION: SHIPPING & MAPS -->
+            <div class="col-lg-8">
+                <!-- SHIPPING LOCATION PANEL -->
+                <div class="checkout-card mb-4">
+                    <div class="card-header-custom">
+                        <i class="fa-solid fa-location-dot text-tiktok-red me-2"></i>
+                        <span>Địa chỉ nhận hàng</span>
+                    </div>
+
+                    <!-- Map Search Input -->
+                    <div class="search-map-group mb-3">
+                        <div class="input-group">
+                            <span class="input-group-text bg-tiktok-dark border-secondary border-opacity-25 text-muted">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                            </span>
+                            <input 
+                                type="text" 
+                                class="form-control form-control-tiktok py-2" 
+                                v-model="mapSearchQuery" 
+                                placeholder="Tìm kiếm địa chỉ trên bản đồ..." 
+                                @@keyup.enter="searchLocation"
+                            >
+                            <button class="btn btn-tiktok-primary px-3 text-xs fw-bold" @@click="searchLocation">Tìm kiếm</button>
+                        </div>
+                        <small class="text-muted text-3xs mt-1 d-block">Nhập địa điểm và nhấn Enter hoặc chọn trực tiếp trên bản đồ</small>
+                    </div>
+
+                    <!-- Interactive Map Container -->
+                    <div class="map-wrapper mb-3 rounded-3 overflow-hidden position-relative">
+                        <div id="leaflet-map" style="height: 250px; width: 100%;"></div>
+                        <div class="map-marker-center" v-if="!mapLoaded">
+                            <span class="spinner-border text-tiktok-teal"></span>
+                        </div>
+                    </div>
+
+                    <!-- Manual Fields (Prefilled from map) -->
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label-custom">Họ tên người nhận <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-tiktok" v-model="orderForm.customerName" placeholder="Tên người nhận">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-custom">Số điện thoại <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-tiktok" v-model="orderForm.phone" placeholder="Số điện thoại liên hệ">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label-custom">Địa chỉ chi tiết (được chọn từ bản đồ) <span class="text-danger">*</span></label>
+                            <textarea class="form-control form-control-tiktok" rows="2" v-model="orderForm.address" placeholder="Chọn trên bản đồ hoặc tự nhập địa chỉ chi tiết"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SELECTED PRODUCT PANEL -->
+                <div class="checkout-card mb-4" v-if="checkoutData">
+                    <div class="card-header-custom">
+                        <i class="fa-solid fa-bag-shopping text-tiktok-teal me-2"></i>
+                        <span>Thông tin sản phẩm</span>
+                    </div>
+
+                    <div class="product-item-row d-flex flex-column flex-sm-row align-items-sm-center p-3 rounded bg-tiktok-dark border border-secondary border-opacity-10">
+                        <img :src="checkoutData.product.imageUrl || 'https://via.placeholder.com/80'" class="product-img-checkout me-3 mb-3 mb-sm-0">
+                        <div class="flex-grow-1 min-width-0">
+                            <h6 class="fw-bold text-white mb-1">${checkoutData.product.name}</h6>
+                            <div class="d-flex flex-wrap gap-2 align-items-center mt-1">
+                                <span class="badge bg-tiktok-dark text-tiktok-teal text-3xs border border-tiktok-teal border-opacity-20" v-if="checkoutData.selectedVariant">
+                                    ${checkoutData.selectedVariant.label}
+                                </span>
+                                <span class="text-2xs text-muted">Mã: ${checkoutData.selectedVariant ? checkoutData.selectedVariant.sku : checkoutData.product.sku}</span>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between mt-2">
+                                <span class="price-checkout">${formatCurrency(checkoutData.selectedVariant ? checkoutData.selectedVariant.price : checkoutData.product.price)}</span>
+                                <span class="text-muted text-xs">Số lượng: <strong>x${checkoutData.quantity}</strong></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <label class="form-label-custom">Ghi chú đơn hàng (nếu có)</label>
+                        <input type="text" class="form-control form-control-tiktok" v-model="orderForm.note" placeholder="Nhập ghi chú cho cửa hàng hoặc người giao hàng...">
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT SECTION: PAYMENT & TOTAL -->
+            <div class="col-lg-4">
+                <!-- PAYMENT METHOD PANEL -->
+                <div class="checkout-card mb-4">
+                    <div class="card-header-custom">
+                        <i class="fa-solid fa-credit-card text-warning me-2"></i>
+                        <span>Phương thức thanh toán</span>
+                    </div>
+
+                    <div class="payment-options d-flex flex-column gap-2">
+                        <!-- COD Option -->
+                        <div 
+                            class="payment-option-card d-flex align-items-center"
+                            :class="{ active: orderForm.paymentMethod === 'COD' }"
+                            @@click="orderForm.paymentMethod = 'COD'"
+                        >
+                            <div class="option-radio me-3">
+                                <div class="inner-circle" v-if="orderForm.paymentMethod === 'COD'"></div>
+                            </div>
+                            <div>
+                                <div class="fw-bold text-white text-xs">Thanh toán khi nhận hàng (COD)</div>
+                                <div class="text-muted text-3xs mt-0.5">Trả tiền mặt khi người giao hàng mang tới</div>
+                            </div>
+                            <i class="fa-solid fa-money-bill-wave text-success ms-auto fs-5"></i>
+                        </div>
+
+                        <!-- Bank Transfer Option -->
+                        <div 
+                            class="payment-option-card d-flex align-items-center"
+                            :class="{ active: orderForm.paymentMethod === 'BANK' }"
+                            @@click="orderForm.paymentMethod = 'BANK'"
+                        >
+                            <div class="option-radio me-3">
+                                <div class="inner-circle" v-if="orderForm.paymentMethod === 'BANK'"></div>
+                            </div>
+                            <div>
+                                <div class="fw-bold text-white text-xs">Chuyển khoản Ngân hàng (QR)</div>
+                                <div class="text-muted text-3xs mt-0.5">Quét mã QR bằng ứng dụng ngân hàng</div>
+                            </div>
+                            <i class="fa-solid fa-qrcode text-tiktok-teal ms-auto fs-5"></i>
+                        </div>
+                    </div>
+
+                    <!-- QR code info for bank transfer -->
+                    <transition name="fade">
+                        <div class="qr-container text-center p-3 mt-3 bg-tiktok-dark rounded border border-secondary border-opacity-10" v-if="orderForm.paymentMethod === 'BANK' && checkoutData">
+                            <div class="text-2xs text-muted mb-2 uppercase tracking-wider">Quét để thanh toán đơn hàng</div>
+                            <img :src="`https://img.vietqr.io/image/mbbank-1234567890-compact2.png?amount=${checkoutData.totalPrice}&addInfo=TTShop%20${checkoutData.product.sku}`" class="qr-img mb-2 shadow rounded border border-white border-opacity-10">
+                            <div class="text-xs fw-bold text-white">Nội dung CK: <span class="text-tiktok-red">TTShop ${checkoutData.product.sku}</span></div>
+                            <div class="text-3xs text-muted mt-1">Đơn hàng sẽ được duyệt ngay sau khi chuyển khoản thành công</div>
+                        </div>
+                    </transition>
+                </div>
+
+                <!-- BILL SUMMARY PANEL -->
+                <div class="checkout-card mb-4" v-if="checkoutData">
+                    <div class="card-header-custom">
+                        <i class="fa-solid fa-receipt text-tiktok-red me-2"></i>
+                        <span>Chi tiết thanh toán</span>
+                    </div>
+
+                    <div class="bill-summary-list d-flex flex-column gap-2 py-2">
+                        <div class="d-flex justify-content-between text-xs">
+                            <span class="text-muted">Giá trị sản phẩm</span>
+                            <span class="text-white">${formatCurrency(checkoutData.totalPrice)}</span>
+                        </div>
+                        <div class="d-flex justify-content-between text-xs">
+                            <span class="text-muted">Phí vận chuyển</span>
+                            <span class="text-white">${formatCurrency(shippingFee)}</span>
+                        </div>
+                        <div class="d-flex justify-content-between text-xs text-success">
+                            <span>Voucher TikTok Shop</span>
+                            <span>-${formatCurrency(couponDiscount)}</span>
+                        </div>
+                        <hr class="border-secondary border-opacity-25 my-1">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-white text-xs">Tổng số tiền thanh toán</span>
+                            <span class="total-price-checkout">${formatCurrency(checkoutData.totalPrice + shippingFee - couponDiscount)}</span>
+                        </div>
+                    </div>
+
+                    <!-- Place Order Button -->
+                    <button 
+                        class="btn btn-checkout-action w-100 py-3 mt-3 rounded-3" 
+                        @@click="confirmOrder"
+                        :disabled="submittingOrder"
+                    >
+                        <span v-if="submittingOrder" class="spinner-border spinner-border-sm me-2"></span>
+                        <i class="fa-solid fa-circle-check me-2" v-else></i>
+                        Xác nhận đặt hàng
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-tiktok-black {
+        background-color: #0b0c10 !important;
+    }
+    .bg-tiktok-dark {
+        background-color: #12131a !important;
+    }
+    .text-tiktok-teal {
+        color: #25F4EE !important;
+    }
+    .text-tiktok-red {
+        color: #FE2C55 !important;
+    }
+
+    .checkout-container {
+        max-width: 1000px;
+    }
+
+    .back-btn {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: #161822;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .back-btn:hover {
+        background: #FE2C55;
+        border-color: #FE2C55;
+    }
+
+    .checkout-card {
+        background: #161822;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .card-header-custom {
+        font-size: 0.95rem;
+        font-weight: 800;
+        color: white;
+        margin-bottom: 18px;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        display: flex;
+        align-items: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding-bottom: 10px;
+    }
+
+    .form-label-custom {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: rgba(255, 255, 255, 0.55);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 6px;
+    }
+
+    .form-control-tiktok {
+        background-color: #12131a !important;
+        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        color: white !important;
+        border-radius: 8px !important;
+    }
+    .form-control-tiktok:focus {
+        border-color: #FE2C55 !important;
+        box-shadow: 0 0 10px rgba(254, 44, 85, 0.25) !important;
+    }
+
+    .map-wrapper {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .map-marker-center {
+        position: absolute;
+        inset: 0;
+        background: rgba(18, 19, 26, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+
+    .product-img-checkout {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .price-checkout {
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: #FE2C55;
+    }
+
+    .payment-option-card {
+        padding: 14px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.03);
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .payment-option-card:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+    .payment-option-card.active {
+        border-color: #FE2C55;
+        background: rgba(254, 44, 85, 0.08);
+    }
+
+    .option-radio {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .payment-option-card.active .option-radio {
+        border-color: #FE2C55;
+    }
+    .inner-circle {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: #FE2C55;
+    }
+
+    .qr-img {
+        width: 150px;
+        height: 150px;
+        object-fit: contain;
+    }
+
+    .total-price-checkout {
+        font-size: 1.5rem;
+        font-weight: 855;
+        color: #FE2C55;
+        text-shadow: 0 0 15px rgba(254, 44, 85, 0.15);
+    }
+
+    .btn-checkout-action {
+        background: linear-gradient(135deg, #FE2C55, #ff6a45);
+        color: white;
+        border: none;
+        font-weight: 800;
+        font-size: 1rem;
+        letter-spacing: 0.02em;
+        box-shadow: 0 6px 20px rgba(254, 44, 85, 0.35);
+        transition: all 0.2s;
+    }
+    .btn-checkout-action:hover:not(:disabled) {
+        transform: translateY(-1.5px);
+        box-shadow: 0 8px 25px rgba(254, 44, 85, 0.5);
+        color: white;
+    }
+    .btn-checkout-action:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    /* Leaflet popup/zoom overrides for dark style */
+    .leaflet-container {
+        background: #12131a !important;
+        font-family: inherit;
+    }
+    .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+        background: #161822 !important;
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    /* Vue Fade transition */
+    .fade-enter-active, .fade-leave-active { transition: opacity 0.25s; }
+    .fade-enter, .fade-leave-to { opacity: 0; }
+</style>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Leaflet JS & CSS for Google Maps-like interactive experience -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        new Vue({
+            el: '#checkout-app',
+            delimiters: ['${', '}'],
+            data: {
+                checkoutData: null,
+                shippingFee: 30000,
+                couponDiscount: 25000,
+                
+                orderForm: {
+                    customerName: '',
+                    phone: '',
+                    address: '',
+                    note: '',
+                    paymentMethod: 'COD'
+                },
+
+                // Leaflet Map settings
+                map: null,
+                marker: null,
+                mapLoaded: false,
+                mapSearchQuery: '',
+                defaultCoords: [10.7769, 106.7009], // Default: Ho Chi Minh City
+                submittingOrder: false
+            },
+            mounted() {
+                // Load checkout data from session storage
+                const data = sessionStorage.getItem('tiktok_checkout_data');
+                if (!data) {
+                    Swal.fire({
+                        title: 'Không tìm thấy thông tin đơn hàng',
+                        text: 'Vui lòng quay lại live để chọn sản phẩm!',
+                        icon: 'warning',
+                        background: '#12131a',
+                        color: '#fff',
+                        confirmButtonColor: '#FE2C55'
+                    }).then(() => {
+                        window.location.href = '/Home/LiveViewer';
+                    });
+                    return;
+                }
+                this.checkoutData = JSON.parse(data);
+
+                // Load cached name from localStorage
+                this.orderForm.customerName = localStorage.getItem('tiktok_viewer_name') || '';
+
+                // Initialize map with a small delay to ensure DOM is ready
+                setTimeout(() => {
+                    this.initMap();
+                }, 300);
+            },
+            methods: {
+                formatCurrency(val) {
+                    if (!val && val !== 0) return '0 ₫';
+                    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
+                },
+                goBack() {
+                    window.location.href = '/Home/LiveViewer';
+                },
+                initMap() {
+                    // Start Leaflet map at defaultCoords
+                    this.map = L.map('leaflet-map').setView(this.defaultCoords, 13);
+                    this.mapLoaded = true;
+
+                    // Load dark themed CartoDB tiles to match TikTok premium design
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                        attribution: '&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors &copy; <a href=\"https://carto.com/attributions\">CARTO</a>',
+                        maxZoom: 20
+                    }).addTo(this.map);
+
+                    // Add markers
+                    this.marker = L.marker(this.defaultCoords, { draggable: true }).addTo(this.map);
+                    
+                    // Initial reverse geocode
+                    this.updateAddressFromCoords(this.defaultCoords[0], this.defaultCoords[1]);
+
+                    // Drag marker handler
+                    this.marker.on('dragend', () => {
+                        const position = this.marker.getLatLng();
+                        this.updateAddressFromCoords(position.lat, position.lng);
+                    });
+
+                    // Map click handler
+                    this.map.on('click', (e) => {
+                        this.marker.setLatLng(e.latlng);
+                        this.updateAddressFromCoords(e.latlng.lat, e.latlng.lng);
+                    });
+                },
+                async updateAddressFromCoords(lat, lng) {
+                    try {
+                        // OpenStreetMap Nominatim reverse geocoding API
+                        const res = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+                        if (res.data && res.data.display_name) {
+                            this.orderForm.address = res.data.display_name;
+                        }
+                    } catch (e) {
+                        this.orderForm.address = `Tọa độ: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                    }
+                },
+                async searchLocation() {
+                    if (!this.mapSearchQuery.trim()) return;
+                    try {
+                        const res = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(this.mapSearchQuery)}&limit=1`);
+                        if (res.data && res.data.length > 0) {
+                            const match = res.data[0];
+                            const lat = parseFloat(match.lat);
+                            const lon = parseFloat(match.lon);
+                            
+                            this.map.setView([lat, lon], 15);
+                            this.marker.setLatLng([lat, lon]);
+                            this.orderForm.address = match.display_name;
+                        } else {
+                            Swal.fire({
+                                title: 'Không tìm thấy địa điểm',
+                                text: 'Vui lòng nhập địa chỉ cụ thể hơn.',
+                                icon: 'info',
+                                background: '#12131a',
+                                color: '#fff',
+                                confirmButtonColor: '#25F4EE'
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Lỗi tìm kiếm địa điểm:', e);
+                    }
+                },
+                async confirmOrder() {
+                    if (!this.orderForm.customerName.trim()) {
+                        Swal.fire({ title: 'Lỗi', text: 'Vui lòng nhập họ tên người nhận!', icon: 'warning', background: '#12131a', color: '#fff', confirmButtonColor: '#FE2C55' });
+                        return;
+                    }
+                    if (!this.orderForm.phone.trim()) {
+                        Swal.fire({ title: 'Lỗi', text: 'Vui lòng nhập số điện thoại!', icon: 'warning', background: '#12131a', color: '#fff', confirmButtonColor: '#FE2C55' });
+                        return;
+                    }
+                    if (!this.orderForm.address.trim()) {
+                        Swal.fire({ title: 'Lỗi', text: 'Vui lòng chọn hoặc nhập địa chỉ giao hàng!', icon: 'warning', background: '#12131a', color: '#fff', confirmButtonColor: '#FE2C55' });
+                        return;
+                    }
+
+                    this.submittingOrder = true;
+                    try {
+                        // Store the customer's name for convenience next time
+                        localStorage.setItem('tiktok_viewer_name', this.orderForm.customerName.trim());
+
+                        const checkoutPayload = {
+                            productId: this.checkoutData.product.productId,
+                            quantity: this.checkoutData.quantity,
+                            customerName: this.orderForm.customerName.trim(),
+                            phone: this.orderForm.phone.trim(),
+                            address: this.orderForm.address.trim(),
+                            selectedSku: this.checkoutData.selectedVariant ? this.checkoutData.selectedVariant.sku : this.checkoutData.product.sku,
+                            selectedSkuLabel: this.checkoutData.selectedVariant ? this.checkoutData.selectedVariant.label : '',
+                            price: this.checkoutData.selectedVariant ? this.checkoutData.selectedVariant.price : this.checkoutData.product.price,
+                            paymentMethod: this.orderForm.paymentMethod
+                        };
+
+                        const res = await axios.post('/api/tiktok/livestream/simulate-buy', checkoutPayload);
+
+                        // Remove order data to prevent duplicate checkout
+                        sessionStorage.removeItem('tiktok_checkout_data');
+
+                        // Big success popup
+                        Swal.fire({
+                            title: 'Đặt hàng thành công!',
+                            html: `Mã đơn hàng: <strong class=\"text-tiktok-teal\">${res.data.orderId}</strong><br>Đơn hàng đã được ghi nhận thành công từ Livestream!`,
+                            icon: 'success',
+                            background: '#12131a',
+                            color: '#fff',
+                            confirmButtonColor: '#25F4EE'
+                        }).then(() => {
+                            window.location.href = '/Home/LiveViewer';
+                        });
+                    } catch (e) {
+                        Swal.fire({
+                            title: 'Đặt hàng thất bại',
+                            text: e.response?.data?.message || 'Có lỗi xảy ra khi tạo đơn hàng, vui lòng thử lại.',
+                            icon: 'error',
+                            background: '#12131a',
+                            color: '#fff',
+                            confirmButtonColor: '#FE2C55'
+                        });
+                    } finally {
+                        this.submittingOrder = false;
+                    }
+                }
+            }
+        });
+    </script>
+}

@@ -295,63 +295,60 @@
         </div>
     </div>
 
-    <!-- BUY MODAL FOR CLIENT -->
-    <div class="modal fade animate-fade-in" id="buyModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content bg-tiktok-card text-light border border-secondary border-opacity-25 rounded-4 shadow-2xl">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold text-white d-flex align-items-center">
-                        <i class="fa-solid fa-cart-shopping text-tiktok-red me-2"></i>
-                        Đặt Mua Sản Phẩm
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body pt-3">
-                    <div class="d-flex align-items-center p-3 mb-3 rounded bg-tiktok-dark border border-secondary border-opacity-10" v-if="modalProduct">
-                        <img :src="modalProduct.imageUrl || 'https://via.placeholder.com/80'" class="rounded bg-secondary me-3" width="70" height="70" style="object-fit: cover;">
-                        <div class="flex-grow-1 min-width-0">
-                            <h6 class="fw-bold text-white mb-1 text-truncate" :title="modalProduct.name">${modalProduct.name}</h6>
-                            <span class="text-tiktok-teal fw-bold">${formatCurrency(modalProduct.price)}</span>
-                            <small class="text-muted d-block text-2xs mt-1">Còn lại: ${modalProduct.stock}</small>
-                        </div>
+    <!-- TIKTOK-STYLE BOTTOM SHEET BUY PANEL -->
+    <transition name="sheet">
+        <div class="buy-sheet-overlay" v-if="showBuySheet" @@click.self="closeBuySheet">
+            <div class="buy-sheet-panel">
+                <!-- Drag handle -->
+                <div class="sheet-drag-handle"></div>
+
+                <!-- Product header -->
+                <div class="sheet-product-header" v-if="modalProduct">
+                    <img :src="(selectedVariant && selectedVariant.imageUrl) ? selectedVariant.imageUrl : (modalProduct.imageUrl || 'https://via.placeholder.com/80')" class="sheet-product-img">
+                    <div class="sheet-product-info">
+                        <div class="sheet-price">${formatCurrency(selectedVariant ? selectedVariant.price : modalProduct.price)}</div>
+                        <div class="sheet-product-name">${modalProduct.name}</div>
+                        <div class="sheet-stock">Kho: <strong>${selectedVariant ? selectedVariant.stock : modalProduct.stock}</strong></div>
                     </div>
+                    <button class="sheet-close-btn" @@click="closeBuySheet"><i class="fa-solid fa-xmark"></i></button>
+                </div>
 
-                    <form @@submit.prevent="submitBuyOrder">
-                        <div class="mb-3">
-                            <label class="form-label text-muted text-xs fw-bold text-uppercase">Họ và Tên Khách Hàng <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-tiktok" v-model="buyForm.customerName" required placeholder="Ví dụ: Nguyễn Thị B">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label text-muted text-xs fw-bold text-uppercase">Số Điện Thoại <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-tiktok" v-model="buyForm.phone" required placeholder="09xxxxxxxx">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label text-muted text-xs fw-bold text-uppercase">Địa Chỉ Nhận Hàng <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-tiktok" v-model="buyForm.address" required placeholder="Số 10 Hai Bà Trưng, Hà Nội">
-                        </div>
-                        <div class="row g-3 mb-3">
-                            <div class="col-6">
-                                <label class="form-label text-muted text-xs fw-bold text-uppercase">Số Lượng Mua</label>
-                                <input type="number" class="form-control form-control-tiktok text-center" v-model.number="buyForm.quantity" min="1" :max="modalProduct ? modalProduct.stock : 99" required>
-                            </div>
-                            <div class="col-6 text-end d-flex flex-column justify-content-end">
-                                <span class="text-muted text-2xs d-block">Tổng tiền:</span>
-                                <h4 class="text-success fw-bold mb-0">${formatCurrency(calculateModalTotal())}</h4>
-                            </div>
-                        </div>
+                <!-- Variant selector (SKU) -->
+                <div class="sheet-section" v-if="productVariants.length > 1">
+                    <div class="sheet-label">Phân loại hàng</div>
+                    <div class="variant-grid">
+                        <button
+                            v-for="v in productVariants"
+                            :key="v.productId"
+                            class="variant-chip"
+                            :class="{ active: selectedVariant && selectedVariant.productId === v.productId, 'out-of-stock': v.stock <= 0 }"
+                            @@click="selectVariant(v)"
+                            :disabled="v.stock <= 0">
+                            ${v.label}
+                        </button>
+                    </div>
+                </div>
 
-                        <div class="border-top border-secondary border-dashed pt-3 mt-3 d-flex justify-content-end gap-2">
-                            <button type="button" class="btn btn-tiktok-dark py-2 px-3" data-bs-dismiss="modal">Hủy bỏ</button>
-                            <button type="submit" class="btn btn-tiktok-primary py-2 px-4" :disabled="submittingOrder">
-                                <span v-if="submittingOrder" class="spinner-border spinner-border-sm me-2"></span>
-                                <i class="fa-solid fa-circle-check me-2"></i>Đặt Mua Ngay
-                            </button>
-                        </div>
-                    </form>
+                <!-- Quantity selector -->
+                <div class="sheet-section">
+                    <div class="sheet-label">Số lượng</div>
+                    <div class="qty-row">
+                        <button class="qty-btn" @@click="changeQty(-1)" :disabled="buyForm.quantity <= 1"><i class="fa-solid fa-minus"></i></button>
+                        <span class="qty-value">${buyForm.quantity}</span>
+                        <button class="qty-btn" @@click="changeQty(1)" :disabled="buyForm.quantity >= (selectedVariant ? selectedVariant.stock : (modalProduct ? modalProduct.stock : 99))"><i class="fa-solid fa-plus"></i></button>
+                        <span class="qty-total ms-auto">Tổng: <strong class="text-tiktok-teal">${formatCurrency(calculateModalTotal())}</strong></span>
+                    </div>
+                </div>
+
+                <!-- CTA -->
+                <div class="sheet-cta">
+                    <button class="sheet-order-btn" @@click="goToCheckout" :disabled="!selectedVariant && productVariants.length > 1">
+                        <i class="fa-solid fa-bolt me-2"></i>Đặt Hàng Ngay
+                    </button>
                 </div>
             </div>
         </div>
-    </div>
+    </transition>
     <audio ref="audioStreamPlayer" playsinline style="display: none;"></audio>
 </div>
 
@@ -795,6 +792,184 @@
     .shadow-2xl {
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     }
+
+    /* ===== TIKTOK BOTTOM SHEET ===== */
+    .buy-sheet-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        z-index: 9999;
+        display: flex;
+        align-items: flex-end;
+        backdrop-filter: blur(4px);
+    }
+    .buy-sheet-panel {
+        width: 100%;
+        max-width: 480px;
+        margin: 0 auto;
+        background: #18191f;
+        border-top-left-radius: 24px;
+        border-top-right-radius: 24px;
+        padding: 0 0 env(safe-area-inset-bottom, 16px);
+        box-shadow: 0 -8px 40px rgba(0,0,0,0.6);
+        border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .sheet-drag-handle {
+        width: 40px;
+        height: 4px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 2px;
+        margin: 12px auto 0;
+    }
+    .sheet-product-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 16px 16px 12px;
+        border-bottom: 1px solid rgba(255,255,255,0.07);
+        position: relative;
+    }
+    .sheet-product-img {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,0.1);
+        flex-shrink: 0;
+    }
+    .sheet-product-info { flex: 1; min-width: 0; }
+    .sheet-price {
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: #FE2C55;
+        line-height: 1.2;
+    }
+    .sheet-product-name {
+        font-size: 0.8rem;
+        color: rgba(255,255,255,0.75);
+        margin-top: 4px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .sheet-stock {
+        font-size: 0.7rem;
+        color: rgba(255,255,255,0.4);
+        margin-top: 4px;
+    }
+    .sheet-close-btn {
+        background: rgba(255,255,255,0.1);
+        border: none;
+        color: rgba(255,255,255,0.6);
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        flex-shrink: 0;
+        transition: background 0.2s;
+    }
+    .sheet-close-btn:hover { background: rgba(255,255,255,0.2); }
+    .sheet-section {
+        padding: 14px 16px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .sheet-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: rgba(255,255,255,0.5);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 10px;
+    }
+    .variant-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .variant-chip {
+        padding: 6px 14px;
+        border-radius: 20px;
+        border: 1px solid rgba(255,255,255,0.2);
+        background: rgba(255,255,255,0.06);
+        color: rgba(255,255,255,0.8);
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .variant-chip.active {
+        border-color: #FE2C55;
+        background: rgba(254,44,85,0.18);
+        color: #FE2C55;
+        font-weight: 700;
+    }
+    .variant-chip.out-of-stock {
+        opacity: 0.35;
+        cursor: not-allowed;
+        text-decoration: line-through;
+    }
+    .qty-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    .qty-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: 1px solid rgba(255,255,255,0.2);
+        background: rgba(255,255,255,0.08);
+        color: white;
+        font-size: 0.8rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.15s;
+        flex-shrink: 0;
+    }
+    .qty-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .qty-btn:not(:disabled):hover { background: rgba(255,255,255,0.18); }
+    .qty-value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: white;
+        min-width: 24px;
+        text-align: center;
+    }
+    .qty-total { font-size: 0.82rem; color: rgba(255,255,255,0.6); }
+    .sheet-cta {
+        padding: 14px 16px 20px;
+    }
+    .sheet-order-btn {
+        width: 100%;
+        padding: 15px;
+        border-radius: 14px;
+        border: none;
+        background: linear-gradient(135deg, #FE2C55, #ff6a45);
+        color: white;
+        font-size: 1rem;
+        font-weight: 800;
+        letter-spacing: 0.03em;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 4px 20px rgba(254,44,85,0.4);
+    }
+    .sheet-order-btn:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 24px rgba(254,44,85,0.55);
+    }
+    .sheet-order-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Vue transition for sheet */
+    .sheet-enter-active, .sheet-leave-active { transition: opacity 0.25s; }
+    .sheet-enter-active .buy-sheet-panel, .sheet-leave-active .buy-sheet-panel { transition: transform 0.3s cubic-bezier(0.32,0.72,0,1); }
+    .sheet-enter .buy-sheet-panel, .sheet-leave-to .buy-sheet-panel { transform: translateY(100%); }
+    .sheet-enter { opacity: 0; }
+    .sheet-leave-to { opacity: 0; }
 </style>
 
 @section Scripts {
@@ -821,8 +996,12 @@
                 // Shopping bag overlay (mobile)
                 showShoppingList: false,
 
-                // Modal for buy order simulation
+                // TikTok buy bottom sheet state
+                showBuySheet: false,
                 modalProduct: null,
+                productVariants: [],
+                selectedVariant: null,
+
                 buyForm: {
                     customerName: '',
                     phone: '',
@@ -1314,7 +1493,7 @@
                 toggleShoppingList() {
                     this.showShoppingList = !this.showShoppingList;
                 },
-                openBuyModal(product) {
+                async openBuyModal(product) {
                     if (product.stock <= 0) {
                         Swal.fire({
                             title: 'Hết hàng',
@@ -1327,70 +1506,63 @@
                         return;
                     }
                     this.modalProduct = product;
-                    this.buyForm.customerName = this.viewerName.startsWith('Guest_') ? '' : this.viewerName;
-                    this.buyForm.phone = '';
-                    this.buyForm.address = '';
                     this.buyForm.quantity = 1;
+                    this.productVariants = [];
+                    this.selectedVariant = null;
                     
-                    const modal = new bootstrap.Modal(document.getElementById('buyModal'));
-                    modal.show();
-                },
-                async submitBuyOrder() {
-                    if (this.buyForm.quantity > this.modalProduct.stock) {
-                        Swal.fire({
-                            title: 'Lỗi',
-                            text: 'Không đủ số lượng trong kho Live!',
-                            icon: 'warning',
-                            background: '#12131a',
-                            color: '#fff',
-                            confirmButtonColor: '#FE2C55'
-                        });
-                        return;
-                    }
-                    this.submittingOrder = true;
                     try {
-                        // Store the name in localStorage for future orders
-                        localStorage.setItem('tiktok_viewer_name', this.buyForm.customerName);
-                        this.viewerName = this.buyForm.customerName;
-
-                        const res = await axios.post('/api/tiktok/livestream/simulate-buy', {
-                            productId: this.modalProduct.productId,
-                            quantity: this.buyForm.quantity,
-                            customerName: this.buyForm.customerName,
-                            phone: this.buyForm.phone,
-                            address: this.buyForm.address
-                        });
+                        const res = await axios.get(`/api/tiktok/livestream/products/${product.productId}/variants`);
+                        this.productVariants = res.data;
                         
-                        // Close modal
-                        const modalEl = document.getElementById('buyModal');
-                        const modalInstance = bootstrap.Modal.getInstance(modalEl);
-                        if (modalInstance) modalInstance.hide();
-                        
-                        // Success notify
-                        Swal.fire({
-                            title: 'Đặt hàng thành công!',
-                            html: `Mã đơn hàng: <strong>${res.data.orderId}</strong><br>Cảm ơn bạn đã mua hàng trực tiếp trên Live!`,
-                            icon: 'success',
-                            background: '#12131a',
-                            color: '#fff',
-                            confirmButtonColor: '#25F4EE'
-                        });
-
-                        // Reload data
-                        await this.fetchLiveProducts();
-                        await this.pollState();
+                        // Auto-select first variant that has stock
+                        this.selectedVariant = this.productVariants.find(v => v.stock > 0) || this.productVariants[0] || null;
                     } catch (err) {
-                        Swal.fire({
-                            title: 'Lỗi',
-                            text: err.response?.data?.message || 'Không thể tạo đơn hàng live!',
-                            icon: 'error',
-                            background: '#12131a',
-                            color: '#fff',
-                            confirmButtonColor: '#FE2C55'
-                        });
-                    } finally {
-                        this.submittingOrder = false;
+                        console.error('Lỗi tải biến thể sản phẩm:', err);
+                        // Fallback to standard variant if loading fails
+                        this.productVariants = [{
+                            productId: product.productId,
+                            name: product.name,
+                            sku: product.sku,
+                            price: product.price,
+                            imageUrl: product.imageUrl,
+                            stock: product.stock,
+                            label: 'Mặc định'
+                        }];
+                        this.selectedVariant = this.productVariants[0];
                     }
+                    
+                    this.showBuySheet = true;
+                },
+                closeBuySheet() {
+                    this.showBuySheet = false;
+                },
+                selectVariant(variant) {
+                    if (variant.stock <= 0) return;
+                    this.selectedVariant = variant;
+                    this.buyForm.quantity = 1; // Reset to 1 on variant change
+                },
+                changeQty(amount) {
+                    const maxStock = this.selectedVariant ? this.selectedVariant.stock : (this.modalProduct ? this.modalProduct.stock : 99);
+                    let newQty = this.buyForm.quantity + amount;
+                    if (newQty < 1) newQty = 1;
+                    if (newQty > maxStock) newQty = maxStock;
+                    this.buyForm.quantity = newQty;
+                },
+                calculateModalTotal() {
+                    if (!this.modalProduct) return 0;
+                    const basePrice = this.selectedVariant ? this.selectedVariant.price : this.modalProduct.price;
+                    return basePrice * this.buyForm.quantity;
+                },
+                goToCheckout() {
+                    if (!this.modalProduct) return;
+                    const checkoutData = {
+                        product: this.modalProduct,
+                        selectedVariant: this.selectedVariant,
+                        quantity: this.buyForm.quantity,
+                        totalPrice: this.calculateModalTotal()
+                    };
+                    sessionStorage.setItem('tiktok_checkout_data', JSON.stringify(checkoutData));
+                    window.location.href = '/Home/OrderCheckout';
                 }
             }
         });

@@ -18,5 +18,10 @@ namespace FakeTikTokShop.Controllers
         {
             return View();
         }
+
+        public IActionResult OrderCheckout()
+        {
+            return View();
+        }
     }
 }

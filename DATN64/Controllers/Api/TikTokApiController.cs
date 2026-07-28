@@ -92,10 +92,12 @@ namespace DATN64.Controllers.Api
                 }
             }
 
-            // Find or create customer (match both name and phone to prevent renaming existing ones)
-            var customer = await _context.KhachHangs.FirstOrDefaultAsync(k => k.SoDienThoai == data.Phone && k.HoTen == data.CustomerName);
+            // Find customer by phone number first (email is derived from phone, so phone is the unique identifier).
+            // This prevents a duplicate-key crash when the same phone places a second order with a slightly different name.
+            var customer = await _context.KhachHangs.FirstOrDefaultAsync(k => k.SoDienThoai == data.Phone);
             if (customer == null)
             {
+                // Truly new customer — create one
                 var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<KhachHang>();
                 customer = new KhachHang
                 {
@@ -103,7 +105,7 @@ namespace DATN64.Controllers.Api
                     SoDienThoai = data.Phone,
                     DiaChi = data.Address,
                     Email = $"{data.Phone}@tiktok.com",
-                    MatKhau = hasher.HashPassword(null!, "TikTok12345"), // Safe hashed password
+                    MatKhau = hasher.HashPassword(null!, "TikTok12345"),
                     DiemTichLuy = 0,
                     TrangThai = "Hoạt động",
                     NgayTao = DateTime.Now
@@ -113,6 +115,7 @@ namespace DATN64.Controllers.Api
             }
             else
             {
+                // Existing customer — update address if provided, keep existing name/email unchanged
                 if (!string.IsNullOrEmpty(data.Address))
                 {
                     customer.DiaChi = data.Address;

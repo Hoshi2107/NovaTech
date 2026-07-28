@@ -281,7 +281,7 @@ namespace FakeTikTokShop.Controllers
                     {
                         ProductId = p.MaSanPham,
                         Name = p.TenSanPham,
-                        Sku = $"SP-{p.MaSanPham}",
+                        Sku = !string.IsNullOrEmpty(p.SKU) ? p.SKU : $"SP-{p.MaSanPham}",
                         Price = p.GiaBan,
                         ImageUrl = p.HinhAnh,
                         Stock = p.SoLuongTon
@@ -299,6 +299,7 @@ namespace FakeTikTokShop.Controllers
                         lp.Price = extProd.GiaBan;
                         lp.Name = extProd.TenSanPham;
                         lp.ImageUrl = extProd.HinhAnh;
+                        lp.Sku = !string.IsNullOrEmpty(extProd.SKU) ? extProd.SKU : $"SP-{extProd.MaSanPham}";
                     }
                 }
 
@@ -601,18 +602,198 @@ namespace FakeTikTokShop.Controllers
             return Ok(new { message = "Cập nhật tồn kho thành công!", product });
         }
 
+        [HttpGet("livestream/products/{productId}/variants")]
+        public async Task<IActionResult> GetProductVariants(int productId)
+        {
+            var product = await _context.ProductCaches.FirstOrDefaultAsync(p => p.ProductId == productId);
+            if (product == null)
+            {
+                return NotFound(new { message = "Không tìm thấy sản phẩm." });
+            }
+
+            var allProducts = await _context.ProductCaches.ToListAsync();
+            var variants = FilterRelatedVariants(product, allProducts);
+            var seriesInfo = GetProductSeriesInfo(product);
+
+            var settings = await GetOrCreateSettingsAsync();
+            var result = variants.Select(v => new
+            {
+                productId = v.ProductId,
+                name = v.Name,
+                sku = v.Sku,
+                price = v.Price,
+                imageUrl = FormatImageUrl(v.ImageUrl, settings.NovaTechBaseUrl),
+                stock = v.Stock,
+                label = ExtractVariantLabel(v.Name, seriesInfo.SeriesName)
+            }).OrderBy(v => v.price).ToList();
+
+            return Ok(result);
+        }
+
+        private (string BaseModel, string SeriesName) GetProductSeriesInfo(TikTokProductCache product)
+        {
+            string baseModel = "";
+            var baseModels = new[] { "iPhone 15", "iPhone 14", "iPhone 13", "iPhone 12", "Samsung Galaxy S24", "Samsung Galaxy S23", "Samsung Galaxy S22" };
+            foreach (var bm in baseModels)
+            {
+                if (product.Name.Contains(bm, StringComparison.OrdinalIgnoreCase))
+                {
+                    baseModel = bm;
+                    break;
+                }
+            }
+
+            if (string.IsNullOrEmpty(baseModel))
+            {
+                return ("", "");
+            }
+
+            string seriesName = baseModel;
+            if (product.Name.Contains("Pro Max", StringComparison.OrdinalIgnoreCase))
+            {
+                seriesName = baseModel + " Pro Max";
+            }
+            else if (product.Name.Contains("Pro", StringComparison.OrdinalIgnoreCase))
+            {
+                seriesName = baseModel + " Pro";
+            }
+            else if (product.Name.Contains("Ultra", StringComparison.OrdinalIgnoreCase))
+            {
+                seriesName = baseModel + " Ultra";
+            }
+            else if (product.Name.Contains("Plus", StringComparison.OrdinalIgnoreCase) || product.Name.Contains("+"))
+            {
+                seriesName = baseModel + " Plus";
+            }
+
+            return (baseModel, seriesName);
+        }
+
+        private List<TikTokProductCache> FilterRelatedVariants(TikTokProductCache product, List<TikTokProductCache> allProducts)
+        {
+            var seriesInfo = GetProductSeriesInfo(product);
+            if (string.IsNullOrEmpty(seriesInfo.BaseModel))
+            {
+                return allProducts.Where(p => p.Name.Equals(product.Name, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+
+            string baseModel = seriesInfo.BaseModel;
+            bool isProMax = product.Name.Contains("Pro Max", StringComparison.OrdinalIgnoreCase);
+            bool isPro = !isProMax && product.Name.Contains("Pro", StringComparison.OrdinalIgnoreCase);
+            bool isUltra = product.Name.Contains("Ultra", StringComparison.OrdinalIgnoreCase);
+            bool isPlus = product.Name.Contains("Plus", StringComparison.OrdinalIgnoreCase) || product.Name.Contains("+");
+
+            var candidates = allProducts.Where(p => p.Name.Contains(baseModel, StringComparison.OrdinalIgnoreCase)).ToList();
+
+            if (isProMax)
+            {
+                return candidates.Where(p => p.Name.Contains("Pro Max", StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+            if (isPro)
+            {
+                return candidates.Where(p => p.Name.Contains("Pro", StringComparison.OrdinalIgnoreCase) && 
+                                             !p.Name.Contains("Pro Max", StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+            if (isUltra)
+            {
+                return candidates.Where(p => p.Name.Contains("Ultra", StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+            if (isPlus)
+            {
+                return candidates.Where(p => p.Name.Contains("Plus", StringComparison.OrdinalIgnoreCase) || p.Name.Contains("+")).ToList();
+            }
+
+            // Standard model: exclude Pro, Pro Max, Ultra, Plus, +
+            return candidates.Where(p => !p.Name.Contains("Pro", StringComparison.OrdinalIgnoreCase) &&
+                                         !p.Name.Contains("Pro Max", StringComparison.OrdinalIgnoreCase) &&
+                                         !p.Name.Contains("Ultra", StringComparison.OrdinalIgnoreCase) &&
+                                         !p.Name.Contains("Plus", StringComparison.OrdinalIgnoreCase) &&
+                                         !p.Name.Contains("+")).ToList();
+        }
+
+        private string ExtractVariantLabel(string name, string series)
+        {
+            if (string.IsNullOrEmpty(series)) return "Mặc định";
+            
+            // Extract storage
+            string storage = "";
+            if (name.Contains("128GB", StringComparison.OrdinalIgnoreCase)) storage = "128GB";
+            else if (name.Contains("256GB", StringComparison.OrdinalIgnoreCase)) storage = "256GB";
+            else if (name.Contains("512GB", StringComparison.OrdinalIgnoreCase)) storage = "512GB";
+            else if (name.Contains("1TB", StringComparison.OrdinalIgnoreCase)) storage = "1TB";
+
+            // Extract color
+            string color = "";
+            var colors = new[] { "Titan Tự Nhiên", "Titan Xanh", "Titan Trắng", "Titan Đen", "Titan Vàng", "Titan Tím", "Titan Xám", "Hồng", "Vàng", "Xanh Lá", "Xanh Dương", "Đen", "Tím", "Xám" };
+            foreach (var c in colors)
+            {
+                if (name.Contains(c, StringComparison.OrdinalIgnoreCase))
+                {
+                    color = c;
+                    break;
+                }
+            }
+
+            // Extract model type (Pro Max, Pro, Ultra, etc.) only if NOT already in series name
+            string modelType = "";
+            if (!series.Contains("Pro Max", StringComparison.OrdinalIgnoreCase) && name.Contains("Pro Max", StringComparison.OrdinalIgnoreCase)) modelType = "Pro Max";
+            else if (!series.Contains("Pro", StringComparison.OrdinalIgnoreCase) && name.Contains("Pro", StringComparison.OrdinalIgnoreCase)) modelType = "Pro";
+            else if (!series.Contains("Ultra", StringComparison.OrdinalIgnoreCase) && name.Contains("Ultra", StringComparison.OrdinalIgnoreCase)) modelType = "Ultra";
+            
+            var parts = new List<string>();
+            if (!string.IsNullOrEmpty(modelType)) parts.Add(modelType);
+            if (!string.IsNullOrEmpty(storage)) parts.Add(storage);
+            if (!string.IsNullOrEmpty(color)) parts.Add(color);
+
+            if (parts.Any())
+            {
+                return string.Join(" - ", parts);
+            }
+            
+            // Fallback: just return the name minus the series
+            var cleaned = name.Replace(series, "", StringComparison.OrdinalIgnoreCase).Trim();
+            return !string.IsNullOrEmpty(cleaned) ? cleaned : "Mặc định";
+        }
+
         [HttpPost("livestream/simulate-buy")]
         public async Task<IActionResult> SimulateBuy([FromBody] SimulateBuyRequest request)
         {
             var liveProd = await _context.LivestreamProducts.FirstOrDefaultAsync(p => p.ProductId == request.ProductId);
+            
+            // If the requested ProductId is a variant, find the parent livestream product that shares the same series prefix
+            if (liveProd == null)
+            {
+                var requestedCachedProd = await _context.ProductCaches.FirstOrDefaultAsync(p => p.ProductId == request.ProductId);
+                if (requestedCachedProd != null)
+                {
+                    var seriesInfo = GetProductSeriesInfo(requestedCachedProd);
+                    if (!string.IsNullOrEmpty(seriesInfo.SeriesName))
+                    {
+                        var liveProducts = await _context.LivestreamProducts.ToListAsync();
+                        // Try matching specific SeriesName (e.g. "iPhone 15 Pro")
+                        liveProd = liveProducts.FirstOrDefault(lp => lp.Name.Contains(seriesInfo.SeriesName, StringComparison.OrdinalIgnoreCase));
+                        
+                        // Fallback to BaseModel (e.g. "iPhone 15") if the specific series isn't pinned
+                        if (liveProd == null)
+                        {
+                            liveProd = liveProducts.FirstOrDefault(lp => lp.Name.Contains(seriesInfo.BaseModel, StringComparison.OrdinalIgnoreCase));
+                        }
+                    }
+                }
+            }
+
             if (liveProd == null)
             {
                 return BadRequest(new { message = "Sản phẩm không có trong livestream." });
             }
 
-            if (liveProd.Stock < request.Quantity)
+            // Check stock from ProductCache for the variant (or fallback to LivestreamProduct if not cached)
+            var cachedProd = await _context.ProductCaches.FirstOrDefaultAsync(p => p.ProductId == request.ProductId);
+            int availableStock = cachedProd != null ? cachedProd.Stock : liveProd.Stock;
+
+            if (availableStock < request.Quantity)
             {
-                return BadRequest(new { message = $"Sản phẩm chỉ còn {liveProd.Stock} trong live! Không đủ để mua {request.Quantity}." });
+                return BadRequest(new { message = $"Phân loại này chỉ còn {availableStock} sản phẩm! Không đủ để mua {request.Quantity}." });
             }
 
             // Create a fake order
@@ -624,39 +805,42 @@ namespace FakeTikTokShop.Controllers
                 Phone = request.Phone ?? "0987654321",
                 Address = request.Address ?? "Màn hình Livestream TikTok",
                 Note = "Mua từ Livestream",
-                PaymentMethod = "COD",
+                PaymentMethod = request.PaymentMethod ?? "COD",
                 Status = "Awaiting Shipment",
                 CreatedAt = DateTime.Now,
                 SyncStatus = "Pending"
             };
 
-            liveProd.Stock -= request.Quantity;
+            liveProd.Stock = Math.Max(0, liveProd.Stock - request.Quantity);
             liveProd.SalesCount += request.Quantity;
 
-            var cachedProd = await _context.ProductCaches.FirstOrDefaultAsync(p => p.ProductId == request.ProductId);
             if (cachedProd != null)
             {
                 cachedProd.Stock = Math.Max(0, cachedProd.Stock - request.Quantity);
             }
 
+            var itemSku = !string.IsNullOrEmpty(request.SelectedSku) ? request.SelectedSku : (cachedProd != null ? cachedProd.Sku : liveProd.Sku);
+            var itemPrice = request.Price ?? (cachedProd != null ? cachedProd.Price : liveProd.Price);
+            var itemDisplayName = !string.IsNullOrEmpty(request.SelectedSkuLabel) ? $"{liveProd.Name} ({request.SelectedSkuLabel})" : (cachedProd != null ? cachedProd.Name : liveProd.Name);
+
             order.OrderItems.Add(new TikTokOrderItem
             {
-                ProductId = liveProd.ProductId,
-                ProductName = liveProd.Name,
-                ProductSku = liveProd.Sku,
+                ProductId = request.ProductId, // Use the actual variant product ID selected!
+                ProductName = itemDisplayName,
+                ProductSku = itemSku,
                 Quantity = request.Quantity,
-                Price = liveProd.Price,
-                ImageUrl = liveProd.ImageUrl
+                Price = itemPrice,
+                ImageUrl = cachedProd != null ? cachedProd.ImageUrl : liveProd.ImageUrl
             });
 
-            order.TotalPrice = liveProd.Price * request.Quantity;
+            order.TotalPrice = itemPrice * request.Quantity;
             _context.Orders.Add(order);
             await _context.SaveChangesAsync();
 
             // Add public livestream activity log
-            LiveStreamState.AddComment("Hệ thống Live", $"🎉 Khách hàng {order.CustomerName} đã đặt mua {request.Quantity} x {liveProd.Name}!", "color-teal");
+            LiveStreamState.AddComment("Hệ thống Live", $"🎉 Khách hàng {order.CustomerName} đã đặt mua {request.Quantity} x {itemDisplayName}!", "color-teal");
             // Push the order notification via SignalR to all connected viewers
-            await _hub.Clients.All.SendAsync("ReceiveComment", "Hệ thống Live", $"🎉 Khách hàng {order.CustomerName} đã đặt mua {request.Quantity} x {liveProd.Name}!", "color-teal");
+            await _hub.Clients.All.SendAsync("ReceiveComment", "Hệ thống Live", $"🎉 Khách hàng {order.CustomerName} đã đặt mua {request.Quantity} x {itemDisplayName}!", "color-teal");
             
             // Also push updated products to all viewers
             var settings = await GetOrCreateSettingsAsync();
@@ -970,6 +1154,7 @@ namespace FakeTikTokShop.Controllers
     {
         public int MaSanPham { get; set; }
         public string TenSanPham { get; set; } = "";
+        public string? SKU { get; set; }
         public decimal GiaBan { get; set; }
         public string? HinhAnh { get; set; }
         public int SoLuongTon { get; set; }
@@ -992,6 +1177,10 @@ namespace FakeTikTokShop.Controllers
         public string? CustomerName { get; set; }
         public string? Phone { get; set; }
         public string? Address { get; set; }
+        public string? SelectedSku { get; set; }
+        public string? SelectedSkuLabel { get; set; }
+        public decimal? Price { get; set; }
+        public string? PaymentMethod { get; set; }
     }
 
     public class LiveAudioChunk

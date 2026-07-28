@@ -75,6 +75,7 @@ namespace DATN64.Controllers.Api
             var products = await query.Select(p => new {
                 p.MaSanPham,
                 p.TenSanPham,
+                p.SKU,
                 p.MaDanhMuc,
                 p.MaThuongHieu,
                 p.MaNCC,
