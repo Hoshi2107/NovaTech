@@ -144,7 +144,9 @@
                     <transition name="fade">
                         <div class="qr-container text-center p-3 mt-3 bg-tiktok-dark rounded border border-secondary border-opacity-10" v-if="orderForm.paymentMethod === 'BANK' && checkoutData">
                             <div class="text-2xs text-muted mb-2 uppercase tracking-wider">Quét để thanh toán đơn hàng</div>
-                            <img :src="`https://img.vietqr.io/image/mbbank-1234567890-compact2.png?amount=${checkoutData.totalPrice}&addInfo=TTShop%20${checkoutData.product.sku}`" class="qr-img mb-2 shadow rounded border border-white border-opacity-10">
+                            <img :src="`https://img.vietqr.io/image/vietinbank-108602210708-compact2.png?amount=${checkoutData.totalPrice}&addInfo=TTShop%20${checkoutData.product.sku}`" class="qr-img mb-2 shadow rounded border border-white border-opacity-10">
+                            <div class="text-xs fw-bold text-white mb-1">🏦 Vietinbank</div>
+                            <div class="text-xs text-tiktok-teal fw-bold mb-1">STK: 108602210708</div>
                             <div class="text-xs fw-bold text-white">Nội dung CK: <span class="text-tiktok-red">TTShop ${checkoutData.product.sku}</span></div>
                             <div class="text-3xs text-muted mt-1">Đơn hàng sẽ được duyệt ngay sau khi chuyển khoản thành công</div>
                         </div>
