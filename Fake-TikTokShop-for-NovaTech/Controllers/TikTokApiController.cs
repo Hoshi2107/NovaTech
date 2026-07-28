@@ -735,6 +735,15 @@ namespace FakeTikTokShop.Controllers
                 LiveStreamState.LikesCount++;
             }
             await _hub.Clients.All.SendAsync("StatsUpdated", LiveStreamState.ViewerCount, LiveStreamState.LikesCount);
+            await _hub.Clients.All.SendAsync("ReceiveLike");
+            return Ok();
+        }
+
+        [HttpPost("livestream/milestone")]
+        public async Task<IActionResult> BroadcastMilestone([FromBody] MilestoneRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Username)) return BadRequest();
+            await _hub.Clients.All.SendAsync("ReceiveMilestone", request.Username);
             return Ok();
         }
 
@@ -992,5 +1001,10 @@ namespace FakeTikTokShop.Controllers
     public class UploadAudioChunkRequest
     {
         public string Audio { get; set; } = "";
+    }
+
+    public class MilestoneRequest
+    {
+        public string Username { get; set; } = "";
     }
 }
