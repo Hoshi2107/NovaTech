@@ -20,8 +20,8 @@ builder.Services.AddSignalR(options =>
 });
 
 // SQLite Database Configuration
-var connectionString = builder.Configuration.GetConnectionString("SQLiteConnection") ?? "Data Source=tiktok_shop_fake.db";
-builder.Services.AddDbContext<TikTokDbContext>(options =>
+var connectionString = builder.Configuration.GetConnectionString("SQLiteConnection") ?? "Data Source=stream_simulator.db";
+builder.Services.AddDbContext<StreamDbContext>(options =>
     options.UseSqlite(connectionString));
 
 var app = builder.Build();
@@ -29,7 +29,7 @@ var app = builder.Build();
 // Auto-create SQLite database and tables on startup
 using (var scope = app.Services.CreateScope())
 {
-    var context = scope.ServiceProvider.GetRequiredService<TikTokDbContext>();
+    var context = scope.ServiceProvider.GetRequiredService<StreamDbContext>();
     try
     {
         context.Database.EnsureCreated();
@@ -49,7 +49,7 @@ using (var scope = app.Services.CreateScope())
         // Seed default products if cache is empty
         if (!context.ProductCaches.Any())
         {
-            context.ProductCaches.AddRange(new List<TikTokProductCache>
+            context.ProductCaches.AddRange(new List<StreamProductCache>
             {
                 new() { ProductId = 1, Name = "Laptop Dell XPS 13 9320 Plus", Sku = "DELL-XPS13-9320", Price = 38500000, Stock = 15, ImageUrl = "https://images.unsplash.com/photo-1593642632823-8f785ba67e45?q=80&w=300" },
                 new() { ProductId = 2, Name = "Laptop ASUS ROG Strix G16", Sku = "ASUS-ROG-G16", Price = 32900000, Stock = 8, ImageUrl = "https://images.unsplash.com/photo-1603302576837-37561b2e2302?q=80&w=300" },

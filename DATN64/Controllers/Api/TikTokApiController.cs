@@ -9,6 +9,7 @@ using DATN64.Models;
 namespace DATN64.Controllers.Api
 {
     [Route("api/tiktok")]
+    [Route("api/stream")]
     [ApiController]
     public class TikTokApiController : ControllerBase
     {
@@ -30,19 +31,20 @@ namespace DATN64.Controllers.Api
 
             var data = payload.Data;
             var identifier = $"[TikTokShop#{data.OrderId}]";
+            var identifierNew = $"[StreamSim#{data.OrderId}]";
 
-            // Map TikTok order status to NovaTech status
+            // Map order status to NovaTech status
             string mappedStatus = MapTikTokStatus(data.Status);
 
             // 1. Check if the order is already synced
             var existingOrder = await _context.DonHangs
-                .FirstOrDefaultAsync(o => o.GhiChu != null && o.GhiChu.Contains(identifier));
+                .FirstOrDefaultAsync(o => o.GhiChu != null && (o.GhiChu.Contains(identifier) || o.GhiChu.Contains(identifierNew)));
 
             if (existingOrder != null)
             {
                 var oldStatus = existingOrder.TrangThai ?? "";
 
-                // ✅ Hoàn kho khi TikTok báo hủy đơn (chỉ hoàn 1 lần, khi chưa ở trạng thái hủy)
+                // Hoàn kho khi báo hủy đơn (chỉ hoàn 1 lần, khi chưa ở trạng thái hủy)
                 if (mappedStatus == "Đã hủy" && oldStatus != "Đã hủy")
                 {
                     var orderDetails = await _context.ChiTietDonHangs
@@ -66,7 +68,7 @@ namespace DATN64.Controllers.Api
                 var log = new TikTokSyncLog
                 {
                     Type = "Cập nhật đơn hàng",
-                    Message = $"Đồng bộ cập nhật trạng thái đơn hàng TikTok Shop #{data.OrderId} sang '{mappedStatus}'." +
+                    Message = $"Đồng bộ cập nhật trạng thái đơn hàng #{data.OrderId} sang '{mappedStatus}'." +
                               (mappedStatus == "Đã hủy" && oldStatus != "Đã hủy" ? " Hàng đã hoàn về kho." : ""),
                     Status = "Thành công",
                     Timestamp = DateTime.Now
@@ -93,7 +95,6 @@ namespace DATN64.Controllers.Api
             }
 
             // Find customer by phone number first (email is derived from phone, so phone is the unique identifier).
-            // This prevents a duplicate-key crash when the same phone places a second order with a slightly different name.
             var customer = await _context.KhachHangs.FirstOrDefaultAsync(k => k.SoDienThoai == data.Phone);
             if (customer == null)
             {
@@ -104,8 +105,8 @@ namespace DATN64.Controllers.Api
                     HoTen = data.CustomerName,
                     SoDienThoai = data.Phone,
                     DiaChi = data.Address,
-                    Email = $"{data.Phone}@tiktok.com",
-                    MatKhau = hasher.HashPassword(null!, "TikTok12345"),
+                    Email = $"{data.Phone}@stream.com",
+                    MatKhau = hasher.HashPassword(null!, "Stream12345"),
                     DiemTichLuy = 0,
                     TrangThai = "Hoạt động",
                     NgayTao = DateTime.Now
@@ -135,8 +136,8 @@ namespace DATN64.Controllers.Api
                 NgayDat = orderDate,
                 TongTien = data.TotalPrice,
                 TrangThai = mappedStatus,
-                PhuongThucThanhToan = $"TikTok - {data.PaymentMethod}",
-                GhiChu = $"{identifier} Ghi chú khách: {data.Note ?? "Không có"}"
+                PhuongThucThanhToan = $"Stream - {data.PaymentMethod}",
+                GhiChu = $"{identifierNew} Ghi chú khách: {data.Note ?? "Không có"}"
             };
 
             _context.DonHangs.Add(order);
@@ -165,8 +166,8 @@ namespace DATN64.Controllers.Api
             // Create notification
             var notification = new SystemNotification
             {
-                Title = "Đơn hàng TikTok Shop mới",
-                Message = $"Đơn hàng TikTok #{data.OrderId} trị giá {data.TotalPrice.ToString("N0")} đ được đồng bộ thành công.",
+                Title = "Đơn hàng Livestream mới",
+                Message = $"Đơn hàng Stream #{data.OrderId} trị giá {data.TotalPrice.ToString("N0")} đ được đồng bộ thành công.",
                 Type = "Đơn mới",
                 Timestamp = DateTime.Now,
                 IsRead = false
@@ -177,7 +178,7 @@ namespace DATN64.Controllers.Api
             var syncLog = new TikTokSyncLog
             {
                 Type = "Đơn hàng",
-                Message = $"Đồng bộ thành công đơn hàng mới từ TikTok Shop #{data.OrderId}.",
+                Message = $"Đồng bộ thành công đơn hàng mới từ Stream #{data.OrderId}.",
                 Status = "Thành công",
                 Timestamp = DateTime.Now
             };

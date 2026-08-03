@@ -14,14 +14,14 @@ using Microsoft.EntityFrameworkCore;
 namespace FakeTikTokShop.Controllers
 {
     [ApiController]
-    [Route("api/tiktok")]
-    public class TikTokApiController : ControllerBase
+    [Route("api/stream")]
+    public class StreamApiController : ControllerBase
     {
-        private readonly TikTokDbContext _context;
+        private readonly StreamDbContext _context;
         private readonly HttpClient _httpClient;
         private readonly IHubContext<LivestreamHub> _hub;
 
-        public TikTokApiController(TikTokDbContext context, IHubContext<LivestreamHub> hub)
+        public StreamApiController(StreamDbContext context, IHubContext<LivestreamHub> hub)
         {
             _context = context;
             _httpClient = new HttpClient();
@@ -48,9 +48,9 @@ namespace FakeTikTokShop.Controllers
                 return BadRequest(new { message = "Đơn hàng phải có ít nhất 1 sản phẩm!" });
             }
 
-            var orderId = "TT-" + DateTime.Now.ToString("yyyyMMdd") + new Random().Next(1000, 9999);
+            var orderId = "SS-" + DateTime.Now.ToString("yyyyMMdd") + new Random().Next(1000, 9999);
 
-            var order = new TikTokOrder
+            var order = new StreamOrder
             {
                 OrderId = orderId,
                 CustomerName = request.CustomerName,
@@ -69,7 +69,7 @@ namespace FakeTikTokShop.Controllers
                 var cachedProd = await _context.ProductCaches.FirstOrDefaultAsync(p => p.ProductId == item.ProductId);
                 if (cachedProd == null)
                 {
-                    return BadRequest(new { message = $"Sản phẩm với mã {item.ProductId} không tồn tại trên Fake TikTok Shop. Vui lòng đồng bộ danh mục trước!" });
+                    return BadRequest(new { message = $"Sản phẩm với mã {item.ProductId} không tồn tại trên Streaming Simulator. Vui lòng đồng bộ danh mục trước!" });
                 }
 
                 if (cachedProd.Stock <= 0)
@@ -89,7 +89,7 @@ namespace FakeTikTokShop.Controllers
                 var itemSku = cachedProd.Sku;
                 var itemPrice = cachedProd.Price;
 
-                order.OrderItems.Add(new TikTokOrderItem
+                order.OrderItems.Add(new StreamOrderItem
                 {
                     ProductId = item.ProductId,
                     ProductName = itemName,
@@ -112,7 +112,7 @@ namespace FakeTikTokShop.Controllers
                 await PushWebhookInternalAsync(order, "OrderCreated", settings.NovaTechBaseUrl);
             }
 
-            return Ok(new { message = "Tạo đơn hàng TikTok thành công!", orderId, order });
+            return Ok(new { message = "Tạo đơn hàng thành công!", orderId, order });
         }
 
         // --- UPDATE ORDER STATUS ---
@@ -209,7 +209,7 @@ namespace FakeTikTokShop.Controllers
                 _context.Orders.RemoveRange(_context.Orders);
                 _context.WebhookLogs.RemoveRange(_context.WebhookLogs);
                 await _context.SaveChangesAsync();
-                return Ok(new { message = "Đã xóa toàn bộ đơn hàng và log webhook trên Fake TikTok Shop!" });
+                return Ok(new { message = "Đã xóa toàn bộ đơn hàng và log webhook trên Trình giả lập!" });
             }
             catch (Exception ex)
             {
@@ -226,7 +226,7 @@ namespace FakeTikTokShop.Controllers
         }
 
         [HttpPost("settings")]
-        public async Task<IActionResult> SaveSettings([FromBody] TikTokShopSettings newSettings)
+        public async Task<IActionResult> SaveSettings([FromBody] StreamShopSettings newSettings)
         {
             var settings = await GetOrCreateSettingsAsync();
             settings.NovaTechBaseUrl = newSettings.NovaTechBaseUrl.TrimEnd('/');
@@ -277,7 +277,7 @@ namespace FakeTikTokShop.Controllers
 
                 foreach (var p in externalProducts)
                 {
-                    _context.ProductCaches.Add(new TikTokProductCache
+                    _context.ProductCaches.Add(new StreamProductCache
                     {
                         ProductId = p.MaSanPham,
                         Name = p.TenSanPham,
@@ -313,12 +313,12 @@ namespace FakeTikTokShop.Controllers
         }
 
         // --- PRIVATE HELPER METHODS ---
-        private async Task<TikTokShopSettings> GetOrCreateSettingsAsync()
+        private async Task<StreamShopSettings> GetOrCreateSettingsAsync()
         {
             var settings = await _context.Settings.FirstOrDefaultAsync();
             if (settings == null)
             {
-                settings = new TikTokShopSettings
+                settings = new StreamShopSettings
                 {
                     NovaTechBaseUrl = "http://localhost:5018",
                     AutoPushWebhook = true
@@ -329,9 +329,9 @@ namespace FakeTikTokShop.Controllers
             return settings;
         }
 
-        private async Task<bool> PushWebhookInternalAsync(TikTokOrder order, string actionType, string baseUrl)
+        private async Task<bool> PushWebhookInternalAsync(StreamOrder order, string actionType, string baseUrl)
         {
-            var webhookUrl = $"{baseUrl}/api/tiktok/webhook";
+            var webhookUrl = $"{baseUrl}/api/stream/webhook";
 
             // Prepare webhook payload
             var payloadObj = new
@@ -448,7 +448,7 @@ namespace FakeTikTokShop.Controllers
                 return BadRequest(new { message = "Sản phẩm này đã được thêm vào livestream." });
             }
 
-            var liveProduct = new TikTokLivestreamProduct
+            var liveProduct = new StreamLivestreamProduct
             {
                 ProductId = cache.ProductId,
                 Name = cache.Name,
@@ -521,7 +521,7 @@ namespace FakeTikTokShop.Controllers
             await _context.SaveChangesAsync();
 
             var settings = await GetOrCreateSettingsAsync();
-            var broadcastProducts = products.Select(p => new TikTokLivestreamProduct
+            var broadcastProducts = products.Select(p => new StreamLivestreamProduct
             {
                 ProductId = p.ProductId,
                 Name = p.Name,
@@ -552,7 +552,7 @@ namespace FakeTikTokShop.Controllers
             await _context.SaveChangesAsync();
 
             var settings = await GetOrCreateSettingsAsync();
-            var broadcastProducts = products.Select(p => new TikTokLivestreamProduct
+            var broadcastProducts = products.Select(p => new StreamLivestreamProduct
             {
                 ProductId = p.ProductId,
                 Name = p.Name,
@@ -630,7 +630,7 @@ namespace FakeTikTokShop.Controllers
             return Ok(result);
         }
 
-        private (string BaseModel, string SeriesName) GetProductSeriesInfo(TikTokProductCache product)
+        private (string BaseModel, string SeriesName) GetProductSeriesInfo(StreamProductCache product)
         {
             string baseModel = "";
             var baseModels = new[] { "iPhone 15", "iPhone 14", "iPhone 13", "iPhone 12", "Samsung Galaxy S24", "Samsung Galaxy S23", "Samsung Galaxy S22" };
@@ -669,7 +669,7 @@ namespace FakeTikTokShop.Controllers
             return (baseModel, seriesName);
         }
 
-        private List<TikTokProductCache> FilterRelatedVariants(TikTokProductCache product, List<TikTokProductCache> allProducts)
+        private List<StreamProductCache> FilterRelatedVariants(StreamProductCache product, List<StreamProductCache> allProducts)
         {
             var seriesInfo = GetProductSeriesInfo(product);
             if (string.IsNullOrEmpty(seriesInfo.BaseModel))
@@ -797,13 +797,13 @@ namespace FakeTikTokShop.Controllers
             }
 
             // Create a fake order
-            var orderId = "TT-LIVE-" + DateTime.Now.ToString("yyyyMMdd") + new Random().Next(1000, 9999);
-            var order = new TikTokOrder
+            var orderId = "SS-LIVE-" + DateTime.Now.ToString("yyyyMMdd") + new Random().Next(1000, 9999);
+            var order = new StreamOrder
             {
                 OrderId = orderId,
                 CustomerName = request.CustomerName ?? "Khách xem Live",
                 Phone = request.Phone ?? "0987654321",
-                Address = request.Address ?? "Màn hình Livestream TikTok",
+                Address = request.Address ?? "Màn hình Livestream",
                 Note = "Mua từ Livestream",
                 PaymentMethod = request.PaymentMethod ?? "COD",
                 Status = "Awaiting Shipment",
@@ -823,7 +823,7 @@ namespace FakeTikTokShop.Controllers
             var itemPrice = request.Price ?? (cachedProd != null ? cachedProd.Price : liveProd.Price);
             var itemDisplayName = !string.IsNullOrEmpty(request.SelectedSkuLabel) ? $"{liveProd.Name} ({request.SelectedSkuLabel})" : (cachedProd != null ? cachedProd.Name : liveProd.Name);
 
-            order.OrderItems.Add(new TikTokOrderItem
+            order.OrderItems.Add(new StreamOrderItem
             {
                 ProductId = request.ProductId, // Use the actual variant product ID selected!
                 ProductName = itemDisplayName,
@@ -1035,7 +1035,7 @@ namespace FakeTikTokShop.Controllers
             "Em xin giá dell xps 13 với",
             "Chuột logitech kia có bảo hành không ạ?",
             "Thích cái bàn phím cơ ghê",
-            "Đồng bộ đơn hàng TikTok siêu mượt luôn",
+            "Đồng bộ đơn hàng siêu mượt luôn",
             "Shop dễ thương ghê, thả tim nè!"
         };
         private static readonly string[] MockColors = { "color-teal", "color-yellow", "color-pink", "color-green", "color-red" };
@@ -1094,8 +1094,6 @@ namespace FakeTikTokShop.Controllers
                 if ((now - _lastMockCommentTime).TotalSeconds >= 4)
                 {
                     _lastMockCommentTime = now;
-                    // Do not add mock comments anymore as per user request
-
                     // Keep ViewerCount in sync with real hub connections (no random drift)
                     ViewerCount = FakeTikTokShop.Hubs.LivestreamHub.GetViewerCount();
 

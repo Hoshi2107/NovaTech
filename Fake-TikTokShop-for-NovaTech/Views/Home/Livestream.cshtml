@@ -1,35 +1,35 @@
 @{
-    ViewData["Title"] = "TikTok Live Studio & Stream Viewer";
+    ViewData["Title"] = "Stream Live Studio & Stream Viewer";
 }
 
 <div id="livestream-app" class="container-fluid py-4" v-cloak>
     <!-- TOP BAR -->
-    <nav class="navbar navbar-expand-lg bg-tiktok-navbar rounded-4 mb-4 px-4 py-3 shadow-sm">
+    <nav class="navbar navbar-expand-lg bg-stream-navbar rounded-4 mb-4 px-4 py-3 shadow-sm">
         <div class="container-fluid p-0 d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center">
-                <a href="/" class="btn btn-tiktok-dark me-3 py-2 px-3">
+                <a href="/" class="btn btn-stream-dark me-3 py-2 px-3">
                     <i class="fa-solid fa-arrow-left me-2"></i>Quay lại
                 </a>
-                <i class="fa-solid fa-circle-dot text-tiktok-red me-2 animate-pulse fs-4"></i>
+                <i class="fa-solid fa-circle-dot text-stream-red me-2 animate-pulse fs-4"></i>
                 <div>
                     <h4 class="mb-0 fw-bold text-white d-flex align-items-center gap-2">
-                        TikTok Live Control Center
+                        Stream Live Control Center
                         <span class="badge bg-danger animate-pulse text-xs py-1 px-2" style="font-size: 0.7rem;">LIVE</span>
                     </h4>
                     <small class="text-muted-custom text-xs">Trình Quản Lý & Giả Lập Live Stream Bán Hàng</small>
                 </div>
             </div>
             <div class="d-flex align-items-center gap-3">
-                <div class="bg-tiktok-dark rounded-pill px-3 py-2 border border-secondary border-opacity-25 d-flex align-items-center gap-3">
-                    <span class="text-xs text-muted-custom"><i class="fa-solid fa-clock text-tiktok-red me-1"></i>Thời gian: <strong class="text-light">${formattedDuration}</strong></span>
-                    <span class="text-xs text-muted-custom"><i class="fa-solid fa-eye text-tiktok-teal me-1"></i>Mắt xem: <strong class="text-light">${viewerCount}</strong></span>
-                    <span class="text-xs text-muted-custom"><i class="fa-solid fa-heart text-tiktok-red me-1"></i>Thích: <strong class="text-light">${formatNumber(likesCount)}</strong></span>
+                <div class="bg-stream-dark rounded-pill px-3 py-2 border border-secondary border-opacity-25 d-flex align-items-center gap-3">
+                    <span class="text-xs text-muted-custom"><i class="fa-solid fa-clock text-stream-red me-1"></i>Thời gian: <strong class="text-light">${formattedDuration}</strong></span>
+                    <span class="text-xs text-muted-custom"><i class="fa-solid fa-eye text-stream-teal me-1"></i>Mắt xem: <strong class="text-light">${viewerCount}</strong></span>
+                    <span class="text-xs text-muted-custom"><i class="fa-solid fa-heart text-stream-red me-1"></i>Thích: <strong class="text-light">${formatNumber(likesCount)}</strong></span>
                 </div>
                 <a href="/Home/LiveViewer" target="_blank" class="btn btn-outline-info py-2 px-3 d-flex align-items-center gap-2">
                     <i class="fa-solid fa-users"></i>
                     Màn hình Viewer
                 </a>
-                <button class="btn btn-tiktok-primary py-2 px-4" @@click="toggleLive">
+                <button class="btn btn-stream-primary py-2 px-4" @@click="toggleLive">
                     <i class="fa-solid" :class="isLive ? 'fa-video-slash' : 'fa-video'"></i>
                     ${isLive ? 'Dừng Phát Sóng' : 'Bắt Đầu Phát Sóng'}
                 </button>
@@ -40,9 +40,9 @@
     <div class="row g-4">
         <!-- LEFT SCREEN: LIVE STREAM SIMULATOR (MOBILE VIEW) -->
         <div class="col-xl-5 col-lg-6 d-flex justify-content-center">
-            <div class="tiktok-mobile-frame shadow-lg position-relative">
+            <div class="Stream-mobile-frame shadow-lg position-relative">
                 <!-- Inner screen container -->
-                <div class="tiktok-screen-inner">
+                <div class="Stream-screen-inner">
                     <!-- VIDEO BACKDROP / CAMERA STREAM -->
                     <div class="video-backdrop-container">
                         <video ref="videoPlayer" class="webcam-video" :style="mirrorCamera ? 'transform: scaleX(-1);' : ''" autoplay playsinline muted v-show="cameraActive && isLive"></video>
@@ -61,7 +61,7 @@
                         <!-- Pulse neon overlay when not live or camera is off -->
                         <div class="neon-stream-placeholder d-flex flex-column align-items-center justify-content-center text-center p-4" v-show="!cameraActive || !isLive">
                             <div class="pulse-ring mb-4">
-                                <i class="fa-brands fa-tiktok text-white fs-1"></i>
+                                <i class="fa-solid fa-satellite-dish text-white fs-1"></i>
                             </div>
                             <h5 class="fw-bold text-white mb-2">
                                 ${isLive ? 'Đang đợi tín hiệu Camera...' : 'Bắt đầu phát sóng'}
@@ -69,7 +69,7 @@
                             <p class="text-muted text-xs px-4">
                                 ${isLive ? 'Vui lòng cho phép quyền truy cập camera để truyền hình ảnh trực tiếp!' : 'Nhấn nút "Bắt Đầu Phát Sóng" để mở giao diện live stream.'}
                             </p>
-                            <button v-if="isLive && !cameraActive" class="btn btn-sm btn-tiktok-secondary mt-2 px-3" @@click="initCamera">
+                            <button v-if="isLive && !cameraActive" class="btn btn-sm btn-stream-secondary mt-2 px-3" @@click="initCamera">
                                 <i class="fa-solid fa-camera me-1"></i>Bật Camera
                             </button>
                         </div>
@@ -78,26 +78,26 @@
                     <!-- FLOATING hearts CONTAINER -->
                     <div class="hearts-container" ref="heartsContainer"></div>
 
-                    <!-- TIKTOK LIVE HUD OVERLAY -->
+                    <!-- Stream LIVE HUD OVERLAY -->
                     <div class="live-hud d-flex flex-column justify-content-between p-3">
                         <!-- TOP HUD: Host info, stats -->
                         <div class="d-flex justify-content-between align-items-start w-100">
                             <div class="d-flex align-items-center bg-dark bg-opacity-50 rounded-pill p-1 pe-3">
-                                <div class="host-avatar bg-tiktok-teal text-dark fw-bold rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; font-size: 0.8rem;">
+                                <div class="host-avatar bg-stream-teal text-dark fw-bold rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; font-size: 0.8rem;">
                                     NT
                                 </div>
                                 <div>
                                     <h6 class="mb-0 text-white fw-bold text-xs" style="line-height: 1.1;">NovaTech Shop</h6>
-                                    <small class="text-tiktok-teal text-2xs" style="font-size: 0.65rem;">Host</small>
+                                    <small class="text-stream-teal text-2xs" style="font-size: 0.65rem;">Host</small>
                                 </div>
-                                <button class="btn btn-tiktok-primary p-0 rounded-circle ms-2 d-flex align-items-center justify-content-center" style="width: 18px; height: 18px; font-size: 0.6rem;">
+                                <button class="btn btn-stream-primary p-0 rounded-circle ms-2 d-flex align-items-center justify-content-center" style="width: 18px; height: 18px; font-size: 0.6rem;">
                                     <i class="fa-solid fa-plus text-white"></i>
                                 </button>
                             </div>
                             
                             <!-- Viewer List bubbles -->
                             <div class="d-flex align-items-center gap-1 bg-dark bg-opacity-40 rounded-pill px-2 py-1">
-                                <span class="badge bg-tiktok-red px-2 py-1 text-2xs me-1">LIVE</span>
+                                <span class="badge bg-stream-red px-2 py-1 text-2xs me-1">LIVE</span>
                                 <div class="viewer-bubbles d-flex align-items-center">
                                     <div class="viewer-bubble bg-purple">A</div>
                                     <div class="viewer-bubble bg-danger">B</div>
@@ -136,11 +136,11 @@
                                 <div class="product-details ms-2 flex-grow-1">
                                     <h6 class="product-title mb-0 text-white text-xs text-truncate">${pinnedProduct.name}</h6>
                                     <div class="d-flex align-items-center justify-content-between mt-1">
-                                        <span class="product-price text-tiktok-teal fw-bold text-xs">${formatCurrency(pinnedProduct.price)}</span>
+                                        <span class="product-price text-stream-teal fw-bold text-xs">${formatCurrency(pinnedProduct.price)}</span>
                                         <span class="product-stock text-muted text-3xs" style="font-size: 0.65rem;">Kho Live: ${pinnedProduct.stock}</span>
                                     </div>
                                 </div>
-                                <button class="btn btn-tiktok-primary btn-sm px-3 py-1 ms-2 text-xs" @@click="openBuyModal(pinnedProduct)">
+                                <button class="btn btn-stream-primary btn-sm px-3 py-1 ms-2 text-xs" @@click="openBuyModal(pinnedProduct)">
                                     Mua Ngay
                                 </button>
                             </div>
@@ -150,7 +150,7 @@
                                 <div class="d-flex align-items-center gap-2">
                                     <div class="shopping-bag-icon position-relative cursor-pointer" @@click="toggleShoppingList">
                                         <i class="fa-solid fa-bag-shopping text-white fs-4 bg-dark bg-opacity-50 p-2 rounded-circle"></i>
-                                        <span class="badge bg-tiktok-red position-absolute top-0 start-100 translate-middle rounded-pill" style="font-size: 0.6rem;">
+                                        <span class="badge bg-stream-red position-absolute top-0 start-100 translate-middle rounded-pill" style="font-size: 0.6rem;">
                                             ${liveProducts.length}
                                         </span>
                                     </div>
@@ -158,7 +158,7 @@
                                 
                                 <div class="d-flex align-items-center gap-2">
                                     <button class="btn btn-dark bg-opacity-50 rounded-circle p-2 text-white border-0" @@click="sendHeart">
-                                        <i class="fa-solid fa-heart text-tiktok-red fs-4"></i>
+                                        <i class="fa-solid fa-heart text-stream-red fs-4"></i>
                                     </button>
                                     <button class="btn btn-dark bg-opacity-50 rounded-circle p-2 text-white border-0" @@click="triggerSimulatedComment">
                                         <i class="fa-solid fa-comment-dots fs-4"></i>
@@ -171,7 +171,7 @@
                     <!-- OVERLAY SHOPPING LIST (Toggled via shopping bag icon) -->
                     <div class="shopping-list-overlay p-3 text-light" v-if="showShoppingList" class="animate-fade-in">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-white"><i class="fa-solid fa-store text-tiktok-teal me-2"></i>Sản phẩm trong Live (${liveProducts.length})</h6>
+                            <h6 class="fw-bold mb-0 text-white"><i class="fa-solid fa-store text-stream-teal me-2"></i>Sản phẩm trong Live (${liveProducts.length})</h6>
                             <i class="fa-solid fa-xmark cursor-pointer fs-5" @@click="toggleShoppingList"></i>
                         </div>
                         
@@ -185,11 +185,11 @@
                                 <div class="ms-2 flex-grow-1">
                                     <div class="fw-bold text-white text-xs text-truncate" style="max-width: 150px;">${p.name}</div>
                                     <div class="d-flex align-items-center justify-content-between">
-                                        <span class="text-tiktok-teal fw-bold text-xs">${formatCurrency(p.price)}</span>
+                                        <span class="text-stream-teal fw-bold text-xs">${formatCurrency(p.price)}</span>
                                         <span class="text-muted text-3xs" style="font-size: 0.65rem;">Còn: ${p.stock}</span>
                                     </div>
                                 </div>
-                                <button class="btn btn-tiktok-primary btn-sm px-2 py-1 text-2xs ms-2" @@click="openBuyModal(p)" :disabled="p.stock <= 0">
+                                <button class="btn btn-stream-primary btn-sm px-2 py-1 text-2xs ms-2" @@click="openBuyModal(p)" :disabled="p.stock <= 0">
                                     Mua
                                 </button>
                             </div>
@@ -202,11 +202,11 @@
         <!-- RIGHT SCREEN: LIVESTREAM CONTROL PANEL -->
         <div class="col-xl-7 col-lg-6">
             <!-- CATALOG ADDER CARD -->
-            <div class="card bg-tiktok-card mb-4">
+            <div class="card bg-stream-card mb-4">
                 <div class="card-body p-4">
                     <h5 class="fw-bold mb-3 text-white d-flex align-items-center justify-content-between">
-                        <span><i class="fa-solid fa-plus-minus text-tiktok-teal me-2"></i>Đưa Sản Phẩm Vào Live Stream</span>
-                        <button class="btn btn-sm btn-tiktok-dark py-1 px-3" @@click="syncCatalogFromWarehouse" :disabled="syncingCatalog">
+                        <span><i class="fa-solid fa-plus-minus text-stream-teal me-2"></i>Đưa Sản Phẩm Vào Live Stream</span>
+                        <button class="btn btn-sm btn-stream-dark py-1 px-3" @@click="syncCatalogFromWarehouse" :disabled="syncingCatalog">
                             <span v-if="syncingCatalog" class="spinner-border spinner-border-sm me-1" role="status"></span>
                             <i class="fa-solid fa-rotate me-1"></i>Đồng bộ tồn kho gốc
                         </button>
@@ -215,7 +215,7 @@
                     
                     <div class="row g-2 mb-3 align-items-center">
                         <div class="col-md-8 col-sm-7">
-                            <select class="form-select form-select-tiktok" v-model="selectedCatalogProductId">
+                            <select class="form-select form-select-stream" v-model="selectedCatalogProductId">
                                 <option value="" disabled>-- Chọn sản phẩm từ Catalog của NovaTech --</option>
                                 <option v-for="p in availableCatalogProducts" :value="p.productId">
                                     ${p.name} - ${formatCurrency(p.price)} (Tồn: ${p.stock})
@@ -223,7 +223,7 @@
                             </select>
                         </div>
                         <div class="col-md-4 col-sm-5">
-                            <button class="btn btn-tiktok-secondary w-100 py-2" @@click="addCatalogProductToLive" :disabled="!selectedCatalogProductId">
+                            <button class="btn btn-stream-secondary w-100 py-2" @@click="addCatalogProductToLive" :disabled="!selectedCatalogProductId">
                                 <i class="fa-solid fa-cloud-arrow-up me-2"></i>Đưa lên Live Stream
                             </button>
                         </div>
@@ -232,14 +232,14 @@
             </div>
 
             <!-- LIVE PRODUCTS LIST AND STOCK CONTROL -->
-            <div class="card bg-tiktok-card">
+            <div class="card bg-stream-card">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="fw-bold mb-0 text-white">
-                            <i class="fa-solid fa-bars-progress text-tiktok-red me-2"></i>
+                            <i class="fa-solid fa-bars-progress text-stream-red me-2"></i>
                             Quản Lý Mặt Hàng Trực Tiếp
                         </h5>
-                        <button class="btn btn-sm btn-tiktok-dark" @@click="fetchLiveProducts">
+                        <button class="btn btn-sm btn-stream-dark" @@click="fetchLiveProducts">
                             <i class="fa-solid fa-arrows-rotate me-1"></i>Làm mới live
                         </button>
                     </div>
@@ -276,12 +276,12 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <strong class="text-tiktok-teal">${formatCurrency(p.price)}</strong>
+                                        <strong class="text-stream-teal">${formatCurrency(p.price)}</strong>
                                     </td>
                                     <td>
                                         <div class="input-group input-group-sm">
-                                            <input type="number" class="form-control form-control-tiktok text-center px-1" v-model.number="p.stock" min="0">
-                                            <button class="btn btn-tiktok-secondary px-2" @@click="updateStock(p.productId, p.stock)" title="Lưu số lượng">
+                                            <input type="number" class="form-control form-control-stream text-center px-1" v-model.number="p.stock" min="0">
+                                            <button class="btn btn-stream-secondary px-2" @@click="updateStock(p.productId, p.stock)" title="Lưu số lượng">
                                                 <i class="fa-solid fa-check"></i>
                                             </button>
                                         </div>
@@ -297,12 +297,12 @@
                                             <button v-if="!p.isPinned" class="btn btn-sm btn-outline-info" @@click="pinProduct(p.productId)">
                                                 <i class="fa-solid fa-thumbtack me-1"></i>Ghim lên Live
                                             </button>
-                                            <span v-else class="badge bg-tiktok-red bg-opacity-75 text-white py-2 px-2 rounded-2 animate-pulse me-1 d-flex align-items-center gap-1 cursor-pointer" @@click="unpinProduct(p.productId)">
+                                            <span v-else class="badge bg-stream-red bg-opacity-75 text-white py-2 px-2 rounded-2 animate-pulse me-1 d-flex align-items-center gap-1 cursor-pointer" @@click="unpinProduct(p.productId)">
                                                 <i class="fa-solid fa-thumbtack animate-bounce"></i>Đang Ghim
                                             </span>
 
                                             <!-- TEST SIMULATED SALE -->
-                                            <button class="btn btn-sm btn-tiktok-primary" @@click="quickSimulateBuy(p)" :disabled="p.stock <= 0" title="Giả lập một khách hàng đặt mua sản phẩm này ngay">
+                                            <button class="btn btn-sm btn-stream-primary" @@click="quickSimulateBuy(p)" :disabled="p.stock <= 0" title="Giả lập một khách hàng đặt mua sản phẩm này ngay">
                                                 <i class="fa-solid fa-magic me-1"></i>Giả lập bán 1
                                             </button>
 
@@ -324,20 +324,20 @@
     <!-- BUY MODAL (SIMULATED FOR CUSTOMER) -->
     <div class="modal fade" id="buyModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content bg-tiktok-card text-light border border-secondary border-opacity-25 rounded-4">
+            <div class="modal-content bg-stream-card text-light border border-secondary border-opacity-25 rounded-4">
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title fw-bold text-white d-flex align-items-center">
-                        <i class="fa-solid fa-cart-shopping text-tiktok-red me-2"></i>
+                        <i class="fa-solid fa-cart-shopping text-stream-red me-2"></i>
                         Đặt Mua Trực Tiếp Trên Live
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body pt-3">
-                    <div class="d-flex align-items-center p-3 mb-3 rounded bg-tiktok-dark border border-secondary border-opacity-10" v-if="modalProduct">
+                    <div class="d-flex align-items-center p-3 mb-3 rounded bg-stream-dark border border-secondary border-opacity-10" v-if="modalProduct">
                         <img :src="modalProduct.imageUrl || 'https://via.placeholder.com/80'" class="rounded bg-secondary me-3" width="70" height="70">
                         <div class="flex-grow-1">
                             <h6 class="fw-bold text-white mb-1 text-truncate" style="max-width: 280px;">${modalProduct.name}</h6>
-                            <span class="text-tiktok-teal fw-bold">${formatCurrency(modalProduct.price)}</span>
+                            <span class="text-stream-teal fw-bold">${formatCurrency(modalProduct.price)}</span>
                             <small class="text-muted d-block text-2xs mt-1">Số lượng tồn live: ${modalProduct.stock}</small>
                         </div>
                     </div>
@@ -345,20 +345,20 @@
                     <form @@submit.prevent="submitBuyOrder">
                         <div class="mb-3">
                             <label class="form-label text-muted text-xs fw-bold text-uppercase">Họ và Tên Khách Hàng <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-tiktok" v-model="buyForm.customerName" required placeholder="Ví dụ: Nguyễn Thị B">
+                            <input type="text" class="form-control form-control-stream" v-model="buyForm.customerName" required placeholder="Ví dụ: Nguyễn Thị B">
                         </div>
                         <div class="mb-3">
                             <label class="form-label text-muted text-xs fw-bold text-uppercase">Số Điện Thoại <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-tiktok" v-model="buyForm.phone" required placeholder="09xxxxxxxx">
+                            <input type="text" class="form-control form-control-stream" v-model="buyForm.phone" required placeholder="09xxxxxxxx">
                         </div>
                         <div class="mb-3">
                             <label class="form-label text-muted text-xs fw-bold text-uppercase">Địa Chỉ Nhận Hàng <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-tiktok" v-model="buyForm.address" required placeholder="Số 10 Hai Bà Trưng, Hà Nội">
+                            <input type="text" class="form-control form-control-stream" v-model="buyForm.address" required placeholder="Số 10 Hai Bà Trưng, Hà Nội">
                         </div>
                         <div class="row g-3 mb-3">
                             <div class="col-6">
                                 <label class="form-label text-muted text-xs fw-bold text-uppercase">Số Lượng Mua</label>
-                                <input type="number" class="form-control form-control-tiktok text-center" v-model.number="buyForm.quantity" min="1" :max="modalProduct ? modalProduct.stock : 99" required>
+                                <input type="number" class="form-control form-control-stream text-center" v-model.number="buyForm.quantity" min="1" :max="modalProduct ? modalProduct.stock : 99" required>
                             </div>
                             <div class="col-6 text-end d-flex flex-column justify-content-end">
                                 <span class="text-muted-custom text-2xs d-block">Tổng giá trị:</span>
@@ -367,8 +367,8 @@
                         </div>
 
                         <div class="border-top border-secondary border-dashed pt-3 mt-3 d-flex justify-content-end gap-2">
-                            <button type="button" class="btn btn-tiktok-dark py-2 px-3" data-bs-dismiss="modal">Hủy bỏ</button>
-                            <button type="submit" class="btn btn-tiktok-primary py-2 px-4" :disabled="submittingOrder">
+                            <button type="button" class="btn btn-stream-dark py-2 px-3" data-bs-dismiss="modal">Hủy bỏ</button>
+                            <button type="submit" class="btn btn-stream-primary py-2 px-4" :disabled="submittingOrder">
                                 <span v-if="submittingOrder" class="spinner-border spinner-border-sm me-2"></span>
                                 <i class="fa-solid fa-circle-check me-2"></i>Xác Nhận Đặt Mua
                             </button>
@@ -382,7 +382,7 @@
 
 <style>
     /* Styling for the Livestream Simulation Workspace */
-    .bg-tiktok-navbar {
+    .bg-stream-navbar {
         background-color: #0d0e14;
         border-bottom: 1px solid #1f2230;
     }
@@ -399,8 +399,8 @@
         50% { opacity: .6; transform: scale(1.05); }
     }
 
-    /* TikTok Mobile Frame */
-    .tiktok-mobile-frame {
+    /* Stream Mobile Frame */
+    .Stream-mobile-frame {
         width: 375px;
         height: 720px;
         background-color: #000;
@@ -410,7 +410,7 @@
         position: relative;
     }
 
-    .tiktok-screen-inner {
+    .Stream-screen-inner {
         width: 100%;
         height: 100%;
         position: relative;
@@ -634,7 +634,7 @@
 
     /* Text sizes */
     .text-2xs { font-size: 0.7rem; }
-    .text-tiktok-red { color: #FE2C55; }
+    .text-stream-red { color: #FE2C55; }
 
     /* Announcement banner: slide in from right, slide out to left */
     .announcement-banner {
@@ -733,7 +733,7 @@
                     'Em xin giá dell xps 13 với',
                     'Chuột logitech kia có bảo hành không ạ?',
                     'Thích cái bàn phím cơ ghê',
-                    'Đồng bộ đơn hàng TikTok siêu mượt luôn',
+                    'Đồng bộ đơn hàng Stream siêu mượt luôn',
                     'Shop dễ thương ghê, thả tim nè!'
                 ],
                 chatInterval: null,
@@ -857,7 +857,7 @@
                 },
                 async fetchCatalogProducts() {
                     try {
-                        const res = await axios.get('/api/tiktok/products-cache');
+                        const res = await axios.get('/api/Stream/products-cache');
                         this.catalogProducts = res.data;
                     } catch (err) {
                         console.error('Lỗi tải sản phẩm catalog:', err);
@@ -865,7 +865,7 @@
                 },
                 async fetchLiveProducts() {
                     try {
-                        const res = await axios.get('/api/tiktok/livestream/products');
+                        const res = await axios.get('/api/Stream/livestream/products');
                         this.liveProducts = res.data;
                     } catch (err) {
                         console.error('Lỗi tải sản phẩm live:', err);
@@ -874,7 +874,7 @@
                 async syncCatalogFromWarehouse() {
                     this.syncingCatalog = true;
                     try {
-                        const res = await axios.post('/api/tiktok/sync-products');
+                        const res = await axios.post('/api/Stream/sync-products');
                         await this.fetchCatalogProducts();
                         await this.fetchLiveProducts();
                         
@@ -899,7 +899,7 @@
                 async addCatalogProductToLive() {
                     if (!this.selectedCatalogProductId) return;
                     try {
-                        await axios.post('/api/tiktok/livestream/products', {
+                        await axios.post('/api/Stream/livestream/products', {
                             productId: parseInt(this.selectedCatalogProductId)
                         });
                         this.selectedCatalogProductId = '';
@@ -922,7 +922,7 @@
                 },
                 async removeProduct(productId) {
                     try {
-                        await axios.delete(`/api/tiktok/livestream/products/${productId}`);
+                        await axios.delete(`/api/Stream/livestream/products/${productId}`);
                         await this.fetchLiveProducts();
                     } catch (err) {
                         Swal.fire('Lỗi', 'Không thể xóa sản phẩm khỏi live!', 'error');
@@ -930,7 +930,7 @@
                 },
                 async pinProduct(productId) {
                     try {
-                        await axios.post(`/api/tiktok/livestream/products/${productId}/pin`);
+                        await axios.post(`/api/Stream/livestream/products/${productId}/pin`);
                         await this.fetchLiveProducts();
                     } catch (err) {
                         Swal.fire('Lỗi', 'Không thể ghim sản phẩm!', 'error');
@@ -938,7 +938,7 @@
                 },
                 async unpinProduct(productId) {
                     try {
-                        await axios.post(`/api/tiktok/livestream/products/${productId}/unpin`);
+                        await axios.post(`/api/Stream/livestream/products/${productId}/unpin`);
                         await this.fetchLiveProducts();
                     } catch (err) {
                         Swal.fire('Lỗi', 'Không thể bỏ ghim sản phẩm!', 'error');
@@ -950,7 +950,7 @@
                         return;
                     }
                     try {
-                        await axios.post(`/api/tiktok/livestream/products/${productId}/stock`, { stock });
+                        await axios.post(`/api/Stream/livestream/products/${productId}/stock`, { stock });
                         await this.fetchLiveProducts();
                         await this.fetchCatalogProducts();
                         const toast = Swal.mixin({
@@ -977,7 +977,7 @@
                     if (this.isLive) {
                         // Notify server to broadcast live state
                         try {
-                            await axios.post('/api/tiktok/livestream/state/start');
+                            await axios.post('/api/Stream/livestream/state/start');
                         } catch (err) {
                             console.error('Lỗi gọi API start live:', err);
                         }
@@ -993,7 +993,7 @@
                     } else {
                         // Notify server to stop live state
                         try {
-                            await axios.post('/api/tiktok/livestream/state/stop');
+                            await axios.post('/api/Stream/livestream/state/stop');
                         } catch (err) {
                             console.error('Lỗi gọi API stop live:', err);
                         }
@@ -1088,7 +1088,7 @@
                                     const reader = new FileReader();
                                     reader.onloadend = () => {
                                         const base64Audio = reader.result;
-                                        axios.post('/api/tiktok/livestream/audio', { audio: base64Audio })
+                                        axios.post('/api/Stream/livestream/audio', { audio: base64Audio })
                                             .catch(err => console.error("Lỗi gửi audio:", err));
                                     };
                                     reader.readAsDataURL(blob);
@@ -1122,7 +1122,7 @@
                         clearTimeout(this.audioTimeout);
                         this.audioTimeout = null;
                     }
-                    axios.post('/api/tiktok/livestream/audio/clear').catch(err => {});
+                    axios.post('/api/Stream/livestream/audio/clear').catch(err => {});
                 },
                 startFrameCapture() {
                     this.stopFrameCapture();
@@ -1139,7 +1139,7 @@
                         clearInterval(this.captureInterval);
                         this.captureInterval = null;
                     }
-                    axios.post('/api/tiktok/livestream/frame', { frame: null }).catch(err => {});
+                    axios.post('/api/Stream/livestream/frame', { frame: null }).catch(err => {});
                 },
                 captureFrame() {
                     const video = this.$refs.videoPlayer;
@@ -1176,7 +1176,7 @@
                     }
                     
                     const dataUrl = canvas.toDataURL('image/jpeg', 0.4);
-                    axios.post('/api/tiktok/livestream/frame', { frame: dataUrl })
+                    axios.post('/api/Stream/livestream/frame', { frame: dataUrl })
                         .catch(err => console.error("Lỗi gửi frame:", err));
                 },
                 startChatSimulation() {
@@ -1285,7 +1285,7 @@
                     }
                     this.submittingOrder = true;
                     try {
-                        const res = await axios.post('/api/tiktok/livestream/simulate-buy', {
+                        const res = await axios.post('/api/Stream/livestream/simulate-buy', {
                             productId: this.modalProduct.productId,
                             quantity: this.buyForm.quantity,
                             customerName: this.buyForm.customerName,
@@ -1336,7 +1336,7 @@
                     const address = addresses[randIndex];
 
                     try {
-                        const res = await axios.post('/api/tiktok/livestream/simulate-buy', {
+                        const res = await axios.post('/api/Stream/livestream/simulate-buy', {
                             productId: product.productId,
                             quantity: 1,
                             customerName,
@@ -1369,3 +1369,5 @@
         });
     </script>
 }
+
+

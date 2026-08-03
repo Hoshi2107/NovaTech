@@ -6,11 +6,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FakeTikTokShop.Models
 {
-    public class TikTokOrder
+    [Table("Orders")]
+    public class StreamOrder
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.None)]
-        public string OrderId { get; set; } = ""; // E.g., TT-10294812
+        public string OrderId { get; set; } = ""; // E.g., SS-10294812
         public string CustomerName { get; set; } = "";
         public string Phone { get; set; } = "";
         public string Address { get; set; } = "";
@@ -21,10 +22,11 @@ namespace FakeTikTokShop.Models
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public string SyncStatus { get; set; } = "Pending"; // Success, Failed, Pending
         public string? WebhookErrorMessage { get; set; }
-        public virtual ICollection<TikTokOrderItem> OrderItems { get; set; } = new List<TikTokOrderItem>();
+        public virtual ICollection<StreamOrderItem> OrderItems { get; set; } = new List<StreamOrderItem>();
     }
 
-    public class TikTokOrderItem
+    [Table("OrderItems")]
+    public class StreamOrderItem
     {
         [Key]
         public int Id { get; set; }
@@ -37,10 +39,11 @@ namespace FakeTikTokShop.Models
         public string? ImageUrl { get; set; }
 
         [ForeignKey("OrderId")]
-        public virtual TikTokOrder? Order { get; set; }
+        public virtual StreamOrder? Order { get; set; }
     }
 
-    public class TikTokProductCache
+    [Table("ProductCaches")]
+    public class StreamProductCache
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.None)]
@@ -52,7 +55,8 @@ namespace FakeTikTokShop.Models
         public int Stock { get; set; }
     }
 
-    public class TikTokLivestreamProduct
+    [Table("LivestreamProducts")]
+    public class StreamLivestreamProduct
     {
         [Key]
         public int Id { get; set; }
@@ -66,6 +70,7 @@ namespace FakeTikTokShop.Models
         public int SalesCount { get; set; } = 0;
     }
 
+    [Table("WebhookLogs")]
     public class WebhookLog
     {
         [Key]
@@ -78,7 +83,8 @@ namespace FakeTikTokShop.Models
         public DateTime Timestamp { get; set; } = DateTime.Now;
     }
 
-    public class TikTokShopSettings
+    [Table("Settings")]
+    public class StreamShopSettings
     {
         [Key]
         public int Id { get; set; }
@@ -86,22 +92,22 @@ namespace FakeTikTokShop.Models
         public bool AutoPushWebhook { get; set; } = true;
     }
 
-    public class TikTokDbContext : DbContext
+    public class StreamDbContext : DbContext
     {
-        public TikTokDbContext(DbContextOptions<TikTokDbContext> options) : base(options)
+        public StreamDbContext(DbContextOptions<StreamDbContext> options) : base(options)
         {
         }
 
-        public DbSet<TikTokOrder> Orders { get; set; }
-        public DbSet<TikTokOrderItem> OrderItems { get; set; }
-        public DbSet<TikTokProductCache> ProductCaches { get; set; }
+        public DbSet<StreamOrder> Orders { get; set; }
+        public DbSet<StreamOrderItem> OrderItems { get; set; }
+        public DbSet<StreamProductCache> ProductCaches { get; set; }
         public DbSet<WebhookLog> WebhookLogs { get; set; }
-        public DbSet<TikTokShopSettings> Settings { get; set; }
-        public DbSet<TikTokLivestreamProduct> LivestreamProducts { get; set; }
+        public DbSet<StreamShopSettings> Settings { get; set; }
+        public DbSet<StreamLivestreamProduct> LivestreamProducts { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<TikTokOrder>()
+            modelBuilder.Entity<StreamOrder>()
                 .HasMany(o => o.OrderItems)
                 .WithOne(i => i.Order)
                 .HasForeignKey(i => i.OrderId)

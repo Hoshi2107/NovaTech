@@ -1,11 +1,11 @@
 @{
-    ViewData["Title"] = "TikTok Live Viewer";
+    ViewData["Title"] = "Stream Live Viewer";
 }
 
-<div id="liveviewer-app" class="w-100 min-vh-100 bg-tiktok-black position-relative" v-cloak>
+<div id="liveviewer-app" class="w-100 min-vh-100 bg-stream-black position-relative" v-cloak>
     <!-- BACK BUTTON FOR DEV/TEST -->
     <div class="position-absolute top-0 start-0 m-3" style="z-index: 1050;">
-        <a href="/" class="btn btn-sm btn-tiktok-dark text-white bg-opacity-75 d-flex align-items-center gap-2 px-3 py-2 border border-secondary border-opacity-25 backdrop-blur">
+        <a href="/" class="btn btn-sm btn-stream-dark text-white bg-opacity-75 d-flex align-items-center gap-2 px-3 py-2 border border-secondary border-opacity-25 backdrop-blur">
             <i class="fa-solid fa-arrow-left"></i>
             <span>Seller Center</span>
         </a>
@@ -28,7 +28,7 @@
                         <!-- Pulse neon overlay when not live or camera is off -->
                         <div class="neon-stream-placeholder d-flex flex-column align-items-center justify-content-center text-center p-4" v-else>
                             <div class="pulse-ring mb-4" :class="{ 'active': isLive }">
-                                <i class="fa-brands fa-tiktok text-white fs-1"></i>
+                                <i class="fa-solid fa-satellite-dish text-white fs-1"></i>
                             </div>
                             <h5 class="fw-bold text-white mb-2 tracking-wide">
                                 ${isLive ? 'ĐANG PHÁT TRỰC TIẾP' : 'LIVESTREAM CHƯA BẮT ĐẦU'}
@@ -39,11 +39,11 @@
                             
                             <!-- Visualizer wave bars when live but no frame -->
                             <div class="d-flex gap-1 align-items-end mt-4" style="height: 30px;" v-if="isLive">
-                                <div class="bar bg-tiktok-teal"></div>
-                                <div class="bar bg-tiktok-red"></div>
-                                <div class="bar bg-tiktok-teal"></div>
-                                <div class="bar bg-tiktok-red"></div>
-                                <div class="bar bg-tiktok-teal"></div>
+                                <div class="bar bg-stream-teal"></div>
+                                <div class="bar bg-stream-red"></div>
+                                <div class="bar bg-stream-teal"></div>
+                                <div class="bar bg-stream-red"></div>
+                                <div class="bar bg-stream-teal"></div>
                             </div>
                         </div>
                     </div>
@@ -54,43 +54,43 @@
                     <!-- PERSONAL LIKE PROGRESS BAR (Top-left) -->
                     <div class="personal-like-progress-container position-absolute start-0 m-3" :class="{ 'scale-up': isProgressPulsing }" v-if="isLive" style="top: 70px; z-index: 100; pointer-events: auto; width: 170px;">
                         <div class="d-flex align-items-center justify-content-between text-white text-3xs mb-1 fw-bold">
-                            <span><i class="fa-solid fa-heart text-tiktok-red me-1 animate-pulse"></i>Mục tiêu tim</span>
-                            <span class="text-tiktok-teal">${personalLikes}/100</span>
+                            <span><i class="fa-solid fa-heart text-stream-red me-1 animate-pulse"></i>Mục tiêu tim</span>
+                            <span class="text-stream-teal">${personalLikes}/100</span>
                         </div>
                         <div class="progress" style="height: 6px; background-color: rgba(255, 255, 255, 0.15); border-radius: 3px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.05);">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-tiktok-red" role="progressbar" :style="{ width: personalLikes + '%' }" :aria-valuenow="personalLikes" aria-valuemin="0" aria-valuemax="100"></div>
+                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-stream-red" role="progressbar" :style="{ width: personalLikes + '%' }" :aria-valuenow="personalLikes" aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
                     </div>
 
-                    <!-- TIKTOK LIVE HUD OVERLAY (Visible on both mobile/desktop for profile, stats) -->
+                    <!-- Stream LIVE HUD OVERLAY (Visible on both mobile/desktop for profile, stats) -->
                     <div class="live-hud d-flex flex-column justify-content-between p-3" v-if="isLive">
                         <!-- TOP HUD: Host profile, viewers count -->
                         <div class="d-flex justify-content-between align-items-start w-100">
                             <!-- Host Badge -->
                             <div class="d-flex align-items-center bg-dark bg-opacity-65 rounded-pill p-1 pe-3 border border-secondary border-opacity-10 backdrop-blur">
-                                <div class="host-avatar bg-tiktok-teal text-dark fw-bold rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; font-size: 0.8rem;">
+                                <div class="host-avatar bg-stream-teal text-dark fw-bold rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; font-size: 0.8rem;">
                                     NT
                                 </div>
                                 <div>
                                     <h6 class="mb-0 text-white fw-bold text-xs" style="line-height: 1.1;">NovaTech Shop</h6>
-                                    <small class="text-tiktok-teal text-2xs" style="font-size: 0.65rem;">@@novatech.shop</small>
+                                    <small class="text-stream-teal text-2xs" style="font-size: 0.65rem;">@@novatech.shop</small>
                                 </div>
-                                <button class="btn btn-tiktok-primary p-0 rounded-circle ms-2 d-flex align-items-center justify-content-center animate-pulse" style="width: 18px; height: 18px; font-size: 0.6rem;">
+                                <button class="btn btn-stream-primary p-0 rounded-circle ms-2 d-flex align-items-center justify-content-center animate-pulse" style="width: 18px; height: 18px; font-size: 0.6rem;">
                                     <i class="fa-solid fa-plus text-white"></i>
                                 </button>
                             </div>
                             
                             <!-- Live status and Viewer counts -->
                             <div class="d-flex align-items-center gap-2 bg-dark bg-opacity-65 rounded-pill px-2 py-1 border border-secondary border-opacity-10 backdrop-blur">
-                                <span class="badge bg-tiktok-red px-2 py-1 text-2xs me-1 animate-pulse">LIVE</span>
+                                <span class="badge bg-stream-red px-2 py-1 text-2xs me-1 animate-pulse">LIVE</span>
                                 <div class="viewer-bubbles d-flex align-items-center me-1 d-none d-sm-flex">
                                     <div class="viewer-bubble bg-purple">A</div>
                                     <div class="viewer-bubble bg-danger">B</div>
                                     <div class="viewer-bubble bg-warning">C</div>
                                 </div>
-                                <span class="text-white text-xs fw-bold ms-1"><i class="fa-regular fa-eye me-1 text-tiktok-teal"></i>${viewerCount}</span>
+                                <span class="text-white text-xs fw-bold ms-1"><i class="fa-regular fa-eye me-1 text-stream-teal"></i>${viewerCount}</span>
                                 <button class="btn btn-sm p-0 border-0 bg-transparent ms-1" @@click="toggleMute" :title="isMuted ? 'Bật âm thanh' : 'Tắt âm thanh'" style="width:28px;height:28px;">
-                                    <i class="fa-solid text-white" :class="isMuted ? 'fa-volume-xmark text-danger' : 'fa-volume-high text-tiktok-teal'"></i>
+                                    <i class="fa-solid text-white" :class="isMuted ? 'fa-volume-xmark text-danger' : 'fa-volume-high text-stream-teal'"></i>
                                 </button>
                             </div>
                         </div>
@@ -124,11 +124,11 @@
                                 <div class="product-details ms-2 flex-grow-1">
                                     <h6 class="product-title mb-0 text-white text-xs text-truncate">${pinnedProduct.name}</h6>
                                     <div class="d-flex align-items-center justify-content-between mt-1">
-                                        <span class="product-price text-tiktok-teal fw-bold text-xs">${formatCurrency(pinnedProduct.price)}</span>
+                                        <span class="product-price text-stream-teal fw-bold text-xs">${formatCurrency(pinnedProduct.price)}</span>
                                         <span class="product-stock text-muted text-3xs" style="font-size: 0.65rem;">Kho Live: ${pinnedProduct.stock}</span>
                                     </div>
                                 </div>
-                                <button class="btn btn-tiktok-primary btn-sm px-3 py-1 ms-2 text-xs" @@click="openBuyModal(pinnedProduct)">
+                                <button class="btn btn-stream-primary btn-sm px-3 py-1 ms-2 text-xs" @@click="openBuyModal(pinnedProduct)">
                                     Mua Ngay
                                 </button>
                             </div>
@@ -138,7 +138,7 @@
                                 <!-- Shopping bag -->
                                 <div class="shopping-bag-icon position-relative cursor-pointer" @@click="toggleShoppingList">
                                     <i class="fa-solid fa-bag-shopping text-white fs-4 bg-dark bg-opacity-65 p-2 rounded-circle border border-secondary border-opacity-10"></i>
-                                    <span class="badge bg-tiktok-red position-absolute top-0 start-100 translate-middle rounded-pill" style="font-size: 0.6rem;">
+                                    <span class="badge bg-stream-red position-absolute top-0 start-100 translate-middle rounded-pill" style="font-size: 0.6rem;">
                                         ${liveProducts.length}
                                     </span>
                                 </div>
@@ -146,14 +146,14 @@
                                 <!-- Comment Input Form -->
                                 <form @@submit.prevent="sendUserComment" class="flex-grow-1 mx-2">
                                     <div class="input-group input-group-sm">
-                                        <input type="text" class="form-control form-control-tiktok bg-opacity-65 border-0 text-white text-xs rounded-pill px-3 py-2" v-model="myComment" placeholder="Bình luận gì đó..." style="background-color: rgba(0,0,0,0.65);">
+                                        <input type="text" class="form-control form-control-stream bg-opacity-65 border-0 text-white text-xs rounded-pill px-3 py-2" v-model="myComment" placeholder="Bình luận gì đó..." style="background-color: rgba(0,0,0,0.65);">
                                     </div>
                                 </form>
                                 
                                 <!-- Heart Like Button -->
                                 <div class="d-flex align-items-center gap-1">
                                     <button class="btn btn-dark bg-opacity-65 rounded-circle p-2 text-white border border-secondary border-opacity-10 position-relative" @@click="likeLiveStream">
-                                        <i class="fa-solid fa-heart text-tiktok-red fs-4 animate-pulse"></i>
+                                        <i class="fa-solid fa-heart text-stream-red fs-4 animate-pulse"></i>
                                     </button>
                                 </div>
                             </div>
@@ -163,7 +163,7 @@
                     <!-- MOBILE SLIDE-UP OVERLAY SHOPPING LIST -->
                     <div class="shopping-list-overlay p-3 text-light d-lg-none" v-if="showShoppingList && isLive">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-white"><i class="fa-solid fa-store text-tiktok-teal me-2"></i>Sản phẩm đang bán (${liveProducts.length})</h6>
+                            <h6 class="fw-bold mb-0 text-white"><i class="fa-solid fa-store text-stream-teal me-2"></i>Sản phẩm đang bán (${liveProducts.length})</h6>
                             <i class="fa-solid fa-xmark cursor-pointer fs-5" @@click="toggleShoppingList"></i>
                         </div>
                         
@@ -177,11 +177,11 @@
                                 <div class="ms-2 flex-grow-1">
                                     <div class="fw-bold text-white text-xs text-truncate" style="max-width: 150px;">${p.name}</div>
                                     <div class="d-flex align-items-center justify-content-between mt-1">
-                                        <span class="text-tiktok-teal fw-bold text-xs">${formatCurrency(p.price)}</span>
+                                        <span class="text-stream-teal fw-bold text-xs">${formatCurrency(p.price)}</span>
                                         <span class="text-muted text-3xs" style="font-size: 0.65rem;">Còn: ${p.stock}</span>
                                     </div>
                                 </div>
-                                <button class="btn btn-tiktok-primary btn-sm px-2 py-1 text-2xs ms-2" @@click="openBuyModal(p)" :disabled="p.stock <= 0">
+                                <button class="btn btn-stream-primary btn-sm px-2 py-1 text-2xs ms-2" @@click="openBuyModal(p)" :disabled="p.stock <= 0">
                                     Mua
                                 </button>
                             </div>
@@ -191,23 +191,23 @@
             </div>
 
             <!-- RIGHT PANEL: DESKTOP SIDEBAR (Visible only on width >= 992px for PC layout) -->
-            <div class="desktop-sidebar d-none d-lg-flex flex-column bg-tiktok-card border-start border-secondary border-opacity-25" style="width: 400px; min-width: 400px; max-width: 400px;">
+            <div class="desktop-sidebar d-none d-lg-flex flex-column bg-stream-card border-start border-secondary border-opacity-25" style="width: 400px; min-width: 400px; max-width: 400px;">
                 <!-- Pinned Product Section (Feature card) -->
-                <div class="p-3 border-bottom border-secondary border-opacity-25 bg-tiktok-dark bg-opacity-40" v-if="pinnedProduct && isLive">
+                <div class="p-3 border-bottom border-secondary border-opacity-25 bg-stream-dark bg-opacity-40" v-if="pinnedProduct && isLive">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="badge bg-tiktok-red text-white py-1 px-2 text-2xs fw-bold animate-pulse"><i class="fa-solid fa-thumbtack me-1"></i>SẢN PHẨM ĐANG GHIM</span>
+                        <span class="badge bg-stream-red text-white py-1 px-2 text-2xs fw-bold animate-pulse"><i class="fa-solid fa-thumbtack me-1"></i>SẢN PHẨM ĐANG GHIM</span>
                         <span class="text-3xs text-muted">Deal hot nhất phiên Live</span>
                     </div>
-                    <div class="desktop-pinned-card d-flex align-items-center p-2 rounded-3 border border-tiktok-teal border-opacity-35 bg-tiktok-black">
+                    <div class="desktop-pinned-card d-flex align-items-center p-2 rounded-3 border border-stream-teal border-opacity-35 bg-stream-black">
                         <img :src="pinnedProduct.imageUrl || 'https://via.placeholder.com/80'" class="rounded bg-secondary" width="70" height="70" style="object-fit: cover;">
                         <div class="ms-3 flex-grow-1 min-width-0">
                             <h6 class="product-title mb-1 text-white text-xs fw-bold text-truncate" style="max-width: 170px;">${pinnedProduct.name}</h6>
                             <div class="d-flex align-items-center justify-content-between">
-                                <span class="product-price text-tiktok-teal fw-bold text-xs">${formatCurrency(pinnedProduct.price)}</span>
+                                <span class="product-price text-stream-teal fw-bold text-xs">${formatCurrency(pinnedProduct.price)}</span>
                                 <span class="badge bg-dark text-muted text-3xs border border-secondary border-opacity-25">Còn: ${pinnedProduct.stock}</span>
                             </div>
                         </div>
-                        <button class="btn btn-tiktok-primary btn-sm px-3 py-2 ms-2 text-xs" @@click="openBuyModal(pinnedProduct)">
+                        <button class="btn btn-stream-primary btn-sm px-3 py-2 ms-2 text-xs" @@click="openBuyModal(pinnedProduct)">
                             Mua Ngay
                         </button>
                     </div>
@@ -215,9 +215,9 @@
 
                 <!-- CHAT SECTION -->
                 <div class="desktop-chat-section d-flex flex-column border-bottom border-secondary border-opacity-25" style="height: 320px;">
-                    <div class="px-3 py-2 bg-tiktok-black bg-opacity-30 d-flex justify-content-between align-items-center">
-                        <span class="fw-bold text-white text-xs"><i class="fa-regular fa-comments text-tiktok-red me-2"></i>Trò chuyện trực tiếp</span>
-                        <span class="text-muted text-3xs d-flex align-items-center"><i class="fa-solid fa-heart text-tiktok-red me-1"></i>${likesCount} thích</span>
+                    <div class="px-3 py-2 bg-stream-black bg-opacity-30 d-flex justify-content-between align-items-center">
+                        <span class="fw-bold text-white text-xs"><i class="fa-regular fa-comments text-stream-red me-2"></i>Trò chuyện trực tiếp</span>
+                        <span class="text-muted text-3xs d-flex align-items-center"><i class="fa-solid fa-heart text-stream-red me-1"></i>${likesCount} thích</span>
                     </div>
                     
                     <!-- DESKTOP LIKES ANNOUNCEMENT BANNER -->
@@ -231,21 +231,21 @@
                     
                     <!-- Chat Messages List -->
                     <div class="live-chat-box flex-grow-1 p-3 overflow-y-auto" ref="chatBoxDesktop">
-                        <div v-for="(chat, index) in chats" :key="index" class="chat-message animate-fade-in mb-2 bg-tiktok-dark bg-opacity-70 border border-secondary border-opacity-5">
+                        <div v-for="(chat, index) in chats" :key="index" class="chat-message animate-fade-in mb-2 bg-stream-dark bg-opacity-70 border border-secondary border-opacity-5">
                             <span class="chat-username" :class="chat.color">${chat.username}:</span>
                             <span class="chat-text text-white">${chat.text}</span>
                         </div>
                     </div>
 
                     <!-- Chat Input form -->
-                    <div class="p-3 bg-tiktok-black bg-opacity-40">
+                    <div class="p-3 bg-stream-black bg-opacity-40">
                         <form @@submit.prevent="sendUserComment">
                             <div class="input-group">
-                                <input type="text" class="form-control form-control-tiktok bg-tiktok-black text-xs py-2 px-3 border-secondary border-opacity-25" v-model="myComment" placeholder="Gửi bình luận...">
-                                <button class="btn btn-tiktok-primary px-3 text-xs" type="submit">
+                                <input type="text" class="form-control form-control-stream bg-stream-black text-xs py-2 px-3 border-secondary border-opacity-25" v-model="myComment" placeholder="Gửi bình luận...">
+                                <button class="btn btn-stream-primary px-3 text-xs" type="submit">
                                     <i class="fa-solid fa-paper-plane"></i>
                                 </button>
-                                <button class="btn btn-tiktok-dark px-3 text-tiktok-red" type="button" @@click="likeLiveStream" title="Thả tim">
+                                <button class="btn btn-stream-dark px-3 text-stream-red" type="button" @@click="likeLiveStream" title="Thả tim">
                                     <i class="fa-solid fa-heart"></i>
                                 </button>
                             </div>
@@ -255,8 +255,8 @@
 
                 <!-- SHOPPING SECTION -->
                 <div class="desktop-shopping-section d-flex flex-column flex-grow-1" style="min-height: 0;">
-                    <div class="px-3 py-2 bg-tiktok-black bg-opacity-30 d-flex justify-content-between align-items-center border-bottom border-secondary border-opacity-10">
-                        <span class="fw-bold text-white text-xs"><i class="fa-solid fa-bag-shopping text-tiktok-teal me-2"></i>Danh sách sản phẩm (${liveProducts.length})</span>
+                    <div class="px-3 py-2 bg-stream-black bg-opacity-30 d-flex justify-content-between align-items-center border-bottom border-secondary border-opacity-10">
+                        <span class="fw-bold text-white text-xs"><i class="fa-solid fa-bag-shopping text-stream-teal me-2"></i>Danh sách sản phẩm (${liveProducts.length})</span>
                         <span class="text-3xs text-muted">Bấm mua để đặt đơn</span>
                     </div>
 
@@ -269,7 +269,7 @@
                         </div>
                         <div v-else>
                             <!-- Product Row -->
-                            <div class="desktop-shopping-item d-flex align-items-center p-2 mb-2 rounded bg-tiktok-dark bg-opacity-60 border border-secondary border-opacity-15 hover-neon-border" v-for="(p, index) in liveProducts" :key="p.productId">
+                            <div class="desktop-shopping-item d-flex align-items-center p-2 mb-2 rounded bg-stream-dark bg-opacity-60 border border-secondary border-opacity-15 hover-neon-border" v-for="(p, index) in liveProducts" :key="p.productId">
                                 <div class="position-relative">
                                     <span class="item-number-badge">${index + 1}</span>
                                     <img :src="p.imageUrl || 'https://via.placeholder.com/80'" class="rounded bg-secondary" width="50" height="50" style="object-fit: cover;">
@@ -277,12 +277,12 @@
                                 <div class="ms-3 flex-grow-1 min-width-0">
                                     <div class="fw-bold text-white text-xs text-truncate" :title="p.name">${p.name}</div>
                                     <div class="d-flex align-items-center justify-content-between mt-1">
-                                        <span class="text-tiktok-teal fw-bold text-xs">${formatCurrency(p.price)}</span>
+                                        <span class="text-stream-teal fw-bold text-xs">${formatCurrency(p.price)}</span>
                                         <span class="text-muted text-3xs">Tồn: <strong>${p.stock}</strong></span>
                                     </div>
                                 </div>
                                 <div class="ms-2">
-                                    <button class="btn btn-tiktok-primary btn-sm px-3 py-1 text-2xs" @@click="openBuyModal(p)" :disabled="p.stock <= 0">
+                                    <button class="btn btn-stream-primary btn-sm px-3 py-1 text-2xs" @@click="openBuyModal(p)" :disabled="p.stock <= 0">
                                         Mua
                                     </button>
                                 </div>
@@ -295,7 +295,7 @@
         </div>
     </div>
 
-    <!-- TIKTOK-STYLE BOTTOM SHEET BUY PANEL -->
+    <!-- Stream-STYLE BOTTOM SHEET BUY PANEL -->
     <transition name="sheet">
         <div class="buy-sheet-overlay" v-if="showBuySheet" @@click.self="closeBuySheet">
             <div class="buy-sheet-panel">
@@ -336,7 +336,7 @@
                         <button class="qty-btn" @@click="changeQty(-1)" :disabled="buyForm.quantity <= 1"><i class="fa-solid fa-minus"></i></button>
                         <span class="qty-value">${buyForm.quantity}</span>
                         <button class="qty-btn" @@click="changeQty(1)" :disabled="buyForm.quantity >= (selectedVariant ? selectedVariant.stock : (modalProduct ? modalProduct.stock : 99))"><i class="fa-solid fa-plus"></i></button>
-                        <span class="qty-total ms-auto">Tổng: <strong class="text-tiktok-teal">${formatCurrency(calculateModalTotal())}</strong></span>
+                        <span class="qty-total ms-auto">Tổng: <strong class="text-stream-teal">${formatCurrency(calculateModalTotal())}</strong></span>
                     </div>
                 </div>
 
@@ -354,19 +354,19 @@
 
 <style>
     /* Styling for the Livestream Viewer Screen */
-    .bg-tiktok-black {
+    .bg-stream-black {
         background-color: #0b0c10 !important;
     }
-    .bg-tiktok-dark {
+    .bg-stream-dark {
         background-color: #12131a !important;
     }
-    .bg-tiktok-card {
+    .bg-stream-card {
         background-color: #161822 !important;
     }
-    .text-tiktok-teal {
+    .text-stream-teal {
         color: #25F4EE !important;
     }
-    .text-tiktok-red {
+    .text-stream-red {
         color: #FE2C55 !important;
     }
 
@@ -793,7 +793,7 @@
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     }
 
-    /* ===== TIKTOK BOTTOM SHEET ===== */
+    /* ===== Stream BOTTOM SHEET ===== */
     .buy-sheet-overlay {
         position: fixed;
         inset: 0;
@@ -996,7 +996,7 @@
                 // Shopping bag overlay (mobile)
                 showShoppingList: false,
 
-                // TikTok buy bottom sheet state
+                // Stream buy bottom sheet state
                 showBuySheet: false,
                 modalProduct: null,
                 productVariants: [],
@@ -1034,7 +1034,7 @@
             },
             mounted() {
                 // Prompt client for a screen name to chat
-                this.viewerName = localStorage.getItem('tiktok_viewer_name') || '';
+                this.viewerName = localStorage.getItem('Stream_viewer_name') || '';
                 
                 // Load initial data via HTTP
                 this.fetchLiveProducts();
@@ -1191,7 +1191,7 @@
                 },
                 async fetchFrame() {
                     try {
-                        const res = await axios.get('/api/tiktok/livestream/frame');
+                        const res = await axios.get('/api/Stream/livestream/frame');
                         this.currentFrame = res.data.frame;
                     } catch (err) { /* silent */ }
                 },
@@ -1206,7 +1206,7 @@
                 },
                 async fetchLiveProducts() {
                     try {
-                        const res = await axios.get('/api/tiktok/livestream/products');
+                        const res = await axios.get('/api/Stream/livestream/products');
                         this.liveProducts = res.data;
                     } catch (err) {
                         console.error('Lỗi tải sản phẩm live:', err);
@@ -1276,7 +1276,7 @@
                 },
                 async pollState() {
                     try {
-                        const res = await axios.get('/api/tiktok/livestream/state');
+                        const res = await axios.get('/api/Stream/livestream/state');
                         const state = res.data;
                         
                         this.isLive = state.isLive;
@@ -1334,7 +1334,7 @@
                         
                         if (name) {
                             this.viewerName = name.trim();
-                            localStorage.setItem('tiktok_viewer_name', this.viewerName);
+                            localStorage.setItem('Stream_viewer_name', this.viewerName);
                         } else {
                             return; // User cancelled
                         }
@@ -1344,7 +1344,7 @@
                     this.myComment = '';
                     
                     try {
-                        await axios.post('/api/tiktok/livestream/comment', {
+                        await axios.post('/api/Stream/livestream/comment', {
                             username: this.viewerName,
                             text: textToSend
                         });
@@ -1374,7 +1374,7 @@
                         
                         if (name) {
                             this.viewerName = name.trim();
-                            localStorage.setItem('tiktok_viewer_name', this.viewerName);
+                            localStorage.setItem('Stream_viewer_name', this.viewerName);
                         } else {
                             return; // User cancelled
                         }
@@ -1396,7 +1396,7 @@
 
                             // Broadcast milestone via API
                             try {
-                                await axios.post('/api/tiktok/livestream/milestone', {
+                                await axios.post('/api/Stream/livestream/milestone', {
                                     username: this.viewerName
                                 });
                             } catch (err) {
@@ -1406,7 +1406,7 @@
                     }
 
                     try {
-                        await axios.post('/api/tiktok/livestream/like');
+                        await axios.post('/api/Stream/livestream/like');
                         this.likesCount++;
                     } catch (err) {
                         console.error('Lỗi thả tim:', err);
@@ -1511,7 +1511,7 @@
                     this.selectedVariant = null;
                     
                     try {
-                        const res = await axios.get(`/api/tiktok/livestream/products/${product.productId}/variants`);
+                        const res = await axios.get(`/api/Stream/livestream/products/${product.productId}/variants`);
                         this.productVariants = res.data;
                         
                         // Auto-select first variant that has stock
@@ -1561,10 +1561,12 @@
                         quantity: this.buyForm.quantity,
                         totalPrice: this.calculateModalTotal()
                     };
-                    sessionStorage.setItem('tiktok_checkout_data', JSON.stringify(checkoutData));
+                    sessionStorage.setItem('Stream_checkout_data', JSON.stringify(checkoutData));
                     window.location.href = '/Home/OrderCheckout';
                 }
             }
         });
     </script>
 }
+
+

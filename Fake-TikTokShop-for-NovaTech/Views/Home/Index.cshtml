@@ -1,24 +1,24 @@
 @{
-    ViewData["Title"] = "Seller Center";
+    ViewData["Title"] = "Streaming Simulator Seller Center";
 }
 
 <div id="app" class="container-fluid py-4" v-cloak>
     <!-- TOPBAR -->
-    <nav class="navbar navbar-expand-lg bg-tiktok-navbar rounded-4 mb-4 px-4 py-3 shadow-sm">
+    <nav class="navbar navbar-expand-lg bg-stream-navbar rounded-4 mb-4 px-4 py-3 shadow-sm">
         <div class="container-fluid p-0 d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center">
-                <i class="fa-brands fa-tiktok fs-2 text-tiktok-red me-2 animate-bounce"></i>
+                <i class="fa-solid fa-satellite-dish fs-2 text-stream-red me-2 animate-bounce"></i>
                 <div>
-                    <h4 class="mb-0 fw-bold text-white">TikTok Shop <span class="text-tiktok-teal">Seller Center</span></h4>
+                    <h4 class="mb-0 fw-bold text-white">Streaming Simulator <span class="text-stream-teal">Seller Center</span></h4>
                     <small class="text-muted-custom text-xs">Trình Giả Lập Đa Kênh & Đồng Bộ Hóa</small>
                 </div>
             </div>
             <div class="d-flex align-items-center gap-3">
-                <a href="/Home/LiveViewer" target="_blank" class="btn btn-tiktok-secondary py-2 px-3">
+                <a href="/Home/LiveViewer" target="_blank" class="btn btn-stream-secondary py-2 px-3">
                     <i class="fa-solid fa-users me-2"></i>Màn hình Live Viewer
                 </a>
-                <a href="/Home/Livestream" target="_blank" class="btn btn-tiktok-primary py-2 px-3">
-                    <i class="fa-solid fa-video me-2"></i>TikTok Live Studio
+                <a href="/Home/Livestream" target="_blank" class="btn btn-stream-primary py-2 px-3">
+                    <i class="fa-solid fa-video me-2"></i>Stream Studio
                 </a>
                 <span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill d-flex align-items-center gap-2">
                     <span class="spinner-grow spinner-grow-sm text-success" role="status"></span>
@@ -27,7 +27,7 @@
                 <span class="text-muted">|</span>
                 <div class="text-end">
                     <small class="text-muted d-block">Cửa hàng tích hợp</small>
-                    <strong class="text-tiktok-teal">NovaTech Shop (Fake)</strong>
+                    <strong class="text-stream-teal">NovaTech Shop (Fake)</strong>
                 </div>
             </div>
         </div>
@@ -37,58 +37,58 @@
         <!-- LEFT COLUMN: CREATE ORDER & SETTINGS -->
         <div class="col-xl-4 col-lg-5">
             <!-- SETTINGS CARD -->
-            <div class="card bg-tiktok-card mb-4">
+            <div class="card bg-stream-card mb-4">
                 <div class="card-body p-4">
                     <h5 class="fw-bold mb-3 text-white d-flex align-items-center justify-content-between">
-                        <span><i class="fa-solid fa-gears text-tiktok-teal me-2"></i>Cấu Hình Kết Nối</span>
+                        <span><i class="fa-solid fa-gears text-stream-teal me-2"></i>Cấu Hình Kết Nối</span>
                         <span class="badge bg-primary-subtle text-primary text-xs">Webhook API</span>
                     </h5>
                     <hr class="border-secondary opacity-25">
                     <div class="mb-3">
                         <label class="form-label text-muted text-xs fw-bold text-uppercase">Base URL Của Web Bán Hàng</label>
-                        <input type="text" class="form-control form-control-tiktok" v-model="settings.novaTechBaseUrl" placeholder="http://localhost:5018">
-                        <small class="text-muted mt-1 d-block">Endpoint webhook sẽ tự động gọi tới: <code>${settings.novaTechBaseUrl}/api/tiktok/webhook</code></small>
+                        <input type="text" class="form-control form-control-stream" v-model="settings.novaTechBaseUrl" placeholder="http://localhost:5018">
+                        <small class="text-muted mt-1 d-block">Endpoint webhook sẽ tự động gọi tới: <code>${settings.novaTechBaseUrl}/api/stream/webhook</code></small>
                     </div>
                     <div class="form-check form-switch mb-3">
                         <input class="form-check-input" type="checkbox" role="switch" id="autoPush" v-model="settings.autoPushWebhook">
                         <label class="form-check-label text-light" for="autoPush">Tự động đẩy Webhook khi có sự thay đổi đơn hàng</label>
                     </div>
-                    <button class="btn btn-tiktok-secondary w-100 py-2" @@click="saveSettings" :disabled="savingSettings">
+                    <button class="btn btn-stream-secondary w-100 py-2" @@click="saveSettings" :disabled="savingSettings">
                         <i class="fa-solid fa-save me-2"></i>Lưu Cấu Hình
                     </button>
                 </div>
             </div>
 
             <!-- ORDER GENERATOR -->
-            <div class="card bg-tiktok-card">
+            <div class="card bg-stream-card">
                 <div class="card-body p-4">
-                    <h5 class="fw-bold mb-3 text-white"><i class="fa-solid fa-cart-plus text-tiktok-red me-2"></i>Tạo Đơn Hàng Giả Lập</h5>
+                    <h5 class="fw-bold mb-3 text-white"><i class="fa-solid fa-cart-plus text-stream-red me-2"></i>Tạo Đơn Hàng Giả Lập</h5>
                     <hr class="border-secondary opacity-25">
                     
                     <form @@submit.prevent="createOrder">
                         <div class="mb-3">
                             <label class="form-label text-muted text-xs fw-bold text-uppercase">Tên Người Nhận <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-tiktok" v-model="newOrder.customerName" required placeholder="Nguyễn Văn A">
+                            <input type="text" class="form-control form-control-stream" v-model="newOrder.customerName" required placeholder="Nguyễn Văn A">
                         </div>
                         
                         <div class="mb-3">
                             <label class="form-label text-muted text-xs fw-bold text-uppercase">Số Điện Thoại <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-tiktok" v-model="newOrder.phone" required placeholder="09xxxxxxxx">
+                            <input type="text" class="form-control form-control-stream" v-model="newOrder.phone" required placeholder="09xxxxxxxx">
                         </div>
                         
                         <div class="mb-3">
                             <label class="form-label text-muted text-xs fw-bold text-uppercase">Địa Chỉ Giao Hàng <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-tiktok" v-model="newOrder.address" required placeholder="Số 1 Đại Cồ Việt, Hai Bà Trưng, Hà Nội">
+                            <input type="text" class="form-control form-control-stream" v-model="newOrder.address" required placeholder="Số 1 Đại Cồ Việt, Hai Bà Trưng, Hà Nội">
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label text-muted text-xs fw-bold text-uppercase">Ghi chú người mua</label>
-                            <textarea class="form-control form-control-tiktok" v-model="newOrder.note" rows="2" placeholder="Giao giờ hành chính..."></textarea>
+                            <textarea class="form-control form-control-stream" v-model="newOrder.note" rows="2" placeholder="Giao giờ hành chính..."></textarea>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label text-muted text-xs fw-bold text-uppercase">Phương Thức Thanh Toán</label>
-                            <select class="form-select form-select-tiktok" v-model="newOrder.paymentMethod">
+                            <select class="form-select form-select-stream" v-model="newOrder.paymentMethod">
                                 <option value="COD">Thanh toán khi nhận hàng (COD)</option>
                                 <option value="Chuyển khoản">Chuyển khoản ngân hàng</option>
                             </select>
@@ -97,14 +97,14 @@
                         <div class="mb-3">
                             <label class="form-label text-muted text-xs fw-bold text-uppercase d-flex justify-content-between">
                                 <span>Sản Phẩm Đặt Mua</span>
-                                <span class="text-tiktok-teal cursor-pointer" @@click="syncProducts" style="font-size: 0.8rem;">
+                                <span class="text-stream-teal cursor-pointer" @@click="syncProducts" style="font-size: 0.8rem;">
                                     <i class="fa-solid fa-arrows-rotate me-1"></i>Làm mới catalog
                                 </span>
                             </label>
                             
                             <div v-if="productsCache.length === 0" class="text-center py-3 border border-secondary border-dashed rounded-3 mb-2">
                                 <p class="text-muted mb-2 text-xs">Chưa có dữ liệu sản phẩm của NovaTech</p>
-                                <button type="button" class="btn btn-sm btn-tiktok-secondary px-3" @@click="syncProducts">
+                                <button type="button" class="btn btn-sm btn-stream-secondary px-3" @@click="syncProducts">
                                     <i class="fa-solid fa-cloud-arrow-down me-1"></i>Đồng bộ catalog ngay
                                 </button>
                             </div>
@@ -112,7 +112,7 @@
                             <div v-else>
                                 <div class="row g-2 mb-2 align-items-center" v-for="(item, index) in newOrder.items" :key="index">
                                     <div class="col-8">
-                                        <select class="form-select form-select-tiktok" v-model="item.productId" @@change="onProductChange(index)" required>
+                                        <select class="form-select form-select-stream" v-model="item.productId" @@change="onProductChange(index)" required>
                                             <option value="" disabled>-- Chọn sản phẩm --</option>
                                             <option v-for="p in productsCache" :value="p.productId" :disabled="p.stock <= 0">
                                                 ${p.name} - ${formatCurrency(p.price)} (Tồn: ${p.stock})
@@ -120,15 +120,15 @@
                                         </select>
                                     </div>
                                     <div class="col-3">
-                                        <input type="number" class="form-control form-control-tiktok text-center" v-model.number="item.quantity" min="1" required>
+                                        <input type="number" class="form-control form-control-stream text-center" v-model.number="item.quantity" min="1" required>
                                     </div>
                                     <div class="col-1 text-end">
-                                        <button type="button" class="btn btn-link text-tiktok-red p-0" @@click="removeItem(index)" v-if="newOrder.items.length > 1">
+                                        <button type="button" class="btn btn-link text-stream-red p-0" @@click="removeItem(index)" v-if="newOrder.items.length > 1">
                                             <i class="fa-solid fa-trash-can"></i>
                                         </button>
                                     </div>
                                 </div>
-                                <button type="button" class="btn btn-sm btn-tiktok-dark mt-2" @@click="addItem">
+                                <button type="button" class="btn btn-sm btn-stream-dark mt-2" @@click="addItem">
                                     <i class="fa-solid fa-plus me-1"></i>Thêm sản phẩm
                                 </button>
                             </div>
@@ -137,9 +137,9 @@
                         <div class="border-top border-secondary border-dashed pt-3 mt-3 d-flex justify-content-between align-items-center">
                             <div>
                                 <span class="text-muted-custom text-xs">Tổng cộng dự kiến:</span>
-                                <h4 class="text-tiktok-teal mb-0 fw-bold">${formatCurrency(calculateTotalPrice())}</h4>
+                                <h4 class="text-stream-teal mb-0 fw-bold">${formatCurrency(calculateTotalPrice())}</h4>
                             </div>
-                            <button type="submit" class="btn btn-tiktok-primary py-2 px-4" :disabled="creatingOrder || productsCache.length === 0">
+                            <button type="submit" class="btn btn-stream-primary py-2 px-4" :disabled="creatingOrder || productsCache.length === 0">
                                 <span v-if="creatingOrder" class="spinner-border spinner-border-sm me-2"></span>
                                 <i class="fa-solid fa-paper-plane me-2"></i>Tạo & Gửi Đơn
                             </button>
@@ -154,9 +154,9 @@
             <!-- METRICS ROW -->
             <div class="row g-3 mb-4">
                 <div class="col-md-4">
-                    <div class="card bg-tiktok-card border-0 h-100">
+                    <div class="card bg-stream-card border-0 h-100">
                         <div class="card-body p-3 d-flex align-items-center">
-                            <div class="rounded-3 p-3 bg-tiktok-red bg-opacity-10 text-tiktok-red me-3">
+                            <div class="rounded-3 p-3 bg-stream-red bg-opacity-10 text-stream-red me-3">
                                 <i class="fa-solid fa-box-archive fs-3"></i>
                             </div>
                             <div>
@@ -167,9 +167,9 @@
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="card bg-tiktok-card border-0 h-100">
+                    <div class="card bg-stream-card border-0 h-100">
                         <div class="card-body p-3 d-flex align-items-center">
-                            <div class="rounded-3 p-3 bg-tiktok-teal bg-opacity-10 text-tiktok-teal me-3">
+                            <div class="rounded-3 p-3 bg-stream-teal bg-opacity-10 text-stream-teal me-3">
                                 <i class="fa-solid fa-money-bill-wave fs-3"></i>
                             </div>
                             <div>
@@ -180,7 +180,7 @@
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="card bg-tiktok-card border-0 h-100">
+                    <div class="card bg-stream-card border-0 h-100">
                         <div class="card-body p-3 d-flex align-items-center">
                             <div class="rounded-3 p-3 bg-success bg-opacity-10 text-success me-3">
                                 <i class="fa-solid fa-circle-check fs-3"></i>
@@ -195,12 +195,12 @@
             </div>
 
             <!-- TABS AREA -->
-            <div class="card bg-tiktok-card">
+            <div class="card bg-stream-card">
                 <div class="card-header bg-transparent border-0 p-0">
-                    <ul class="nav nav-tabs nav-tabs-tiktok px-4 pt-3" role="tablist">
+                    <ul class="nav nav-tabs nav-tabs-stream px-4 pt-3" role="tablist">
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active" id="orders-tab" data-bs-toggle="tab" data-bs-target="#orders-panel" type="button" role="tab">
-                                <i class="fa-solid fa-list-check me-2"></i>Đơn Hàng TikTok (${orders.length})
+                                <i class="fa-solid fa-list-check me-2"></i>Đơn Hàng (${orders.length})
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
@@ -220,12 +220,12 @@
                         <!-- TAB 1: ORDERS -->
                         <div class="tab-pane fade show active animate-fade-in" id="orders-panel" role="tabpanel">
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h6 class="fw-bold mb-0 text-white"><i class="fa-solid fa-list text-tiktok-teal me-2"></i>Danh sách đơn hàng giả lập</h6>
+                                <h6 class="fw-bold mb-0 text-white"><i class="fa-solid fa-list text-stream-teal me-2"></i>Danh sách đơn hàng giả lập</h6>
                                 <div class="d-flex gap-2">
                                     <button v-if="orders.length > 0" class="btn btn-sm btn-outline-danger" @@click="clearData">
                                         <i class="fa-solid fa-trash-can me-1"></i>Xóa hết dữ liệu
                                     </button>
-                                    <button class="btn btn-sm btn-tiktok-dark" @@click="fetchOrders">
+                                    <button class="btn btn-sm btn-stream-dark" @@click="fetchOrders">
                                         <i class="fa-solid fa-arrows-rotate me-1"></i>Tải lại
                                     </button>
                                 </div>
@@ -252,7 +252,7 @@
                                     <tbody>
                                         <tr v-for="order in orders" :key="order.orderId" class="border-secondary border-opacity-10">
                                             <td>
-                                                <strong class="text-tiktok-teal font-monospace">${order.orderId}</strong>
+                                                <strong class="text-stream-teal font-monospace">${order.orderId}</strong>
                                                 <small class="text-muted d-block">${formatDate(order.createdAt)}</small>
                                             </td>
                                             <td>
@@ -269,7 +269,7 @@
                                                 <small class="text-muted d-block text-xs">${order.paymentMethod}</small>
                                             </td>
                                             <td>
-                                                <select class="form-select form-select-sm form-select-tiktok w-auto text-xs py-1" 
+                                                <select class="form-select form-select-sm form-select-stream w-auto text-xs py-1" 
                                                         v-model="order.status" 
                                                         @@change="updateStatus(order.orderId, order.status)">
                                                     <option value="Awaiting Shipment">Chờ giao hàng</option>
@@ -291,7 +291,7 @@
                                                 </span>
                                             </td>
                                             <td class="text-end">
-                                                <button class="btn btn-sm btn-tiktok-primary" @@click="pushWebhook(order.orderId)" title="Gửi Webhook sang web NovaTech">
+                                                <button class="btn btn-sm btn-stream-primary" @@click="pushWebhook(order.orderId)" title="Gửi Webhook sang web NovaTech">
                                                     <i class="fa-solid fa-rotate me-1"></i>Gửi Webhook
                                                 </button>
                                             </td>
@@ -304,8 +304,8 @@
                         <!-- TAB 2: WEBHOOK LOGS -->
                         <div class="tab-pane fade animate-fade-in" id="logs-panel" role="tabpanel">
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h6 class="fw-bold mb-0 text-white"><i class="fa-solid fa-terminal text-tiktok-red me-2"></i>Nhật ký đẩy Webhook sang NovaTech</h6>
-                                <button class="btn btn-sm btn-tiktok-dark" @@click="fetchLogs">
+                                <h6 class="fw-bold mb-0 text-white"><i class="fa-solid fa-terminal text-stream-red me-2"></i>Nhật ký đẩy Webhook sang NovaTech</h6>
+                                <button class="btn btn-sm btn-stream-dark" @@click="fetchLogs">
                                     <i class="fa-solid fa-arrows-rotate me-1"></i>Tải lại
                                 </button>
                             </div>
@@ -330,7 +330,7 @@
                                     <tbody>
                                         <tr v-for="log in webhookLogs" :key="log.id" class="border-secondary border-opacity-10">
                                             <td class="text-xs font-monospace">${formatDate(log.timestamp)}</td>
-                                            <td><strong class="text-tiktok-teal font-monospace">${log.orderId}</strong></td>
+                                            <td><strong class="text-stream-teal font-monospace">${log.orderId}</strong></td>
                                             <td>
                                                 <span class="badge bg-secondary-subtle text-light-custom text-xs">${log.actionType}</span>
                                             </td>
@@ -343,7 +343,7 @@
                                                 <div class="text-xs text-truncate" style="max-width: 250px;" :title="log.message">${log.message}</div>
                                             </td>
                                             <td class="text-end">
-                                                <button class="btn btn-sm btn-tiktok-dark py-1 px-2" @@click="viewPayload(log)">
+                                                <button class="btn btn-sm btn-stream-dark py-1 px-2" @@click="viewPayload(log)">
                                                     <i class="fa-solid fa-eye me-1"></i>Payload
                                                 </button>
                                             </td>
@@ -356,8 +356,8 @@
                         <!-- TAB 3: PRODUCTS CATALOG -->
                         <div class="tab-pane fade animate-fade-in" id="catalog-panel" role="tabpanel">
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h6 class="fw-bold mb-0 text-white"><i class="fa-solid fa-warehouse text-tiktok-teal me-2"></i>Catalog sản phẩm đồng bộ từ NovaTech</h6>
-                                <button class="btn btn-sm btn-tiktok-secondary" @@click="syncProducts" :disabled="syncingProducts">
+                                <h6 class="fw-bold mb-0 text-white"><i class="fa-solid fa-warehouse text-stream-teal me-2"></i>Catalog sản phẩm đồng bộ từ NovaTech</h6>
+                                <button class="btn btn-sm btn-stream-secondary" @@click="syncProducts" :disabled="syncingProducts">
                                     <span v-if="syncingProducts" class="spinner-border spinner-border-sm me-1"></span>
                                     <i class="fa-solid fa-arrows-rotate me-1"></i>Đồng bộ catalog sản phẩm
                                 </button>
@@ -370,7 +370,7 @@
 
                             <div v-else class="row g-3">
                                 <div class="col-md-6" v-for="p in productsCache" :key="p.productId">
-                                    <div class="card bg-tiktok-dark border-secondary border-opacity-25 h-100">
+                                    <div class="card bg-stream-dark border-secondary border-opacity-25 h-100">
                                         <div class="card-body p-3 d-flex align-items-center">
                                             <img :src="p.imageUrl || 'https://via.placeholder.com/80'" class="rounded-3 object-fit-cover me-3 bg-secondary" width="64" height="64" alt="Product Image">
                                             <div class="flex-grow-1">
@@ -466,13 +466,14 @@
                     const prod = this.productsCache.find(p => p.productId === item.productId);
                     if (prod) {
                         item.price = prod.price;
+                        item.name = prod.name;
                         item.productName = prod.name;
                         item.productSku = prod.sku;
                     }
                 },
                 async fetchSettings() {
                     try {
-                        const res = await axios.get('/api/tiktok/settings');
+                        const res = await axios.get('/api/stream/settings');
                         if (res.data) {
                             this.settings = res.data;
                         }
@@ -483,7 +484,7 @@
                 async saveSettings() {
                     this.savingSettings = true;
                     try {
-                        await axios.post('/api/tiktok/settings', this.settings);
+                        await axios.post('/api/stream/settings', this.settings);
                         Swal.fire({
                             title: 'Thành công!',
                             text: 'Đã lưu cấu hình kết nối.',
@@ -500,7 +501,7 @@
                 },
                 async fetchProductsCache() {
                     try {
-                        const res = await axios.get('/api/tiktok/products-cache');
+                        const res = await axios.get('/api/stream/products-cache');
                         this.productsCache = res.data;
                     } catch (err) {
                         console.error('Lỗi tải sản phẩm cache:', err);
@@ -509,7 +510,7 @@
                 async syncProducts() {
                     this.syncingProducts = true;
                     try {
-                        const res = await axios.post('/api/tiktok/sync-products');
+                        const res = await axios.post('/api/stream/sync-products');
                         Swal.fire({
                             title: 'Đồng bộ catalog!',
                             text: res.data.message,
@@ -535,7 +536,7 @@
                 },
                 async fetchOrders() {
                     try {
-                        const res = await axios.get('/api/tiktok/orders');
+                        const res = await axios.get('/api/stream/orders');
                         this.orders = res.data;
                     } catch (err) {
                         console.error('Lỗi tải đơn hàng:', err);
@@ -578,10 +579,10 @@
                     
                     this.creatingOrder = true;
                     try {
-                        const res = await axios.post('/api/tiktok/orders', this.newOrder);
+                        const res = await axios.post('/api/stream/orders', this.newOrder);
                         Swal.fire({
                             title: 'Đã tạo đơn!',
-                            text: `Mã đơn hàng TikTok: ${res.data.orderId}`,
+                            text: `Mã đơn hàng: ${res.data.orderId}`,
                             icon: 'success',
                             background: '#12131a',
                             color: '#fff',
@@ -611,7 +612,7 @@
                 },
                 async updateStatus(orderId, status) {
                     try {
-                        const res = await axios.post(`/api/tiktok/orders/${orderId}/status`, { status });
+                        const res = await axios.post(`/api/stream/orders/${orderId}/status`, { status });
                         const toast = Swal.mixin({
                             toast: true,
                             position: 'top-end',
@@ -631,7 +632,7 @@
                 },
                 async pushWebhook(orderId) {
                     try {
-                        const res = await axios.post(`/api/tiktok/orders/${orderId}/push-webhook`);
+                        const res = await axios.post(`/api/stream/orders/${orderId}/push-webhook`);
                         Swal.fire({
                             title: 'Đẩy thành công!',
                             text: res.data.message,
@@ -656,7 +657,7 @@
                 },
                 async fetchLogs() {
                     try {
-                        const res = await axios.get('/api/tiktok/webhook-logs');
+                        const res = await axios.get('/api/stream/webhook-logs');
                         this.webhookLogs = res.data;
                     } catch (err) {
                         console.error('Lỗi fetch logs:', err);
@@ -703,7 +704,7 @@
 
                     if (result.isConfirmed) {
                         try {
-                            const res = await axios.post('/api/tiktok/clear-data');
+                            const res = await axios.post('/api/stream/clear-data');
                             Swal.fire({
                                 title: 'Đã xóa!',
                                 text: res.data.message,
