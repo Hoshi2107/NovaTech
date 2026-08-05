@@ -296,8 +296,10 @@
         <div class="chips">
             <span class="chip" data-q="Báo cáo nhanh doanh thu và tình trạng đơn hàng hôm nay">📊 Doanh thu & Đơn hàng</span>
             <span class="chip" data-q="Sản phẩm nào sắp hết hàng? Tồn kho hiện tại thế nào?">⚠️ Cảnh báo tồn kho</span>
-            <span class="chip" data-q="Đề xuất cho tôi 1 mặt hàng công nghệ đang hot trên thị trường mà cửa hàng nên nhập về kinh doanh">🛒 Đề xuất sản phẩm mới</span>
-            <span class="chip" data-q="Phân tích tình hình kinh doanh và cho tôi lời khuyên tối ưu doanh thu">💡 Phân tích & Tư vấn</span>
+            <span class="chip" data-q="Hãy tìm cho tôi 3 sản phẩm tồn kho cao bán chậm nhất tháng này, tự tạo chương trình giảm giá 15% cho chúng và tự gửi Email thông báo cho tất cả khách hàng từ Đồng trở lên vào Gmail thật">📩 Gửi Gmail KM khách Đồng+</span>
+            <span class="chip" data-q="Tự động lập chiến dịch khuyến mãi giảm giá cho các sản phẩm tồn kho cao bán chậm giúp tôi">🔥 Khuyến mãi hàng tồn kho</span>
+            <span class="chip" data-q="Gửi mã ưu đãi tri ân cho các khách hàng VIP thân thiết có doanh số mua nhiều nhất">💎 Tri ân Khách VIP</span>
+            <span class="chip" data-q="Đề xuất cho tôi 1 mặt hàng công nghệ mới hot trên thị trường để nhập kinh doanh">🛒 Đề xuất nhập SP mới</span>
         </div>
         <div class="input-row">
             <input type="text" class="ai-input" id="chatInput"
@@ -372,57 +374,179 @@ function appendMsg(sender, text, time) {
 function appendActionCard(payload, actionType) {
     if (!payload) return;
 
-    const giaNhap = payload.giaNhap || 0;
-    const giaBan = payload.giaBan || 0;
-    const soLuong = payload.soLuongNhap || 0;
-    const tongChi = (giaNhap * soLuong).toLocaleString('vi-VN');
-    const loiNhuan = giaBan > 0 ? Math.round((giaBan - giaNhap) / giaNhap * 100) : 0;
-
     const card = document.createElement('div');
     card.className = 'action-card';
-    card.innerHTML = `
-        <div class="action-card-title" style="gap:6px">
-            <span style="font-size:18px">📋</span>
-            <span>AI đề xuất hành động — Tạo phiếu nhập & Thêm sản phẩm</span>
-        </div>
-        <div class="payload-grid">
-            <div class="payload-item">
-                <div class="payload-label">📦 Sản phẩm</div>
-                <div class="payload-value">${payload.tenSanPham || '—'}</div>
+
+    if (actionType === 'CREATE_PROMOTION_CAMPAIGN') {
+        const code = payload.maCode || 'SALE15';
+        const giaTri = payload.giaTri || 15;
+        const soLuong = payload.soLuongNhap || 50;
+
+        card.innerHTML = `
+            <div class="action-card-title" style="gap:6px; color:#f59e0b">
+                <span style="font-size:18px">🔥</span>
+                <span>AI đề xuất — Khởi tạo Chiến dịch Khuyến Mãi</span>
             </div>
-            <div class="payload-item">
-                <div class="payload-label">📥 Số lượng nhập</div>
-                <div class="payload-value">${soLuong} cái</div>
+            <div class="payload-grid">
+                <div class="payload-item">
+                    <div class="payload-label">🎟️ Mã Voucher</div>
+                    <div class="payload-value" style="color:#f59e0b;font-weight:700">${code}</div>
+                </div>
+                <div class="payload-item">
+                    <div class="payload-label">💰 Mức giảm giá</div>
+                    <div class="payload-value price">-${giaTri}%</div>
+                </div>
+                <div class="payload-item">
+                    <div class="payload-label">📦 Số lượng phát hành</div>
+                    <div class="payload-value">${soLuong} lượt</div>
+                </div>
+                <div class="payload-item">
+                    <div class="payload-label">📅 Thời hạn</div>
+                    <div class="payload-value">30 ngày</div>
+                </div>
             </div>
-            <div class="payload-item">
-                <div class="payload-label">💰 Giá nhập</div>
-                <div class="payload-value price">${giaNhap.toLocaleString('vi-VN')} đ</div>
+            <div class="payload-item" style="margin-top:8px">
+                <div class="payload-label">💡 Mục đích</div>
+                <div class="payload-value" style="font-size:12px;font-weight:400;color:#94a3b8">${payload.lyDoDeXuat || 'Kích cầu sản phẩm tồn kho cao'}</div>
             </div>
-            <div class="payload-item">
-                <div class="payload-label">🏷️ Giá bán đề xuất</div>
-                <div class="payload-value price">${giaBan.toLocaleString('vi-VN')} đ</div>
+            <div class="action-buttons">
+                <button class="btn-accept" id="acceptBtn" style="background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%)">
+                    🔥 Chấp nhận — Phát hành Voucher ngay!
+                </button>
+                <button class="btn-reject" id="rejectBtn">❌ Bỏ qua</button>
+            </div>`;
+    } else if (actionType === 'SEND_PROMO_EMAIL_DONG_PLUS') {
+        const code = payload.maCode || 'SALE15';
+        const giaTri = payload.giaTri || 15;
+        const soLuong = payload.soLuongNhap || 100;
+
+        card.innerHTML = `
+            <div class="action-card-title" style="gap:6px; color:#e63946">
+                <span style="font-size:18px">📩</span>
+                <span>AI đề xuất — Xả Hàng Tồn + Gửi Gmail Thật đến Khách Đồng+</span>
             </div>
-            <div class="payload-item">
-                <div class="payload-label">🧾 Tổng chi phí</div>
-                <div class="payload-value price">${tongChi} đ</div>
+            <div style="background:rgba(230,57,70,0.08);border:1px solid rgba(230,57,70,0.25);border-radius:10px;padding:12px;margin-bottom:12px;font-size:12px;color:#94a3b8;line-height:1.6;">
+                🤖 AI sẽ tự động: <strong style="color:#f8fafc">① Tìm 3 SP tồn cao bán chậm nhất</strong> → <strong style="color:#f8fafc">② Tạo Voucher ${giaTri}%</strong> → <strong style="color:#f8fafc">③ Gửi Gmail HTML đến tất cả khách hàng Đồng trở lên</strong>
             </div>
-            <div class="payload-item">
-                <div class="payload-label">📈 Lợi nhuận/cái</div>
-                <div class="payload-value" style="color:#818cf8">+${loiNhuan}%</div>
+            <div class="payload-grid">
+                <div class="payload-item">
+                    <div class="payload-label">🎟️ Mã Voucher</div>
+                    <div class="payload-value" style="color:#e63946;font-weight:700;font-family:monospace;">${code}</div>
+                </div>
+                <div class="payload-item">
+                    <div class="payload-label">💰 Mức giảm giá</div>
+                    <div class="payload-value price">-${giaTri}%</div>
+                </div>
+                <div class="payload-item">
+                    <div class="payload-label">📦 Số lượng Voucher</div>
+                    <div class="payload-value">${soLuong} lượt</div>
+                </div>
+                <div class="payload-item">
+                    <div class="payload-label">⏳ Thời hạn</div>
+                    <div class="payload-value">30 ngày</div>
+                </div>
+                <div class="payload-item" style="grid-column: span 2">
+                    <div class="payload-label">👥 Đối tượng nhận Email</div>
+                    <div class="payload-value" style="color:#38bdf8">${
+                        payload.targetEmail
+                            ? `✉️ ${payload.targetName ? `<strong>${payload.targetName}</strong> (${payload.targetEmail})` : `<strong>${payload.targetEmail}</strong>`}`
+                            : payload.targetRank
+                                ? `🏅 Chỉ khách hàng <strong style="color:#facc15">${payload.targetRank}</strong>`
+                                : '🥉 Đồng • 🥈 Bạc • 🥇 Vàng • 💎 Kim Cương (tất cả thành viên có email)'
+                    }</div>
+                </div>
             </div>
-        </div>
-        <div class="payload-item" style="margin-top:8px">
-            <div class="payload-label">💡 Lý do đề xuất</div>
-            <div class="payload-value" style="font-size:12px;font-weight:400;color:#94a3b8">${payload.lyDoDeXuat || '—'}</div>
-        </div>
-        <div class="action-buttons">
-            <button class="btn-accept" id="acceptBtn">
-                ✅ Chấp nhận — Tạo ngay!
-            </button>
-            <button class="btn-reject" id="rejectBtn">
-                ❌ Từ chối
-            </button>
-        </div>`;
+            <div class="payload-item" style="margin-top:4px;margin-bottom:12px;">
+                <div class="payload-label">💡 Lý do AI phân tích</div>
+                <div class="payload-value" style="font-size:12px;font-weight:400;color:#94a3b8">${payload.lyDoDeXuat || 'Tự động xả hàng tồn kho + kích cầu khách hàng'}</div>
+            </div>
+            <div class="action-buttons">
+                <button class="btn-accept" id="acceptBtn" style="background:linear-gradient(135deg, #e63946 0%, #c1121f 100%);box-shadow:0 4px 16px rgba(230,57,70,0.4);">
+                    📩 Xác nhận — AI Gửi Gmail ngay!
+                </button>
+                <button class="btn-reject" id="rejectBtn">❌ Bỏ qua</button>
+            </div>`;
+    } else if (actionType === 'SEND_VIP_REWARD') {
+        const code = payload.maCode || 'VIP2026';
+        const giaTri = payload.giaTri || 20;
+
+        card.innerHTML = `
+            <div class="action-card-title" style="gap:6px; color:#818cf8">
+                <span style="font-size:18px">💎</span>
+                <span>AI đề xuất — Gửi quà Tri ân Khách Hàng VIP</span>
+            </div>
+            <div class="payload-grid">
+                <div class="payload-item">
+                    <div class="payload-label">👑 Mã Tri Ân VIP</div>
+                    <div class="payload-value" style="color:#818cf8;font-weight:700">${code}</div>
+                </div>
+                <div class="payload-item">
+                    <div class="payload-label">🎁 Mức ưu đãi</div>
+                    <div class="payload-value price">-${giaTri}%</div>
+                </div>
+                <div class="payload-item" style="grid-column: span 2">
+                    <div class="payload-label">👥 Nhóm Khách Hàng Nhận Quà</div>
+                    <div class="payload-value" style="color:#38bdf8">${payload.danhSachKhachHang || 'Top Khách Hàng VIP'}</div>
+                </div>
+            </div>
+            <div class="action-buttons">
+                <button class="btn-accept" id="acceptBtn" style="background:linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)">
+                    👑 Chấp nhận — Gửi Quà Tri Ân!
+                </button>
+                <button class="btn-reject" id="rejectBtn">❌ Từ chối</button>
+            </div>`;
+    } else {
+        // Default: CREATE_PRODUCT_AND_IMPORT
+        const giaNhap = payload.giaNhap || 0;
+        const giaBan = payload.giaBan || 0;
+        const soLuong = payload.soLuongNhap || 0;
+        const tongChi = (giaNhap * soLuong).toLocaleString('vi-VN');
+        const loiNhuan = giaBan > 0 ? Math.round((giaBan - giaNhap) / giaNhap * 100) : 0;
+
+        card.innerHTML = `
+            <div class="action-card-title" style="gap:6px">
+                <span style="font-size:18px">📋</span>
+                <span>AI đề xuất hành động — Tạo phiếu nhập & Thêm sản phẩm</span>
+            </div>
+            <div class="payload-grid">
+                <div class="payload-item">
+                    <div class="payload-label">📦 Sản phẩm</div>
+                    <div class="payload-value">${payload.tenSanPham || '—'}</div>
+                </div>
+                <div class="payload-item">
+                    <div class="payload-label">📥 Số lượng nhập</div>
+                    <div class="payload-value">${soLuong} cái</div>
+                </div>
+                <div class="payload-item">
+                    <div class="payload-label">💰 Giá nhập</div>
+                    <div class="payload-value price">${giaNhap.toLocaleString('vi-VN')} đ</div>
+                </div>
+                <div class="payload-item">
+                    <div class="payload-label">🏷️ Giá bán đề xuất</div>
+                    <div class="payload-value price">${giaBan.toLocaleString('vi-VN')} đ</div>
+                </div>
+                <div class="payload-item">
+                    <div class="payload-label">🧾 Tổng chi phí</div>
+                    <div class="payload-value price">${tongChi} đ</div>
+                </div>
+                <div class="payload-item">
+                    <div class="payload-label">📈 Lợi nhuận/cái</div>
+                    <div class="payload-value" style="color:#818cf8">+${loiNhuan}%</div>
+                </div>
+            </div>
+            <div class="payload-item" style="margin-top:8px">
+                <div class="payload-label">💡 Lý do đề xuất</div>
+                <div class="payload-value" style="font-size:12px;font-weight:400;color:#94a3b8">${payload.lyDoDeXuat || '—'}</div>
+            </div>
+            <div class="action-buttons">
+                <button class="btn-accept" id="acceptBtn">
+                    ✅ Chấp nhận — Tạo ngay!
+                </button>
+                <button class="btn-reject" id="rejectBtn">
+                    ❌ Từ chối
+                </button>
+            </div>`;
+    }
 
     msgBox.insertBefore(card, typingIndicator);
     scrollBottom();
@@ -445,7 +569,7 @@ function appendActionCard(payload, actionType) {
             card.style.background = 'rgba(16,185,129,0.06)';
             card.querySelector('.action-buttons').innerHTML = `<span style="color:#10b981;font-size:13px;font-weight:600">✅ Đã thực hiện thành công!</span>`;
 
-            appendMsg('bot', data.message || '✅ Đã tạo phiếu nhập và thêm sản phẩm thành công!');
+            appendMsg('bot', data.message || '✅ Đã thực hiện tác vụ thành công!');
         } catch(e) {
             card.querySelector('.action-buttons').innerHTML = `<span style="color:#ef4444;font-size:13px">❌ Lỗi: ${e.message}</span>`;
         }
@@ -455,7 +579,7 @@ function appendActionCard(payload, actionType) {
     card.querySelector('#rejectBtn').addEventListener('click', () => {
         card.style.opacity = '0.4';
         card.querySelector('.action-buttons').innerHTML = `<span style="color:#64748b;font-size:13px">Đã từ chối đề xuất này.</span>`;
-        appendMsg('bot', '👍 Đã bỏ qua đề xuất. Bạn có muốn thử sản phẩm khác hoặc điều chỉnh yêu cầu không?');
+        appendMsg('bot', '👍 Đã bỏ qua đề xuất. Bạn có muốn thử yêu cầu khác không?');
     });
 }
 

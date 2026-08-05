@@ -181,56 +181,70 @@ namespace DATN64.Models
             return await CallGeminiAsync(url, requestBody);
         }
 
-        private async Task<string> CallGeminiAsync(string url, object requestBody)
+        private async Task<string> CallGeminiAsync(string originalUrl, object requestBody)
         {
-            var json = JsonSerializer.Serialize(requestBody);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var modelsToTry = new List<string> { _model, "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro" };
+            var distinctModels = modelsToTry.Where(m => !string.IsNullOrWhiteSpace(m)).Distinct().ToList();
 
-            try
+            string lastError = "";
+
+            foreach (var currentModel in distinctModels)
             {
-                // Truyền key qua query parameter ?key=... để tránh bị reverse proxy hoặc router của host lột mất custom header
-                var urlWithKey = $"{url}?key={Uri.EscapeDataString(_apiKey)}";
-                
-                using var request = new HttpRequestMessage(HttpMethod.Post, urlWithKey);
-                request.Content = content;
-                
-                // Clear bất kỳ Authorization header nào tự động sinh ra bởi môi trường host (vd: Azure Easy Auth, Managed Identity, IIS proxy...)
-                request.Headers.Authorization = null;
-                
-                // Vẫn truyền kèm custom header dự phòng
-                request.Headers.TryAddWithoutValidation("x-goog-api-key", _apiKey);
+                var targetUrl = $"https://generativelanguage.googleapis.com/v1beta/models/{currentModel}:generateContent";
+                var json = JsonSerializer.Serialize(requestBody);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                Console.WriteLine($"[GeminiService] CALLING URL: {url}");
-                Console.WriteLine($"[GeminiService] HEADERS: {request.Headers}");
-                Console.WriteLine($"[GeminiService] BODY: {json}");
-
-                var response = await _httpClient.SendAsync(request);
-                var responseContent = await response.Content.ReadAsStringAsync();
-                
-                Console.WriteLine($"[GeminiService] RESPONSE STATUS: {response.StatusCode}");
-                Console.WriteLine($"[GeminiService] RESPONSE BODY: {responseContent}");
-
-                if (!response.IsSuccessStatusCode)
+                try
                 {
-                    return $"Lỗi API Gemini ({response.StatusCode}): {responseContent}";
+                    var urlWithKey = $"{targetUrl}?key={Uri.EscapeDataString(_apiKey)}";
+
+                    using var request = new HttpRequestMessage(HttpMethod.Post, urlWithKey);
+                    request.Content = content;
+                    request.Headers.Authorization = null;
+                    request.Headers.TryAddWithoutValidation("x-goog-api-key", _apiKey);
+
+                    Console.WriteLine($"[GeminiService] CALLING MODEL: {currentModel}");
+
+                    var response = await _httpClient.SendAsync(request);
+                    var responseContent = await response.Content.ReadAsStringAsync();
+
+                    Console.WriteLine($"[GeminiService] MODEL {currentModel} RESPONSE STATUS: {response.StatusCode}");
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        using var doc = JsonDocument.Parse(responseContent);
+                        var reply = doc.RootElement
+                            .GetProperty("candidates")[0]
+                            .GetProperty("content")
+                            .GetProperty("parts")[0]
+                            .GetProperty("text")
+                            .GetString();
+
+                        return reply ?? "Không nhận được nội dung phản hồi từ AI.";
+                    }
+
+                    lastError = $"Lỗi API Gemini ({response.StatusCode}): {responseContent}";
+
+                    // Nếu gặp 503 (quá tải), 404 (model không tìm thấy), hoặc 429 (hết quota model này), thử model tiếp theo
+                    if (response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable ||
+                        response.StatusCode == System.Net.HttpStatusCode.NotFound ||
+                        (int)response.StatusCode == 429)
+                    {
+                        Console.WriteLine($"[GeminiService] Model {currentModel} gặp lỗi {response.StatusCode}, tự động chuyển sang model tiếp theo...");
+                        await Task.Delay(300);
+                        continue;
+                    }
+
+                    // Nếu gặp lỗi khác (ví dụ: Invalid Key), dừng không thử tiếp
+                    break;
                 }
-
-                var responseString = responseContent;
-                using var doc = JsonDocument.Parse(responseString);
-
-                var reply = doc.RootElement
-                    .GetProperty("candidates")[0]
-                    .GetProperty("content")
-                    .GetProperty("parts")[0]
-                    .GetProperty("text")
-                    .GetString();
-
-                return reply ?? "Không nhận được nội dung phản hồi từ AI.";
+                catch (Exception ex)
+                {
+                    lastError = $"Lỗi ngoại lệ khi gọi Gemini API ({currentModel}): {ex.Message}";
+                }
             }
-            catch (Exception ex)
-            {
-                return $"Lỗi ngoại lệ khi gọi Gemini API: {ex.Message}";
-            }
+
+            return lastError;
         }
     }
 }
