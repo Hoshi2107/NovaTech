@@ -1,5 +1,7 @@
 using DATN64.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.DataProtection;
+using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +14,21 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<GeminiService>();
 builder.Services.AddScoped<OpenAIService>();
 builder.Services.AddScoped<DATN64.Services.IAttendanceService, DATN64.Services.AttendanceService>();
+
+// 1. Persist Data Protection keys to file system so cookie decryption works across App Pool recycles
+var keysFolder = Path.Combine(builder.Environment.ContentRootPath, "temp-keys");
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysFolder))
+    .SetApplicationName("NovaTechApp");
+
+// 2. Store Session Data in SQL Server instead of in-memory RAM
+builder.Services.AddDistributedSqlServerCache(options =>
+{
+    options.ConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    options.SchemaName = "dbo";
+    options.TableName = "SessionCache";
+});
+
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromMinutes(30);
