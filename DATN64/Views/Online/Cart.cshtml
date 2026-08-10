@@ -13,6 +13,15 @@
     var customerAddress = ViewBag.CustomerAddress as string ?? "";
 }
 
+@section Styles {
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        .leaflet-container { font-family: inherit; z-index: 1; }
+        #mapPickerModal { z-index: 1090 !important; }
+        .modal-backdrop { z-index: 1080 !important; }
+    </style>
+}
+
 <div class="container my-5 animate-fade-in">
     <h3 class="fw-bold mb-4 text-dark">
         <i class="fa-solid fa-cart-shopping text-primary me-2"></i>Giỏ hàng của bạn
@@ -256,17 +265,32 @@
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label fw-bold text-secondary text-xs">
-                                    Địa chỉ giao hàng
-                                </label>
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <label class="form-label fw-bold text-secondary text-xs mb-0">
+                                        Địa chỉ giao hàng
+                                    </label>
+                                    <div class="d-flex gap-1">
+                                        <button type="button" id="btnGetLocation" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-0.5 text-xxs fw-bold">
+                                            <i class="fa-solid fa-location-crosshairs me-1"></i>Vị trí thực tế
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2 py-0.5 text-xxs fw-bold" data-bs-toggle="modal" data-bs-target="#mapPickerModal">
+                                            <i class="fa-solid fa-map-pin me-1"></i>Ghim bản đồ
+                                        </button>
+                                    </div>
+                                </div>
 
                                 <textarea name="customerAddress"
+                                          id="customerAddressInput"
                                           class="form-control"
                                           rows="2"
                                           required
                                           placeholder="Số nhà, tên đường, phường/xã, quận/huyện..."
                                           minlength="10"
                                           maxlength="250">@customerAddress</textarea>
+
+                                <div id="locationStatus" class="text-xxs text-info mt-1 d-none">
+                                    <span id="locationStatusText"></span>
+                                </div>
                             </div>
 
                             <div class="mb-4">
@@ -309,8 +333,225 @@
     }
 </div>
 
+<!-- Map Picker Modal -->
+<div class="modal fade" id="mapPickerModal" tabindex="-1" aria-labelledby="mapPickerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable" style="margin-top: 60px; max-width: 750px;">
+        <div class="modal-content rounded-4 border-0 shadow-lg" style="max-height: 82vh;">
+            <div class="modal-header bg-dark text-white rounded-top-4 py-2.5 px-3">
+                <h5 class="modal-title fs-6 fw-bold m-0 text-white" id="mapPickerModalLabel">
+                    <i class="fa-solid fa-map-location-dot text-info me-2"></i>Chọn & Ghim vị trí giao hàng thực tế
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3">
+                <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                    <span class="text-xs text-muted">
+                        <i class="fa-solid fa-circle-info me-1 text-primary"></i>Kéo ghim hoặc nhấp bản đồ để chọn điểm giao.
+                    </span>
+                    <button type="button" id="btnModalLocateMe" class="btn btn-sm btn-primary rounded-pill text-xs px-3">
+                        <i class="fa-solid fa-crosshairs me-1"></i>Vị trí thực tế của tôi
+                    </button>
+                </div>
+                <!-- Leaflet Map Container -->
+                <div id="leafletMap" style="height: 250px; width: 100%; border-radius: 12px;" class="border shadow-sm mb-2"></div>
+
+                <div class="p-2.5 rounded-3 bg-light border text-xs">
+                    <div class="fw-bold text-dark mb-1"><i class="fa-solid fa-location-dot text-danger me-1"></i>Địa chỉ được chọn:</div>
+                    <div id="modalSelectedAddress" class="text-secondary fw-semibold" style="word-break: break-word;">Chưa chọn vị trí...</div>
+                    <div class="text-xxs text-muted mt-1" id="modalCoords">Tọa độ: --, --</div>
+                </div>
+            </div>
+            <div class="modal-footer py-2 px-3 bg-white rounded-bottom-4">
+                <button type="button" class="btn btn-secondary rounded-pill px-4 text-xs" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" id="btnConfirmLocation" class="btn btn-primary rounded-pill px-4 text-xs fw-bold" data-bs-dismiss="modal">
+                    <i class="fa-solid fa-check me-1"></i>Xác nhận địa chỉ này
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        let map = null;
+        let marker = null;
+        let selectedLat = null;
+        let selectedLng = null;
+        let selectedAddressStr = "";
+
+        function initLeafletMap() {
+            if (map !== null) {
+                setTimeout(function() { map.invalidateSize(); }, 300);
+                return;
+            }
+
+            const defaultLat = 10.942;
+            const defaultLng = 106.818;
+
+            map = L.map('leafletMap').setView([defaultLat, defaultLng], 14);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+
+            const customIcon = L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+            });
+
+            marker = L.marker([defaultLat, defaultLng], { draggable: true, icon: customIcon }).addTo(map);
+
+            function updateAddressFromCoords(lat, lng) {
+                selectedLat = lat;
+                selectedLng = lng;
+                document.getElementById('modalCoords').innerText = `Tọa độ GPS: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                document.getElementById('modalSelectedAddress').innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Đang truy xuất thông tin địa chỉ...';
+
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=vi`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && data.display_name) {
+                            selectedAddressStr = data.display_name;
+                        } else {
+                            selectedAddressStr = `Tọa độ GPS (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+                        }
+                        document.getElementById('modalSelectedAddress').innerText = selectedAddressStr;
+                    })
+                    .catch(err => {
+                        selectedAddressStr = `Tọa độ GPS (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+                        document.getElementById('modalSelectedAddress').innerText = selectedAddressStr;
+                    });
+            }
+
+            updateAddressFromCoords(defaultLat, defaultLng);
+
+            marker.on('dragend', function(e) {
+                const pos = marker.getLatLng();
+                updateAddressFromCoords(pos.lat, pos.lng);
+            });
+
+            map.on('click', function(e) {
+                marker.setLatLng(e.latlng);
+                updateAddressFromCoords(e.latlng.lat, e.latlng.lng);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const mapModalEl = document.getElementById('mapPickerModal');
+            if (mapModalEl && mapModalEl.parentElement !== document.body) {
+                document.body.appendChild(mapModalEl);
+            }
+        });
+
+        const mapModalEl = document.getElementById('mapPickerModal');
+        if (mapModalEl) {
+            mapModalEl.addEventListener('shown.bs.modal', function () {
+                initLeafletMap();
+                setTimeout(function() {
+                    if (map) map.invalidateSize();
+                }, 150);
+                setTimeout(function() {
+                    if (map) map.invalidateSize();
+                }, 400);
+            });
+        }
+
+        function getRealTimeLocation(autoFillMainInput = false) {
+            if (!navigator.geolocation) {
+                alert("Trình duyệt của bạn không hỗ trợ định vị GPS.");
+                return;
+            }
+
+            const statusEl = document.getElementById('locationStatus');
+            const statusText = document.getElementById('locationStatusText');
+            if (statusEl) {
+                statusEl.classList.remove('d-none');
+                statusText.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Đang kết nối GPS vị trí thực tế của bạn...';
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+
+                    if (map && marker) {
+                        map.setView([lat, lng], 16);
+                        marker.setLatLng([lat, lng]);
+                    }
+
+                    fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=vi`)
+                        .then(res => res.json())
+                        .then(data => {
+                            let fullAddr = data && data.display_name ? data.display_name : `Vị trí GPS thực tế (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+                            selectedAddressStr = fullAddr;
+
+                            const modalAddr = document.getElementById('modalSelectedAddress');
+                            if (modalAddr) modalAddr.innerText = fullAddr;
+                            const modalCoords = document.getElementById('modalCoords');
+                            if (modalCoords) modalCoords.innerText = `Tọa độ GPS: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+
+                            if (autoFillMainInput) {
+                                const addrInput = document.getElementById('customerAddressInput');
+                                if (addrInput) addrInput.value = fullAddr;
+                            }
+
+                            if (statusEl) {
+                                statusText.innerHTML = `<i class="fa-solid fa-circle-check text-success me-1"></i>Đã lấy vị trí thực tế thành công! (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+                            }
+                        })
+                        .catch(err => {
+                            let fallback = `Vị trí GPS thực tế (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+                            if (autoFillMainInput) {
+                                const addrInput = document.getElementById('customerAddressInput');
+                                if (addrInput) addrInput.value = fallback;
+                            }
+                            if (statusEl) {
+                                statusText.innerHTML = `<i class="fa-solid fa-circle-check text-success me-1"></i>Đã định vị tọa độ GPS (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+                            }
+                        });
+                },
+                function(error) {
+                    let msg = "Không thể lấy vị trí. Vui lòng cho phép quyền vị trí trên trình duyệt.";
+                    if (error.code === error.PERMISSION_DENIED) {
+                        msg = "Bạn đã từ chối cấp quyền vị trí GPS.";
+                    }
+                    if (statusEl) {
+                        statusText.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-warning me-1"></i>${msg}`;
+                    } else {
+                        alert(msg);
+                    }
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+
+        document.getElementById('btnGetLocation')?.addEventListener('click', function() {
+            getRealTimeLocation(true);
+        });
+
+        document.getElementById('btnModalLocateMe')?.addEventListener('click', function() {
+            getRealTimeLocation(false);
+        });
+
+        document.getElementById('btnConfirmLocation')?.addEventListener('click', function() {
+            if (selectedAddressStr) {
+                const addrInput = document.getElementById('customerAddressInput');
+                if (addrInput) addrInput.value = selectedAddressStr;
+                const statusEl = document.getElementById('locationStatus');
+                const statusText = document.getElementById('locationStatusText');
+                if (statusEl) {
+                    statusEl.classList.remove('d-none');
+                    statusText.innerHTML = `<i class="fa-solid fa-circle-check text-success me-1"></i>Đã cập nhật địa chỉ giao hàng từ ghim bản đồ!`;
+                }
+            }
+        });
+
         var currentSubtotalVal = @subtotal;
         var discountVal = 0;
 
