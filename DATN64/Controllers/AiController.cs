@@ -181,8 +181,29 @@ Trả về CHÍNH XÁC cấu trúc JSON:
   ""actionPayload"": {{ ... }}
 }}
 
-1. Khi user muốn NHẬP SẢN PHẨM MỚI (ActionType: CREATE_PRODUCT_AND_IMPORT):
-   actionPayload: {{ ""tenSanPham"": ""..."", ""moTa"": ""..."", ""giaNhap"": 1000000, ""giaBan"": 1500000, ""soLuongNhap"": 20, ""maDanhMuc"": 1, ""maThuongHieu"": 1, ""maNCC"": 1, ""sku"": ""SP-XXX"", ""lyDoDeXuat"": ""..."" }}
+1. Khi user muốn NHẬP SẢN PHẨM MỚI hoặc HỎI VỀ XU HƯỚNG / TOP 5 SẢN PHẨM HOT TRÊN THỊ TRƯỜNG ĐỂ NHẬP HÀNG (ActionType: CREATE_PRODUCT_AND_IMPORT):
+   actionPayload: {{
+     ""tenSanPham"": ""iPhone 16 Pro Max 256GB"",
+     ""hinhAnh"": ""https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=800&q=80"",
+     ""sku"": ""AP-IP16PM-256G-DES"",
+     ""giaNhap"": 29500000,
+     ""giaBan"": 34990000,
+     ""soLuongNhap"": 20,
+     ""maDanhMuc"": 1,
+     ""maThuongHieu"": 1,
+     ""maNCC"": 3,
+     ""tenNCC"": ""Apple Vietnam"",
+     ""bienThe"": ""Titan Sa Mạc | 256GB | 8GB RAM"",
+     ""moTa"": ""Siêu phẩm công nghệ hot nhất thị trường hiện tại, khung Titan siêu nhẹ, chip A18 Pro hiệu năng cao."",
+     ""lyDoDeXuat"": ""Nhu cầu thị trường cực cao, biên lợi nhuận tốt (~18%), phù hợp nhập bán ngay."",
+     ""top5Products"": [
+       {{ ""tenSanPham"": ""iPhone 16 Pro Max 256GB"", ""hinhAnh"": ""https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=800&q=80"", ""sku"": ""AP-IP16PM-256G-DES"", ""giaNhap"": 29500000, ""giaBan"": 34990000, ""soLuongNhap"": 20, ""maDanhMuc"": 1, ""maThuongHieu"": 1, ""maNCC"": 3, ""tenNCC"": ""Apple Vietnam"", ""bienThe"": ""Titan Sa Mạc | 256GB"", ""lyDoDeXuat"": ""Top 1 Flagship hot nhất năm"" }},
+       {{ ""tenSanPham"": ""Samsung Galaxy S25 Ultra"", ""hinhAnh"": ""https://images.unsplash.com/photo-1510557880182-3f8ed9f4a7b6?auto=format&fit=crop&w=800&q=80"", ""sku"": ""SS-S25U-512G-GRY"", ""giaNhap"": 27000000, ""giaBan"": 32990000, ""soLuongNhap"": 15, ""maDanhMuc"": 1, ""maThuongHieu"": 2, ""maNCC"": 2, ""tenNCC"": ""Samsung Vietnam"", ""bienThe"": ""Xám Titan | 512GB"", ""lyDoDeXuat"": ""AI Phone camera 200MP dẫn đầu xu hướng"" }},
+       {{ ""tenSanPham"": ""Xiaomi 15 Ultra"", ""hinhAnh"": ""https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=800&q=80"", ""sku"": ""XI-XM15U-512G-BLK"", ""giaNhap"": 19500000, ""giaBan"": 24990000, ""soLuongNhap"": 25, ""maDanhMuc"": 1, ""maThuongHieu"": 3, ""maNCC"": 4, ""tenNCC"": ""Xiaomi Vietnam"", ""bienThe"": ""Đen Nhám | 512GB | 16GB RAM"", ""lyDoDeXuat"": ""Camera Leica đỉnh cao, giá cạnh tranh"" }},
+       {{ ""tenSanPham"": ""MacBook Air 15 inch M3"", ""hinhAnh"": ""https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=800&q=80"", ""sku"": ""AP-MBA15M3-16G-SLV"", ""giaNhap"": 28000000, ""giaBan"": 33990000, ""soLuongNhap"": 10, ""maDanhMuc"": 2, ""maThuongHieu"": 1, ""maNCC"": 3, ""tenNCC"": ""Apple Vietnam"", ""bienThe"": ""Bạc Starlight | 16GB RAM | 512GB SSD"", ""lyDoDeXuat"": ""Laptop mỏng nhẹ bán chạy nhất phân khúc cao cấp"" }},
+       {{ ""tenSanPham"": ""Sony WH-1000XM5"", ""hinhAnh"": ""https://images.unsplash.com/photo-1511367461989-f85a21fda167?auto=format&fit=crop&w=800&q=80"", ""sku"": ""SN-WH1000XM5-SLV"", ""giaNhap"": 5500000, ""giaBan"": 7490000, ""soLuongNhap"": 30, ""maDanhMuc"": 4, ""maThuongHieu"": 7, ""maNCC"": 1, ""tenNCC"": ""NovaTech Logistics"", ""bienThe"": ""Bạc Bạch Kim | Bluetooth 5.2"", ""lyDoDeXuat"": ""Tai nghe chống ồn đỉnh cao luôn cháy hàng"" }}
+     ]
+   }}
 
 2. Khi user muốn KHUYẾN MÃI / XẢ HÀNG TỒN (ActionType: CREATE_PROMOTION_CAMPAIGN):
    actionPayload: {{ ""maCode"": ""SALE15"", ""giaTri"": 15, ""soLuongNhap"": 50, ""lyDoDeXuat"": ""Tạo khuyến mãi 15% kích cầu sản phẩm tồn kho cao"" }}
@@ -212,134 +233,14 @@ KHÔNG bao giờ trả về text bên ngoài JSON.";
                 aiResp = null;
             }
 
-            // Smart Fallback nếu Gemini API bị lỗi 429 Quota hoặc ServiceUnavailable
-            if (aiResp == null || string.IsNullOrWhiteSpace(aiResp.Message) || aiResp.Message.Contains("Lỗi API Gemini") || aiResp.Message.Contains("Quota"))
+            // Nếu không Deserialize thành công JSON (do Gemini API trả về chuỗi lỗi hoặc định dạng khác), sử dụng trực tiếp chuỗi rawJson
+            if (aiResp == null || string.IsNullOrWhiteSpace(aiResp.Message))
             {
-                string userQuery = (req.Message ?? "").ToLower();
-                string p1Name = slowMovingTop3.FirstOrDefault()?.Product.TenSanPham ?? "Sản phẩm tồn cao";
-                string p2Name = slowMovingTop3.Skip(1).FirstOrDefault()?.Product.TenSanPham ?? "Tai nghe Galaxy Buds";
-                string p3Name = slowMovingTop3.Skip(2).FirstOrDefault()?.Product.TenSanPham ?? "iPhone 15 Thường";
-
-                if (userQuery.Contains("gmail") || userQuery.Contains("đồng") || userQuery.Contains("bán chậm") || userQuery.Contains("gửi email") || userQuery.Contains("email") || userQuery.Contains("voucher"))
+                aiResp = new AiActionResponse
                 {
-                    // Lấy % từ câu hỏi nếu có (VD: 30%, 20%, 50%), mặc định 15%
-                    int customDiscount = 15;
-                    var match = System.Text.RegularExpressions.Regex.Match(userQuery, @"(\d+)\s*%");
-                    if (match.Success && int.TryParse(match.Groups[1].Value, out int parsedVal) && parsedVal > 0 && parsedVal <= 100)
-                    {
-                        customDiscount = parsedVal;
-                    }
-
-                    // Lấy email cụ thể nếu user có nhập trong câu hỏi (VD: khathtb01844@gmail.com)
-                    var emailMatch = System.Text.RegularExpressions.Regex.Match(userQuery, @"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}");
-                    string? explicitTargetEmailStr = emailMatch.Success ? emailMatch.Value : null;
-
-                    // Lấy tên khách hàng từ DB nếu nhập email cụ thể
-                    string? targetNameStr = null;
-                    bool emailNotFound = false;
-                    if (explicitTargetEmailStr != null)
-                    {
-                        var foundKh = await _context.KhachHangs.FirstOrDefaultAsync(k => k.Email == explicitTargetEmailStr);
-                        if (foundKh != null && !string.IsNullOrWhiteSpace(foundKh.HoTen))
-                        {
-                            targetNameStr = foundKh.HoTen;
-                        }
-                        else
-                        {
-                            // Email không có trong hệ thống → báo lỗi ngay, không tạo Action Card
-                            emailNotFound = true;
-                        }
-                    }
-
-                    // Nếu email không tồn tại trong DB → trả về thông báo, không tạo Action Card
-                    if (emailNotFound)
-                    {
-                        aiResp = new AiActionResponse
-                        {
-                            Message = $"❌ **Không tìm thấy khách hàng với email `{explicitTargetEmailStr}` trong hệ thống NovaTech.**\n\nEmail này không phải là khách hàng của NovaTech. Vui lòng kiểm tra lại địa chỉ email hoặc sử dụng email đã đăng ký tài khoản.",
-                            HasAction = false,
-                            ActionType = null,
-                            ActionPayload = null
-                        };
-                    }
-                    else
-                    {
-                        // Phân tích hạng (rank) nếu user yêu cầu hạng cụ thể (VD: "chỉ rank bạc", "khách hàng kim cương")
-                        string? targetRankStr = null;
-                        if (userQuery.Contains("kim cương") || userQuery.Contains("diamond")) targetRankStr = "Kim Cương";
-                        else if (userQuery.Contains("vàng") || userQuery.Contains("gold")) targetRankStr = "Vàng";
-                        else if (userQuery.Contains("bạc") || userQuery.Contains("silver")) targetRankStr = "Bạc";
-                        else if (userQuery.Contains("đồng") || userQuery.Contains("bronze")) targetRankStr = "Đồng";
-
-                        var payload = JsonSerializer.SerializeToElement(new
-                        {
-                            maCode = $"SALE{customDiscount}_{DateTime.Now:MMyy}",
-                            giaTri = customDiscount,
-                            soLuongNhap = 100,
-                            targetEmail = explicitTargetEmailStr,
-                            targetName = targetNameStr,
-                            targetRank = targetRankStr,
-                            lyDoDeXuat = $"Tự động phân tích Top 3 SP bán chậm tháng {DateTime.Now.Month}: 1. {p1Name}, 2. {p2Name}, 3. {p3Name}. Tạo mã giảm giá {customDiscount}% và gửi Gmail thật tới {(targetNameStr != null ? $"{targetNameStr} ({explicitTargetEmailStr})" : (explicitTargetEmailStr ?? (targetRankStr != null ? $"khách hạng {targetRankStr}" : "khách hàng")))}."
-                        });
-
-                        string targetEmailText = targetNameStr != null ? $"khách hàng **{targetNameStr}** ({explicitTargetEmailStr})"
-                            : (explicitTargetEmailStr != null ? $"địa chỉ Email **{explicitTargetEmailStr}**"
-                            : (targetRankStr != null ? $"tất cả khách hàng hạng **{targetRankStr}**" : "tất cả khách hàng thành viên"));
-
-                        aiResp = new AiActionResponse
-                        {
-                            Message = $"🤖 **Hệ thống AI Autonomous Agent đã phân tích dữ liệu kho tháng {DateTime.Now.Month}/{DateTime.Now.Year}:**\n\n- 🔴 TOP 1 tồn cao bán chậm: **{p1Name}**\n- 🔴 TOP 2 tồn cao bán chậm: **{p2Name}**\n- 🔴 TOP 3 tồn cao bán chậm: **{p3Name}**\n\nTôi đã lập kế hoạch khởi tạo mã Voucher **`SALE{customDiscount}_{DateTime.Now:MMyy}`** giảm **{customDiscount}%** theo đúng yêu cầu của bạn và chuẩn bị gửi Gmail thông báo riêng đến {targetEmailText}.",
-                            HasAction = true,
-                            ActionType = "SEND_PROMO_EMAIL_DONG_PLUS",
-                            ActionPayload = payload
-                        };
-                    }
-                }
-                else if (userQuery.Contains("vip") || userQuery.Contains("tri ấn") || userQuery.Contains("tri ân"))
-                {
-                    var payload = JsonSerializer.SerializeToElement(new
-                    {
-                        maCode = $"VIP{DateTime.Now:MMddHH}",
-                        giaTri = 20,
-                        soLuongNhap = 20,
-                        danhSachKhachHang = topCustomersText,
-                        lyDoDeXuat = "Tri ân Top 5 Khách hàng VIP thân thiết có điểm tích lũy cao nhất"
-                    });
-                    aiResp = new AiActionResponse
-                    {
-                        Message = $"💎 **Đề xuất Tri ân Khách hàng VIP:**\n\nTạo mã giảm giá **20%** dành riêng cho Top khách hàng thân thiết ({topCustomersText}).",
-                        HasAction = true,
-                        ActionType = "SEND_VIP_REWARD",
-                        ActionPayload = payload
-                    };
-                }
-                else if (userQuery.Contains("khuyến mãi") || userQuery.Contains("xả hàng"))
-                {
-                    var payload = JsonSerializer.SerializeToElement(new
-                    {
-                        maCode = $"SALE15_{DateTime.Now:MMdd}",
-                        giaTri = 15,
-                        soLuongNhap = 50,
-                        lyDoDeXuat = "Chiến dịch xả hàng tồn kho cao"
-                    });
-                    aiResp = new AiActionResponse
-                    {
-                        Message = $"🔥 **Đề xuất Khuyến Mãi Hàng Tồn Kho:**\n\nKích hoạt Voucher giảm **15%** cho các mặt hàng tồn kho cao.",
-                        HasAction = true,
-                        ActionType = "CREATE_PROMOTION_CAMPAIGN",
-                        ActionPayload = payload
-                    };
-                }
-                else
-                {
-                    aiResp = new AiActionResponse
-                    {
-                        Message = rawJson.Contains("Lỗi API Gemini")
-                            ? "⚠️ Google Gemini API hiện tại đang giới hạn lượt gọi Free Tier. Tôi đã bật chế độ Smart Offline Agent để phục vụ bạn!"
-                            : rawJson,
-                        HasAction = false
-                    };
-                }
+                    Message = rawJson,
+                    HasAction = false
+                };
             }
 
             // Save AI message with per-user isolation
@@ -383,6 +284,12 @@ KHÔNG bao giờ trả về text bên ngoài JSON.";
                     if (!await _context.DanhMucs.AnyAsync(d => d.MaDanhMuc == maDanhMuc)) maDanhMuc = (await _context.DanhMucs.FirstAsync()).MaDanhMuc;
                     if (!await _context.ThuongHieus.AnyAsync(t => t.MaThuongHieu == maThuongHieu)) maThuongHieu = (await _context.ThuongHieus.FirstAsync()).MaThuongHieu;
 
+                    string hinhAnhUrl = !string.IsNullOrWhiteSpace(payload.HinhAnh)
+                        ? payload.HinhAnh
+                        : "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=800&q=80";
+
+                    string moTaFull = (payload.MoTa ?? "") + (string.IsNullOrWhiteSpace(payload.BienThe) ? "" : $"\n📌 Biến thể: {payload.BienThe}");
+
                     var newProduct = new SanPham
                     {
                         TenSanPham = payload.TenSanPham ?? "Sản phẩm mới",
@@ -393,7 +300,8 @@ KHÔNG bao giờ trả về text bên ngoài JSON.";
                         GiaNhap = payload.GiaNhap,
                         GiaBan = payload.GiaBan,
                         SoLuongTon = 0,
-                        MoTa = payload.MoTa,
+                        MoTa = moTaFull,
+                        HinhAnh = hinhAnhUrl,
                         TrangThai = "Đang bán"
                     };
                     _context.SanPhams.Add(newProduct);
@@ -925,6 +833,14 @@ Trả lời tiếng Việt, ngắn gọn, chuyên nghiệp. Hỗ trợ markdown:
         public int MaNCC { get; set; }
         public string? SKU { get; set; }
         public string? LyDoDeXuat { get; set; }
+
+        // New properties for Image, Supplier name, and Variant specs
+        public string? HinhAnh { get; set; }
+        public string? TenNCC { get; set; }
+        public string? BienThe { get; set; }
+
+        // Top 5 products array for market recommendations
+        public List<ActionPayloadDto>? Top5Products { get; set; }
 
         // New properties for Promotion & VIP actions
         public string? MaCode { get; set; }

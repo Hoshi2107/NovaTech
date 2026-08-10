@@ -183,7 +183,7 @@ namespace DATN64.Models
 
         private async Task<string> CallGeminiAsync(string originalUrl, object requestBody)
         {
-            var modelsToTry = new List<string> { _model, "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro" };
+            var modelsToTry = new List<string> { _model, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash" };
             var distinctModels = modelsToTry.Where(m => !string.IsNullOrWhiteSpace(m)).Distinct().ToList();
 
             string lastError = "";
@@ -223,7 +223,21 @@ namespace DATN64.Models
                         return reply ?? "Không nhận được nội dung phản hồi từ AI.";
                     }
 
-                    lastError = $"Lỗi API Gemini ({response.StatusCode}): {responseContent}";
+                    if (response.StatusCode == System.Net.HttpStatusCode.BadRequest || (int)response.StatusCode == 400 || (int)response.StatusCode == 401 || (int)response.StatusCode == 403)
+                    {
+                        if (responseContent.Contains("API_KEY_SERVICE_BLOCKED"))
+                        {
+                            lastError = $"❌ **Lỗi Google Gemini API (API_KEY_SERVICE_BLOCKED):** Dịch vụ Generative Language API chưa được bật (Enable) cho Project này trên Google Cloud Console.\nChi tiết: {responseContent}";
+                            break;
+                        }
+                        if (responseContent.Contains("API_KEY_INVALID") || responseContent.Contains("API key not valid"))
+                        {
+                            lastError = $"❌ **Lỗi Google Gemini API (API_KEY_INVALID):** API Key không hợp lệ hoặc chưa cấp quyền dịch vụ Gemini AI.\nChi tiết: {responseContent}";
+                            break;
+                        }
+                    }
+
+                    lastError = $"❌ **Lỗi API Gemini ({response.StatusCode}):** {responseContent}";
 
                     // Nếu gặp 503 (quá tải), 404 (model không tìm thấy), hoặc 429 (hết quota model này), thử model tiếp theo
                     if (response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable ||

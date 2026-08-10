@@ -1,4 +1,4 @@
-@model List<DATN64.Models.ChatMessage>
+﻿@model List<DATN64.Models.ChatMessage>
 @{
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
     ViewData["Title"] = "NovaTech AI Assistant";
@@ -6,15 +6,17 @@
 }
 
 <style>
+    @@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
     :root {
-        --ai-bg: #0f1117;
-        --ai-surface: #1a1d27;
-        --ai-card: #22263a;
-        --ai-border: rgba(99,179,237,0.15);
+        --ai-bg: #080c14;
+        --ai-surface: #0d1220;
+        --ai-card: #151c2e;
+        --ai-border: rgba(56,189,248,0.2);
         --ai-accent: #38bdf8;
         --ai-accent2: #818cf8;
         --ai-user-bg: linear-gradient(135deg, #0284c7 0%, #6366f1 100%);
-        --ai-bot-bg: #22263a;
+        --ai-bot-bg: #151c2e;
         --ai-action: linear-gradient(135deg, #10b981 0%, #0284c7 100%);
         --ai-reject: #ef4444;
     }
@@ -25,31 +27,48 @@
         height: calc(100vh - 140px);
         min-height: 600px;
         background: var(--ai-surface);
-        border-radius: 20px;
+        border-radius: 22px;
         border: 1px solid var(--ai-border);
         overflow: hidden;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+        font-family: 'Inter', sans-serif;
+        position: relative;
+    }
+    .ai-wrapper::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(ellipse at 10% 0%, rgba(56,189,248,0.08) 0%, transparent 60%),
+                    radial-gradient(ellipse at 90% 100%, rgba(129,140,248,0.06) 0%, transparent 60%);
     }
 
     /* Header */
     .ai-header {
-        background: linear-gradient(135deg, #1e3a5f 0%, #2d1b69 100%);
+        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
         padding: 16px 24px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         border-bottom: 1px solid var(--ai-border);
         flex-shrink: 0;
+        z-index: 2;
     }
     .ai-header-info { display: flex; align-items: center; gap: 14px; }
     .ai-avatar {
         width: 48px; height: 48px;
         background: rgba(56,189,248,0.15);
-        border: 1.5px solid rgba(56,189,248,0.4);
+        border: 1.5px solid rgba(56,189,248,0.6);
         border-radius: 14px;
         display: flex; align-items: center; justify-content: center;
         font-size: 22px;
         position: relative;
+        box-shadow: 0 0 20px rgba(56,189,248,0.3);
+        animation: pulse-avatar 3s infinite ease-in-out;
+    }
+    @@keyframes pulse-avatar {
+        0%, 100% { box-shadow: 0 0 15px rgba(56,189,248,0.25); }
+        50% { box-shadow: 0 0 32px rgba(56,189,248,0.6); }
     }
     .ai-avatar::after {
         content: '';
@@ -59,10 +78,11 @@
         border-radius: 50%;
         border: 2px solid var(--ai-surface);
         animation: pulse-dot 2s infinite;
+        box-shadow: 0 0 8px #10b981;
     }
-    @@keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.7;transform:scale(1.2)} }
-    .ai-title { font-weight: 700; font-size: 16px; color: #f0f6ff; margin: 0; }
-    .ai-subtitle { font-size: 12px; color: #38bdf8; margin: 0; }
+    @@keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.7;transform:scale(1.25)} }
+    .ai-title { font-weight: 800; font-size: 16px; color: #f0f6ff; margin: 0; letter-spacing: 0.3px; }
+    .ai-subtitle { font-size: 12px; color: #38bdf8; margin: 0; opacity: 0.9; }
 
     /* Messages */
     .ai-messages {
@@ -75,34 +95,40 @@
         background: radial-gradient(ellipse at top left, rgba(56,189,248,0.04) 0%, transparent 60%),
                     radial-gradient(ellipse at bottom right, rgba(129,140,248,0.04) 0%, transparent 60%),
                     var(--ai-bg);
+        z-index: 1;
     }
-    .ai-messages::-webkit-scrollbar { width: 5px; }
+    .ai-messages::-webkit-scrollbar { width: 6px; }
     .ai-messages::-webkit-scrollbar-track { background: transparent; }
-    .ai-messages::-webkit-scrollbar-thumb { background: rgba(99,179,237,0.2); border-radius: 10px; }
+    .ai-messages::-webkit-scrollbar-thumb { background: rgba(99,179,237,0.25); border-radius: 10px; }
 
     /* Message bubbles */
-    .msg-row { display: flex; gap: 12px; animation: msgIn 0.3s ease; }
+    .msg-row { display: flex; gap: 12px; animation: msgIn 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
     .msg-row.user { flex-direction: row-reverse; }
-    @@keyframes msgIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+    @@keyframes msgIn { from{opacity:0;transform:translateY(16px) scale(0.98)} to{opacity:1;transform:translateY(0) scale(1)} }
 
     .msg-avatar {
-        width: 36px; height: 36px; border-radius: 10px;
+        width: 38px; height: 38px; border-radius: 12px;
         display: flex; align-items: center; justify-content: center;
-        font-size: 16px; flex-shrink: 0; margin-top: 4px;
+        font-size: 17px; flex-shrink: 0; margin-top: 4px;
+        transition: transform 0.2s;
     }
-    .msg-avatar.bot { background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); }
-    .msg-avatar.user-av { background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.3); }
+    .msg-avatar:hover { transform: scale(1.1); }
+    .msg-avatar.bot { background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.35); box-shadow: 0 4px 12px rgba(56,189,248,0.15); }
+    .msg-avatar.user-av { background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.35); box-shadow: 0 4px 12px rgba(99,102,241,0.15); }
 
-    .msg-content { max-width: 72%; display: flex; flex-direction: column; gap: 6px; }
+    .msg-content { max-width: 82%; display: flex; flex-direction: column; gap: 6px; }
     .msg-row.user .msg-content { align-items: flex-end; }
 
     .msg-bubble {
-        padding: 12px 16px;
+        padding: 14px 18px;
         border-radius: 18px;
         font-size: 14px;
         line-height: 1.65;
         word-break: break-word;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+        transition: transform 0.2s;
     }
+    .msg-bubble:hover { transform: translateY(-1px); }
     .msg-bubble.bot {
         background: var(--ai-card);
         border: 1px solid var(--ai-border);
@@ -114,114 +140,226 @@
         border-top-right-radius: 4px;
         color: #fff;
     }
-    .msg-time { font-size: 11px; color: #4a5568; }
+    .msg-time { font-size: 11px; color: #475569; font-weight: 500; }
 
     /* Action card */
     .action-card {
-        margin-top: 10px;
-        background: linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(2,132,199,0.08) 100%);
-        border: 1px solid rgba(16,185,129,0.3);
-        border-radius: 14px;
-        padding: 16px 18px;
-        max-width: 72%;
-        animation: msgIn 0.4s ease 0.15s both;
+        margin-top: 12px;
+        background: linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(2,132,199,0.12) 100%);
+        border: 1px solid rgba(16,185,129,0.45);
+        border-radius: 16px;
+        padding: 18px 20px;
+        max-width: 85%;
+        animation: msgIn 0.45s ease 0.1s both;
+        box-shadow: 0 10px 35px rgba(0,0,0,0.35);
+        backdrop-filter: blur(8px);
     }
     .action-card-title {
-        font-size: 13px; font-weight: 600; color: #10b981;
-        display: flex; align-items: center; gap-6px; margin-bottom: 10px;
+        font-size: 14px; font-weight: 700; color: #10b981;
+        display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
     }
-    .action-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+    .action-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
     .btn-accept {
         background: var(--ai-action); color: #fff;
-        border: none; border-radius: 10px; padding: 9px 20px;
-        font-size: 13px; font-weight: 600; cursor: pointer;
-        display: flex; align-items: center; gap: 6px;
-        transition: all .2s; box-shadow: 0 4px 15px rgba(16,185,129,0.3);
+        border: none; border-radius: 12px; padding: 11px 24px;
+        font-size: 13px; font-weight: 700; cursor: pointer;
+        display: flex; align-items: center; gap: 8px;
+        transition: all .25s ease; box-shadow: 0 4px 18px rgba(16,185,129,0.35);
     }
-    .btn-accept:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16,185,129,0.4); }
+    .btn-accept:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 8px 25px rgba(16,185,129,0.5); }
     .btn-accept:disabled { opacity: .5; cursor: not-allowed; transform: none; }
     .btn-reject {
-        background: rgba(239,68,68,0.1); color: #ef4444;
-        border: 1px solid rgba(239,68,68,0.3); border-radius: 10px; padding: 9px 20px;
+        background: rgba(239,68,68,0.12); color: #ef4444;
+        border: 1px solid rgba(239,68,68,0.35); border-radius: 12px; padding: 11px 22px;
         font-size: 13px; font-weight: 600; cursor: pointer;
-        display: flex; align-items: center; gap: 6px; transition: all .2s;
+        display: flex; align-items: center; gap: 6px; transition: all .25s ease;
     }
-    .btn-reject:hover { background: rgba(239,68,68,0.2); }
+    .btn-reject:hover { background: rgba(239,68,68,0.22); transform: translateY(-2px); }
+
+    /* Top 5 Market Hot Products Showcase Grid */
+    .top5-box {
+        margin-top: 14px;
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        border-radius: 18px;
+        padding: 18px;
+        max-width: 98%;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+        backdrop-filter: blur(10px);
+    }
+    .top5-header-bar {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 14px; padding-bottom: 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .top5-header-title {
+        font-size: 14px; font-weight: 800; color: #38bdf8;
+        display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .top5-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 14px;
+    }
+    .top5-card {
+        background: rgba(30, 41, 59, 0.75);
+        border: 1.5px solid rgba(255, 255, 255, 0.12);
+        border-radius: 16px;
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        position: relative;
+        cursor: pointer;
+        transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .top5-card:hover {
+        transform: translateY(-7px) scale(1.02);
+        border-color: #38bdf8;
+        box-shadow: 0 14px 30px rgba(56, 189, 248, 0.3);
+    }
+    .top5-card.active {
+        border-color: #10b981;
+        background: rgba(16, 185, 129, 0.15);
+        box-shadow: 0 0 25px rgba(16, 185, 129, 0.45);
+    }
+    .top5-rank-badge {
+        position: absolute;
+        top: 10px; left: 10px;
+        background: linear-gradient(135deg, #e63946 0%, #c1121f 100%);
+        color: #fff; font-size: 10px; font-weight: 800;
+        padding: 4px 9px; border-radius: 12px; z-index: 2;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+    }
+    .top5-img-container {
+        width: 100%; height: 125px;
+        border-radius: 12px; overflow: hidden;
+        margin-bottom: 10px; background: #0f172a;
+        position: relative;
+    }
+    .top5-img {
+        width: 100%; height: 100%; object-fit: cover;
+        transition: transform 0.4s ease;
+    }
+    .top5-card:hover .top5-img { transform: scale(1.1); }
+    .top5-name {
+        font-size: 13.5px; font-weight: 700; color: #f8fafc;
+        line-height: 1.35; margin-bottom: 4px;
+    }
+    .top5-supplier-tag {
+        font-size: 11px; color: #38bdf8; font-weight: 600;
+        margin-bottom: 4px; display: flex; align-items: center; gap: 4px;
+    }
+    .top5-variant-pill {
+        font-size: 10px; color: #cbd5e1; background: rgba(255,255,255,0.08);
+        padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12);
+        margin-bottom: 6px; word-break: break-word;
+    }
+    .top5-prices-row {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(255,255,255,0.12);
+    }
+    .top5-price-sell { color: #10b981; font-weight: 700; font-size: 13.5px; }
+    .top5-price-buy { color: #94a3b8; font-size: 11px; }
+    .top5-profit-pill {
+        background: rgba(56, 189, 248, 0.2); color: #38bdf8;
+        font-size: 10px; font-weight: 700; padding: 3px 7px; border-radius: 6px;
+    }
+    .btn-choose-import {
+        width: 100%; margin-top: 10px;
+        background: linear-gradient(135deg, #0284c7 0%, #6366f1 100%);
+        border: none; color: #fff; font-size: 12px; font-weight: 700;
+        padding: 8px 12px; border-radius: 10px; cursor: pointer;
+        transition: all 0.25s ease; display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn-choose-import:hover { transform: scale(1.03); box-shadow: 0 4px 18px rgba(2,132,199,0.5); }
 
     /* Payload preview */
     .payload-grid {
-        display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+        display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
         margin-top: 10px;
     }
-    .payload-item { background: rgba(255,255,255,0.04); border-radius: 8px; padding: 8px 10px; }
-    .payload-label { font-size: 11px; color: #64748b; margin-bottom: 2px; }
-    .payload-value { font-size: 13px; font-weight: 600; color: #e2e8f0; }
+    .payload-item { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 10px 14px; border: 1px solid rgba(255,255,255,0.05); }
+    .payload-label { font-size: 11px; color: #94a3b8; margin-bottom: 4px; }
+    .payload-value { font-size: 13.5px; font-weight: 700; color: #e2e8f0; }
     .payload-value.price { color: #10b981; }
 
     /* Footer */
-    .ai-footer { padding: 16px 20px; background: var(--ai-surface); border-top: 1px solid var(--ai-border); flex-shrink: 0; }
+    .ai-footer { padding: 18px 24px; background: var(--ai-surface); border-top: 1px solid var(--ai-border); flex-shrink: 0; z-index: 2; }
 
-    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
     .chip {
-        background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.2);
-        color: #94a3b8; font-size: 12px; border-radius: 20px;
-        padding: 5px 12px; cursor: pointer; transition: all .2s;
+        background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.25);
+        color: #cbd5e1; font-size: 12.5px; font-weight: 500; border-radius: 20px;
+        padding: 7px 16px; cursor: pointer; transition: all .25s ease;
+        display: inline-flex; align-items: center; gap: 6px;
     }
-    .chip:hover { background: rgba(56,189,248,0.15); color: #38bdf8; border-color: rgba(56,189,248,0.4); }
+    .chip:hover {
+        background: rgba(56,189,248,0.2); color: #38bdf8;
+        border-color: rgba(56,189,248,0.6); transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(56,189,248,0.2);
+    }
 
-    .input-row { display: flex; gap: 10px; }
+    .input-row { display: flex; gap: 12px; }
     .ai-input {
         flex: 1; background: var(--ai-card); border: 1px solid var(--ai-border);
-        border-radius: 14px; padding: 12px 18px; color: #e2e8f0;
-        font-size: 14px; outline: none; transition: border-color .2s;
+        border-radius: 16px; padding: 14px 20px; color: #e2e8f0;
+        font-size: 14px; outline: none; transition: all .25s ease;
     }
-    .ai-input:focus { border-color: rgba(56,189,248,0.5); box-shadow: 0 0 0 3px rgba(56,189,248,0.08); }
-    .ai-input::placeholder { color: #4a5568; }
+    .ai-input:focus { border-color: rgba(56,189,248,0.6); box-shadow: 0 0 0 4px rgba(56,189,248,0.12); }
+    .ai-input::placeholder { color: #64748b; }
     .ai-send {
         background: linear-gradient(135deg, #0284c7 0%, #6366f1 100%);
-        border: none; border-radius: 14px; width: 50px; height: 50px;
-        color: #fff; font-size: 18px; cursor: pointer;
+        border: none; border-radius: 16px; width: 52px; height: 52px;
+        color: #fff; font-size: 19px; cursor: pointer;
         display: flex; align-items: center; justify-content: center;
-        transition: all .2s; box-shadow: 0 4px 15px rgba(2,132,199,0.3);
+        transition: all .25s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 4px 18px rgba(2,132,199,0.35);
         flex-shrink: 0;
     }
-    .ai-send:hover { transform: scale(1.05); box-shadow: 0 6px 20px rgba(2,132,199,0.4); }
+    .ai-send:hover { transform: scale(1.08) rotate(-5deg); box-shadow: 0 6px 24px rgba(2,132,199,0.5); }
     .ai-send:disabled { opacity: .5; cursor: not-allowed; transform: none; }
 
     /* Typing indicator */
     .typing-indicator { display: none; }
     .typing-indicator.show { display: flex; }
     .typing-dots span {
-        width: 7px; height: 7px; background: #38bdf8;
-        border-radius: 50%; display: inline-block; margin: 0 2px;
+        width: 8px; height: 8px; background: #38bdf8;
+        border-radius: 50%; display: inline-block; margin: 0 3px;
         animation: bounce 1.4s infinite;
+        box-shadow: 0 0 8px rgba(56,189,248,0.6);
     }
     .typing-dots span:nth-child(2) { animation-delay: .2s; }
     .typing-dots span:nth-child(3) { animation-delay: .4s; }
-    @@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-8px)} }
+    @@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-9px)} }
 
     /* Welcome */
     .welcome-center {
         flex: 1; display: flex; flex-direction: column;
         align-items: center; justify-content: center; text-align: center;
-        gap: 12px; padding: 40px;
+        gap: 14px; padding: 40px;
     }
     .welcome-icon {
-        width: 80px; height: 80px;
-        background: rgba(56,189,248,0.1); border: 1.5px solid rgba(56,189,248,0.3);
-        border-radius: 24px; display: flex; align-items: center; justify-content: center;
-        font-size: 36px; animation: float 3s ease-in-out infinite;
+        width: 84px; height: 84px;
+        background: rgba(56,189,248,0.12); border: 1.5px solid rgba(56,189,248,0.4);
+        border-radius: 26px; display: flex; align-items: center; justify-content: center;
+        font-size: 38px; animation: float 3.5s ease-in-out infinite;
+        box-shadow: 0 0 30px rgba(56,189,248,0.2);
     }
-    @@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+    @@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
 
     /* Markdown */
     .msg-bubble strong { color: #38bdf8; font-weight: 700; }
     .msg-bubble.user strong { color: #fff; }
-    .bullet-line { display: flex; align-items: flex-start; gap: 8px; margin: 3px 0; }
-    .bullet-dot { width: 5px; height: 5px; background: #38bdf8; border-radius: 50%; margin-top: 7px; flex-shrink: 0; }
+    .bullet-line { display: flex; align-items: flex-start; gap: 8px; margin: 5px 0; }
+    .bullet-dot { width: 6px; height: 6px; background: #38bdf8; border-radius: 50%; margin-top: 8px; flex-shrink: 0; box-shadow: 0 0 6px rgba(56,189,248,0.8); }
 
-    .btn-clear-hist { background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.25); border-radius: 10px; padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all .2s; }
-    .btn-clear-hist:hover { background: rgba(239,68,68,0.2); }
+    .btn-clear-hist {
+        background: rgba(239,68,68,0.12); color: #ef4444;
+        border: 1px solid rgba(239,68,68,0.3); border-radius: 12px;
+        padding: 8px 16px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+        display: flex; align-items: center; gap: 6px; transition: all .25s ease;
+    }
+    .btn-clear-hist:hover { background: rgba(239,68,68,0.22); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(239,68,68,0.3); }
 </style>
 
 <div class="ai-wrapper">
@@ -231,7 +369,7 @@
             <div class="ai-avatar">🤖</div>
             <div>
                 <p class="ai-title">NovaTech AI Assistant</p>
-                <p class="ai-subtitle" id="aiStatus">⚡ Agentic Mode — Tự động tạo phiếu & thêm sản phẩm</p>
+                <p class="ai-subtitle" id="aiStatus">⚡ Agentic Mode — Tự động phân tích thị trường & Tạo phiếu nhập hàng</p>
             </div>
         </div>
         <form asp-action="ClearHistory" method="post" onsubmit="return confirm('Xóa toàn bộ lịch sử?')">
@@ -247,9 +385,9 @@
         {
             <div class="welcome-center" id="welcomeBox">
                 <div class="welcome-icon">✨</div>
-                <h4 style="color:#f0f6ff; font-weight:700; margin:0">Chào mừng đến với NovaTech AI</h4>
-                <p style="color:#64748b; font-size:14px; max-width:400px; margin:0">
-                    Tôi có thể phân tích kinh doanh, đề xuất sản phẩm mới và <strong style="color:#38bdf8">tự động tạo phiếu nhập</strong> khi bạn chấp nhận.
+                <h4 style="color:#f0f6ff; font-weight:700; margin:0">Chào mừng đến với NovaTech AI Assistant</h4>
+                <p style="color:#64748b; font-size:14px; max-width:480px; margin:0">
+                    Tôi có thể phân tích xu hướng thị trường, gợi ý <strong style="color:#38bdf8">Top 5 sản phẩm hot</strong>, hiển thị hình ảnh + nhà cung cấp + biến thể và <strong style="color:#10b981">tự động tạo phiếu nhập hàng</strong> khi bạn chọn.
                 </p>
             </div>
         }
@@ -294,342 +432,301 @@
     <!-- Footer -->
     <div class="ai-footer">
         <div class="chips">
-            <span class="chip" data-q="Báo cáo nhanh doanh thu và tình trạng đơn hàng hôm nay">📊 Doanh thu & Đơn hàng</span>
-            <span class="chip" data-q="Sản phẩm nào sắp hết hàng? Tồn kho hiện tại thế nào?">⚠️ Cảnh báo tồn kho</span>
-            <span class="chip" data-q="Hãy tìm cho tôi 3 sản phẩm tồn kho cao bán chậm nhất tháng này, tự tạo chương trình giảm giá 15% cho chúng và tự gửi Email thông báo cho tất cả khách hàng từ Đồng trở lên vào Gmail thật">📩 Gửi Gmail KM khách Đồng+</span>
-            <span class="chip" data-q="Tự động lập chiến dịch khuyến mãi giảm giá cho các sản phẩm tồn kho cao bán chậm giúp tôi">🔥 Khuyến mãi hàng tồn kho</span>
-            <span class="chip" data-q="Gửi mã ưu đãi tri ân cho các khách hàng VIP thân thiết có doanh số mua nhiều nhất">💎 Tri ân Khách VIP</span>
-            <span class="chip" data-q="Đề xuất cho tôi 1 mặt hàng công nghệ mới hot trên thị trường để nhập kinh doanh">🛒 Đề xuất nhập SP mới</span>
+            <span class="chip" onclick="sendMessage(this.dataset.q)" data-q="Đề xuất cho tôi top 5 sản phẩm điện thoại đang hot trên thị trường và gợi ý tôi nên nhập sản phẩm nào?">🔥 Top 5 Điện thoại Hot Thị trường</span>
+            <span class="chip" onclick="sendMessage(this.dataset.q)" data-q="Đề xuất cho tôi top 5 sản phẩm laptop công nghệ hot để nhập kinh doanh">💻 Top 5 Laptop Hot Thị trường</span>
+            <span class="chip" onclick="sendMessage(this.dataset.q)" data-q="Báo cáo nhanh doanh thu và tình trạng đơn hàng hôm nay">📊 Doanh thu & Đơn hàng</span>
+            <span class="chip" onclick="sendMessage(this.dataset.q)" data-q="Sản phẩm nào sắp hết hàng? Tồn kho hiện tại thế nào?">⚠️ Cảnh báo tồn kho</span>
+            <span class="chip" onclick="sendMessage(this.dataset.q)" data-q="Hãy tìm cho tôi 3 sản phẩm tồn kho cao bán chậm nhất tháng này, tự tạo chương trình giảm giá 15% cho chúng và tự gửi Email thông báo cho tất cả khách hàng từ Đồng trở lên vào Gmail thật">📩 Gửi Gmail KM khách Đồng+</span>
+            <span class="chip" onclick="sendMessage(this.dataset.q)" data-q="Gửi mã ưu đãi tri ân cho các khách hàng VIP thân thiết có doanh số mua nhiều nhất">💎 Tri ân Khách VIP</span>
         </div>
         <div class="input-row">
             <input type="text" class="ai-input" id="chatInput"
-                   placeholder="Hỏi về doanh thu, đề xuất sản phẩm mới để nhập hàng..." autocomplete="off" />
-            <button class="ai-send" id="sendBtn" title="Gửi">
+                   placeholder="Hỏi về top 5 sản phẩm hot thị trường, doanh thu, đề xuất nhập hàng..." autocomplete="off" />
+            <button class="ai-send" id="sendBtn" type="button" onclick="sendMessage()" title="Gửi">
                 <i class="fa-solid fa-paper-plane" id="sendIcon"></i>
                 <div class="spinner-border spinner-border-sm d-none" id="sendSpinner" style="width:18px;height:18px"></div>
             </button>
         </div>
     </div>
 </div>
-
 @section Scripts {
 <script>
-const msgBox = document.getElementById('msgBox');
-const chatInput = document.getElementById('chatInput');
-const sendBtn = document.getElementById('sendBtn');
-const sendIcon = document.getElementById('sendIcon');
-const sendSpinner = document.getElementById('sendSpinner');
-const typingIndicator = document.getElementById('typingIndicator');
-const welcomeBox = document.getElementById('welcomeBox');
+// ═══════════════════════════════════════════════════════
+// 1. GLOBAL sendMessage – defined immediately, always ready
+// ═══════════════════════════════════════════════════════
+window.sendMessage = async function(text) {
+    var inp      = document.getElementById('chatInput');
+    var sBtn     = document.getElementById('sendBtn');
+    var sIcon    = document.getElementById('sendIcon');
+    var sSpinner = document.getElementById('sendSpinner');
+    var typing   = document.getElementById('typingIndicator');
+    var box      = document.getElementById('msgBox');
 
-// ── Markdown parser ──────────────────────────────────────────────────────────
-function parseMarkdown(text) {
-    let html = text
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>');
-
-    html = html.split('\n').map(line => {
-        const t = line.trim();
-        if (t.startsWith('- ') || t.startsWith('• ')) {
-            const content = t.substring(2);
-            return `<div class="bullet-line"><span class="bullet-dot"></span><span>${content}</span></div>`;
-        }
-        if (t === '') return '<br>';
-        return `<span>${line}</span><br>`;
-    }).join('');
-    return html;
-}
-
-// Apply markdown to all AI messages on load
-document.querySelectorAll('.ai-md').forEach(el => {
-    el.innerHTML = parseMarkdown(el.dataset.raw || el.textContent);
-});
-
-// ── Scroll helper ────────────────────────────────────────────────────────────
-function scrollBottom() {
-    setTimeout(() => { msgBox.scrollTop = msgBox.scrollHeight; }, 50);
-}
-scrollBottom();
-
-// ── Append message bubble ────────────────────────────────────────────────────
-function appendMsg(sender, text, time) {
-    if (welcomeBox) welcomeBox.style.display = 'none';
-    const isUser = sender === 'user';
-    const now = time || new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-
-    const row = document.createElement('div');
-    row.className = `msg-row ${isUser ? 'user' : ''}`;
-    row.innerHTML = `
-        <div class="msg-avatar ${isUser ? 'user-av' : 'bot'}">${isUser ? '👤' : '🤖'}</div>
-        <div class="msg-content">
-            <div class="msg-bubble ${isUser ? 'user' : 'bot ai-md'}">${isUser ? text : parseMarkdown(text)}</div>
-            <span class="msg-time">${isUser ? 'Bạn' : 'NovaTech AI'} • ${now}</span>
-        </div>`;
-    msgBox.insertBefore(row, typingIndicator);
-    scrollBottom();
-    return row;
-}
-
-// ── Append action card ───────────────────────────────────────────────────────
-function appendActionCard(payload, actionType) {
-    if (!payload) return;
-
-    const card = document.createElement('div');
-    card.className = 'action-card';
-
-    if (actionType === 'CREATE_PROMOTION_CAMPAIGN') {
-        const code = payload.maCode || 'SALE15';
-        const giaTri = payload.giaTri || 15;
-        const soLuong = payload.soLuongNhap || 50;
-
-        card.innerHTML = `
-            <div class="action-card-title" style="gap:6px; color:#f59e0b">
-                <span style="font-size:18px">🔥</span>
-                <span>AI đề xuất — Khởi tạo Chiến dịch Khuyến Mãi</span>
-            </div>
-            <div class="payload-grid">
-                <div class="payload-item">
-                    <div class="payload-label">🎟️ Mã Voucher</div>
-                    <div class="payload-value" style="color:#f59e0b;font-weight:700">${code}</div>
-                </div>
-                <div class="payload-item">
-                    <div class="payload-label">💰 Mức giảm giá</div>
-                    <div class="payload-value price">-${giaTri}%</div>
-                </div>
-                <div class="payload-item">
-                    <div class="payload-label">📦 Số lượng phát hành</div>
-                    <div class="payload-value">${soLuong} lượt</div>
-                </div>
-                <div class="payload-item">
-                    <div class="payload-label">📅 Thời hạn</div>
-                    <div class="payload-value">30 ngày</div>
-                </div>
-            </div>
-            <div class="payload-item" style="margin-top:8px">
-                <div class="payload-label">💡 Mục đích</div>
-                <div class="payload-value" style="font-size:12px;font-weight:400;color:#94a3b8">${payload.lyDoDeXuat || 'Kích cầu sản phẩm tồn kho cao'}</div>
-            </div>
-            <div class="action-buttons">
-                <button class="btn-accept" id="acceptBtn" style="background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%)">
-                    🔥 Chấp nhận — Phát hành Voucher ngay!
-                </button>
-                <button class="btn-reject" id="rejectBtn">❌ Bỏ qua</button>
-            </div>`;
-    } else if (actionType === 'SEND_PROMO_EMAIL_DONG_PLUS') {
-        const code = payload.maCode || 'SALE15';
-        const giaTri = payload.giaTri || 15;
-        const soLuong = payload.soLuongNhap || 100;
-
-        card.innerHTML = `
-            <div class="action-card-title" style="gap:6px; color:#e63946">
-                <span style="font-size:18px">📩</span>
-                <span>AI đề xuất — Xả Hàng Tồn + Gửi Gmail Thật đến Khách Đồng+</span>
-            </div>
-            <div style="background:rgba(230,57,70,0.08);border:1px solid rgba(230,57,70,0.25);border-radius:10px;padding:12px;margin-bottom:12px;font-size:12px;color:#94a3b8;line-height:1.6;">
-                🤖 AI sẽ tự động: <strong style="color:#f8fafc">① Tìm 3 SP tồn cao bán chậm nhất</strong> → <strong style="color:#f8fafc">② Tạo Voucher ${giaTri}%</strong> → <strong style="color:#f8fafc">③ Gửi Gmail HTML đến tất cả khách hàng Đồng trở lên</strong>
-            </div>
-            <div class="payload-grid">
-                <div class="payload-item">
-                    <div class="payload-label">🎟️ Mã Voucher</div>
-                    <div class="payload-value" style="color:#e63946;font-weight:700;font-family:monospace;">${code}</div>
-                </div>
-                <div class="payload-item">
-                    <div class="payload-label">💰 Mức giảm giá</div>
-                    <div class="payload-value price">-${giaTri}%</div>
-                </div>
-                <div class="payload-item">
-                    <div class="payload-label">📦 Số lượng Voucher</div>
-                    <div class="payload-value">${soLuong} lượt</div>
-                </div>
-                <div class="payload-item">
-                    <div class="payload-label">⏳ Thời hạn</div>
-                    <div class="payload-value">30 ngày</div>
-                </div>
-                <div class="payload-item" style="grid-column: span 2">
-                    <div class="payload-label">👥 Đối tượng nhận Email</div>
-                    <div class="payload-value" style="color:#38bdf8">${
-                        payload.targetEmail
-                            ? `✉️ ${payload.targetName ? `<strong>${payload.targetName}</strong> (${payload.targetEmail})` : `<strong>${payload.targetEmail}</strong>`}`
-                            : payload.targetRank
-                                ? `🏅 Chỉ khách hàng <strong style="color:#facc15">${payload.targetRank}</strong>`
-                                : '🥉 Đồng • 🥈 Bạc • 🥇 Vàng • 💎 Kim Cương (tất cả thành viên có email)'
-                    }</div>
-                </div>
-            </div>
-            <div class="payload-item" style="margin-top:4px;margin-bottom:12px;">
-                <div class="payload-label">💡 Lý do AI phân tích</div>
-                <div class="payload-value" style="font-size:12px;font-weight:400;color:#94a3b8">${payload.lyDoDeXuat || 'Tự động xả hàng tồn kho + kích cầu khách hàng'}</div>
-            </div>
-            <div class="action-buttons">
-                <button class="btn-accept" id="acceptBtn" style="background:linear-gradient(135deg, #e63946 0%, #c1121f 100%);box-shadow:0 4px 16px rgba(230,57,70,0.4);">
-                    📩 Xác nhận — AI Gửi Gmail ngay!
-                </button>
-                <button class="btn-reject" id="rejectBtn">❌ Bỏ qua</button>
-            </div>`;
-    } else if (actionType === 'SEND_VIP_REWARD') {
-        const code = payload.maCode || 'VIP2026';
-        const giaTri = payload.giaTri || 20;
-
-        card.innerHTML = `
-            <div class="action-card-title" style="gap:6px; color:#818cf8">
-                <span style="font-size:18px">💎</span>
-                <span>AI đề xuất — Gửi quà Tri ân Khách Hàng VIP</span>
-            </div>
-            <div class="payload-grid">
-                <div class="payload-item">
-                    <div class="payload-label">👑 Mã Tri Ân VIP</div>
-                    <div class="payload-value" style="color:#818cf8;font-weight:700">${code}</div>
-                </div>
-                <div class="payload-item">
-                    <div class="payload-label">🎁 Mức ưu đãi</div>
-                    <div class="payload-value price">-${giaTri}%</div>
-                </div>
-                <div class="payload-item" style="grid-column: span 2">
-                    <div class="payload-label">👥 Nhóm Khách Hàng Nhận Quà</div>
-                    <div class="payload-value" style="color:#38bdf8">${payload.danhSachKhachHang || 'Top Khách Hàng VIP'}</div>
-                </div>
-            </div>
-            <div class="action-buttons">
-                <button class="btn-accept" id="acceptBtn" style="background:linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)">
-                    👑 Chấp nhận — Gửi Quà Tri Ân!
-                </button>
-                <button class="btn-reject" id="rejectBtn">❌ Từ chối</button>
-            </div>`;
-    } else {
-        // Default: CREATE_PRODUCT_AND_IMPORT
-        const giaNhap = payload.giaNhap || 0;
-        const giaBan = payload.giaBan || 0;
-        const soLuong = payload.soLuongNhap || 0;
-        const tongChi = (giaNhap * soLuong).toLocaleString('vi-VN');
-        const loiNhuan = giaBan > 0 ? Math.round((giaBan - giaNhap) / giaNhap * 100) : 0;
-
-        card.innerHTML = `
-            <div class="action-card-title" style="gap:6px">
-                <span style="font-size:18px">📋</span>
-                <span>AI đề xuất hành động — Tạo phiếu nhập & Thêm sản phẩm</span>
-            </div>
-            <div class="payload-grid">
-                <div class="payload-item">
-                    <div class="payload-label">📦 Sản phẩm</div>
-                    <div class="payload-value">${payload.tenSanPham || '—'}</div>
-                </div>
-                <div class="payload-item">
-                    <div class="payload-label">📥 Số lượng nhập</div>
-                    <div class="payload-value">${soLuong} cái</div>
-                </div>
-                <div class="payload-item">
-                    <div class="payload-label">💰 Giá nhập</div>
-                    <div class="payload-value price">${giaNhap.toLocaleString('vi-VN')} đ</div>
-                </div>
-                <div class="payload-item">
-                    <div class="payload-label">🏷️ Giá bán đề xuất</div>
-                    <div class="payload-value price">${giaBan.toLocaleString('vi-VN')} đ</div>
-                </div>
-                <div class="payload-item">
-                    <div class="payload-label">🧾 Tổng chi phí</div>
-                    <div class="payload-value price">${tongChi} đ</div>
-                </div>
-                <div class="payload-item">
-                    <div class="payload-label">📈 Lợi nhuận/cái</div>
-                    <div class="payload-value" style="color:#818cf8">+${loiNhuan}%</div>
-                </div>
-            </div>
-            <div class="payload-item" style="margin-top:8px">
-                <div class="payload-label">💡 Lý do đề xuất</div>
-                <div class="payload-value" style="font-size:12px;font-weight:400;color:#94a3b8">${payload.lyDoDeXuat || '—'}</div>
-            </div>
-            <div class="action-buttons">
-                <button class="btn-accept" id="acceptBtn">
-                    ✅ Chấp nhận — Tạo ngay!
-                </button>
-                <button class="btn-reject" id="rejectBtn">
-                    ❌ Từ chối
-                </button>
-            </div>`;
-    }
-
-    msgBox.insertBefore(card, typingIndicator);
-    scrollBottom();
-
-    // Accept handler
-    card.querySelector('#acceptBtn').addEventListener('click', async () => {
-        card.querySelector('#acceptBtn').disabled = true;
-        card.querySelector('#acceptBtn').innerHTML = `<div class="spinner-border spinner-border-sm" style="width:16px;height:16px"></div> Đang thực hiện...`;
-        card.querySelector('#rejectBtn').disabled = true;
-
-        try {
-            const res = await fetch('/Ai/ExecuteAction', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ actionType, actionPayload: payload })
-            });
-            const data = await res.json();
-
-            card.style.borderColor = 'rgba(16,185,129,0.5)';
-            card.style.background = 'rgba(16,185,129,0.06)';
-            card.querySelector('.action-buttons').innerHTML = `<span style="color:#10b981;font-size:13px;font-weight:600">✅ Đã thực hiện thành công!</span>`;
-
-            appendMsg('bot', data.message || '✅ Đã thực hiện tác vụ thành công!');
-        } catch(e) {
-            card.querySelector('.action-buttons').innerHTML = `<span style="color:#ef4444;font-size:13px">❌ Lỗi: ${e.message}</span>`;
-        }
-    });
-
-    // Reject handler
-    card.querySelector('#rejectBtn').addEventListener('click', () => {
-        card.style.opacity = '0.4';
-        card.querySelector('.action-buttons').innerHTML = `<span style="color:#64748b;font-size:13px">Đã từ chối đề xuất này.</span>`;
-        appendMsg('bot', '👍 Đã bỏ qua đề xuất. Bạn có muốn thử yêu cầu khác không?');
-    });
-}
-
-// ── Send message ─────────────────────────────────────────────────────────────
-async function sendMessage(text) {
-    const msg = text || chatInput.value.trim();
+    var msg = text ? String(text).trim() : (inp ? inp.value.trim() : '');
     if (!msg) return;
 
-    chatInput.value = '';
-    appendMsg('user', msg);
+    if (inp) inp.value = '';
+    var wb = document.getElementById('welcomeBox');
+    if (wb) wb.style.display = 'none';
 
-    // Loading state
-    sendBtn.disabled = true;
-    sendIcon.classList.add('d-none');
-    sendSpinner.classList.remove('d-none');
-    typingIndicator.classList.add('show');
-    scrollBottom();
+    // User bubble
+    var uRow = document.createElement('div');
+    uRow.className = 'msg-row user';
+    uRow.innerHTML = '<div class="msg-avatar user-av">👤</div>'
+        + '<div class="msg-content"><div class="msg-bubble user">' + _escHtml(msg) + '</div>'
+        + '<span class="msg-time">Bạn • ' + _fmtTime() + '</span></div>';
+    _appendNode(uRow);
+
+    if (sBtn) sBtn.disabled = true;
+    if (sIcon) sIcon.classList.add('d-none');
+    if (sSpinner) sSpinner.classList.remove('d-none');
+    if (typing) typing.classList.add('show');
+    if (box) box.scrollTop = box.scrollHeight;
 
     try {
-        const res = await fetch('/Ai/ChatAsync', {
+        var res = await fetch('/Ai/ChatAsync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ message: msg })
         });
-
-        typingIndicator.classList.remove('show');
-
-        if (!res.ok) { appendMsg('bot', '❌ Lỗi kết nối server. Thử lại nhé!'); return; }
-
-        const data = await res.json();
-        appendMsg('bot', data.message || 'Không có phản hồi.');
-
-        // If AI wants to do an action → show action card
+        if (typing) typing.classList.remove('show');
+        if (!res.ok) {
+            _botMsg(res.status === 401
+                ? '❌ Phiên đăng nhập hết hạn, vui lòng đăng nhập lại!'
+                : '❌ Lỗi server HTTP ' + res.status + '. Thử lại nhé!');
+            return;
+        }
+        var data = await res.json();
+        _botMsg(data.message || 'Không có phản hồi.');
         if (data.hasAction && data.actionType && data.actionPayload) {
-            setTimeout(() => appendActionCard(data.actionPayload, data.actionType), 300);
+            setTimeout(function() { _appendActionCard(data.actionPayload, data.actionType); }, 300);
         }
     } catch(e) {
-        typingIndicator.classList.remove('show');
-        appendMsg('bot', `⚠️ Lỗi: ${e.message}`);
+        if (typing) typing.classList.remove('show');
+        _botMsg('⚠️ Lỗi kết nối: ' + e.message);
     } finally {
-        sendBtn.disabled = false;
-        sendIcon.classList.remove('d-none');
-        sendSpinner.classList.add('d-none');
-        chatInput.focus();
+        if (sBtn) sBtn.disabled = false;
+        if (sIcon) sIcon.classList.remove('d-none');
+        if (sSpinner) sSpinner.classList.add('d-none');
+        if (inp) inp.focus();
+        var b2 = document.getElementById('msgBox');
+        if (b2) b2.scrollTop = b2.scrollHeight;
     }
+};
+
+// ═══════════════════════════════════════════════════════
+// 2. HELPER FUNCTIONS
+// ═══════════════════════════════════════════════════════
+function _fmtTime() {
+    return new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+}
+function _escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function _md(text) {
+    if (!text) return '';
+    var h = text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>');
+    var icons = ['🔹', '✨', '💡', '📌', '⚡'];
+    var idx = 0;
+    return h.split('\n').map(function(line) {
+        var t = line.trim();
+        if (t.startsWith('- ') || t.startsWith('• ')) {
+            var ic = icons[idx % icons.length];
+            idx++;
+            return '<div class="bullet-line"><span class="bullet-icon">' + ic + '</span><span>' + t.substring(2) + '</span></div>';
+        }
+        if (t === '') return '<br>';
+        return '<span>' + line + '</span><br>';
+    }).join('');
+}
+function _botMsg(text) {
+    var wb = document.getElementById('welcomeBox');
+    if (wb) wb.style.display = 'none';
+    var box = document.getElementById('msgBox');
+    var row = document.createElement('div');
+    row.className = 'msg-row';
+    row.innerHTML = '<div class="msg-avatar bot">🤖</div>'
+        + '<div class="msg-content"><div class="msg-bubble bot ai-md">' + _md(text) + '</div>'
+        + '<span class="msg-time">NovaTech AI • ' + _fmtTime() + '</span></div>';
+    _appendNode(row);
+    return row;
+}
+function appendMsg(sender, text) {
+    if (sender === 'user') {
+        var wb = document.getElementById('welcomeBox');
+        if (wb) wb.style.display = 'none';
+        var box = document.getElementById('msgBox');
+        var row = document.createElement('div');
+        row.className = 'msg-row user';
+        row.innerHTML = '<div class="msg-avatar user-av">👤</div>'
+            + '<div class="msg-content"><div class="msg-bubble user">' + _escHtml(text) + '</div>'
+            + '<span class="msg-time">Bạn • ' + _fmtTime() + '</span></div>';
+        _appendNode(row);
+        return row;
+    }
+    return _botMsg(text);
+}
+function _appendNode(node) {
+    var box = document.getElementById('msgBox');
+    if (!box) return;
+    var ti = document.getElementById('typingIndicator');
+    if (ti && ti.parentNode === box) box.insertBefore(node, ti);
+    else box.appendChild(node);
+    box.scrollTop = box.scrollHeight;
 }
 
-// ── Event listeners ──────────────────────────────────────────────────────────
-sendBtn.addEventListener('click', () => sendMessage());
-chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
-document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => sendMessage(c.dataset.q)));
+// ═══════════════════════════════════════════════════════
+// 3. ACTION CARD FUNCTIONS
+// ═══════════════════════════════════════════════════════
+function _updateImportCard(cardEl, p) {
+    var gn = p.giaNhap||0, gb = p.giaBan||0, sl = p.soLuongNhap||0;
+    var tc = (gn*sl).toLocaleString('vi-VN');
+    var ln = (gb>0&&gn>0)?Math.round((gb-gn)/gn*100):0;
+    var img = p.hinhAnh||'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=800&q=80';
+    cardEl.innerHTML = '<div class="action-card-title"><span>🛒</span><span>Đề xuất nhập: <strong style="color:#38bdf8">'+(p.tenSanPham||'Sản phẩm mới')+'</strong></span></div>'
+        +'<div style="display:flex;gap:14px;margin-bottom:12px;background:rgba(255,255,255,0.03);padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.08)">'
+        +'<img src="'+img+'" style="width:75px;height:75px;object-fit:cover;border-radius:10px" onerror="this.src=\'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=800&q=80\'"/>'
+        +'<div style="flex:1"><div style="font-weight:700;font-size:14px;color:#f8fafc">'+(p.tenSanPham||'—')+'</div>'
+        +'<div style="font-size:11px;color:#38bdf8">SKU: <strong>'+(p.sku||'Tự động tạo')+'</strong></div>'
+        +'<div style="font-size:11px;color:#cbd5e1">NCC: <strong>'+(p.tenNCC||'—')+'</strong></div>'
+        +'<div style="font-size:11px;color:#94a3b8">Biến thể: <strong>'+(p.bienThe||'Mặc định')+'</strong></div></div></div>'
+        +'<div class="payload-grid">'
+        +'<div class="payload-item"><div class="payload-label">📥 Số lượng</div><div class="payload-value" style="color:#38bdf8">'+sl+' cái</div></div>'
+        +'<div class="payload-item"><div class="payload-label">💰 Giá nhập</div><div class="payload-value price">'+gn.toLocaleString('vi-VN')+' đ</div></div>'
+        +'<div class="payload-item"><div class="payload-label">🏷️ Giá bán</div><div class="payload-value price">'+gb.toLocaleString('vi-VN')+' đ</div></div>'
+        +'<div class="payload-item"><div class="payload-label">🧾 Tổng vốn</div><div class="payload-value price">'+tc+' đ</div></div>'
+        +'<div class="payload-item" style="grid-column:span 2"><div class="payload-label">📈 Lợi nhuận</div><div class="payload-value" style="color:#10b981">+'+ln+'%</div></div>'
+        +'</div>'
+        +'<div style="margin-top:8px"><div class="payload-label">💡 Lý do</div><div style="font-size:12px;color:#94a3b8">'+(p.lyDoDeXuat||p.moTa||'Dự báo tiềm năng sinh lời cao.')+'</div></div>'
+        +'<div class="action-buttons">'
+        +'<button class="btn-accept" id="acceptBtn">✅ Chấp nhận — Tạo &amp; Nhập ngay!</button>'
+        +'<button class="btn-reject" id="rejectBtn">❌ Bỏ qua</button></div>';
+    _bindCard(cardEl, p, 'CREATE_PRODUCT_AND_IMPORT');
+}
+
+function _renderTop5(list, onSelect) {
+    if (!list||!list.length) return null;
+    var box = document.createElement('div');
+    box.className = 'top5-box';
+    var ranks = ['🔥 TOP 1','⭐ TOP 2','⚡ TOP 3','📈 TOP 4','💡 TOP 5'];
+    var html = list.map(function(item,i) {
+        var gn=item.giaNhap||0, gb=item.giaBan||0;
+        var profit=(gb>0&&gn>0)?Math.round((gb-gn)/gn*100):0;
+        var img=item.hinhAnh||'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=800&q=80';
+        return '<div class="top5-card '+(i===0?'active':'')+'" data-idx="'+i+'">'
+            +'<div class="top5-rank-badge">'+(ranks[i]||'#'+(i+1))+'</div>'
+            +'<div class="top5-img-container"><img src="'+img+'" class="top5-img" onerror="this.src=\'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=800&q=80\'"/></div>'
+            +'<div class="top5-name">'+(item.tenSanPham||'Sản phẩm')+'</div>'
+            +'<div class="top5-supplier-tag">'+(item.tenNCC||'NCC chính')+'</div>'
+            +'<div class="top5-variant-pill">'+(item.bienThe||'Mặc định')+'</div>'
+            +'<div class="top5-prices-row"><div><div class="top5-price-sell">'+gb.toLocaleString('vi-VN')+' đ</div><div class="top5-price-buy">Nhập: '+gn.toLocaleString('vi-VN')+' đ</div></div>'
+            +'<span class="top5-profit-pill">+'+profit+'%</span></div>'
+            +'<button class="btn-choose-import">🛒 Chọn nhập</button></div>';
+    }).join('');
+    box.innerHTML = '<div class="top5-header-bar"><div class="top5-header-title"><i class="fa-solid fa-fire" style="color:#e63946"></i> TOP 5 SẢN PHẨM HOT THỊ TRƯỜNG</div></div>'
+        +'<div class="top5-grid">'+html+'</div>';
+    box.querySelectorAll('.top5-card').forEach(function(card) {
+        card.addEventListener('click', function() {
+            box.querySelectorAll('.top5-card').forEach(function(c){c.classList.remove('active');});
+            card.classList.add('active');
+            if (onSelect) onSelect(list[parseInt(card.dataset.idx)]);
+        });
+    });
+    return box;
+}
+
+function _appendActionCard(payload, actionType) {
+    if (!payload) return;
+    if (actionType==='CREATE_PRODUCT_AND_IMPORT' && payload.top5Products && payload.top5Products.length) {
+        var current = payload.top5Products[0]||payload;
+        var card = document.createElement('div'); card.className='action-card';
+        var sh = _renderTop5(payload.top5Products, function(sel){ current=sel; _updateImportCard(card,current); });
+        if (sh) _appendNode(sh);
+        _updateImportCard(card, current);
+        _appendNode(card);
+        return;
+    }
+    var card = document.createElement('div'); card.className='action-card';
+    if (actionType==='CREATE_PROMOTION_CAMPAIGN') {
+        var code=payload.maCode||'SALE15', gt=payload.giaTri||15, sl=payload.soLuongNhap||50;
+        card.innerHTML='<div class="action-card-title" style="color:#f59e0b"><span>🔥</span><span>AI đề xuất — Khuyến Mãi</span></div>'
+            +'<div class="payload-grid"><div class="payload-item"><div class="payload-label">🎟️ Mã Voucher</div><div class="payload-value" style="color:#f59e0b">'+code+'</div></div>'
+            +'<div class="payload-item"><div class="payload-label">💰 Giảm</div><div class="payload-value price">-'+gt+'%</div></div></div>'
+            +'<div class="action-buttons"><button class="btn-accept" id="acceptBtn" style="background:linear-gradient(135deg,#f59e0b,#d97706)">🔥 Phát hành!</button>'
+            +'<button class="btn-reject" id="rejectBtn">❌ Bỏ qua</button></div>';
+    } else if (actionType==='SEND_PROMO_EMAIL_DONG_PLUS') {
+        var code=payload.maCode||'SALE15', gt=payload.giaTri||15;
+        card.innerHTML='<div class="action-card-title" style="color:#e63946"><span>📩</span><span>AI — Gửi Gmail Khách Đồng+</span></div>'
+            +'<div class="payload-grid"><div class="payload-item"><div class="payload-label">🎟️ Mã</div><div class="payload-value" style="color:#e63946">'+code+'</div></div>'
+            +'<div class="payload-item"><div class="payload-label">💰 Giảm</div><div class="payload-value price">-'+gt+'%</div></div></div>'
+            +'<div class="action-buttons"><button class="btn-accept" id="acceptBtn" style="background:linear-gradient(135deg,#e63946,#c1121f)">📩 Gửi Gmail!</button>'
+            +'<button class="btn-reject" id="rejectBtn">❌ Bỏ qua</button></div>';
+    } else if (actionType==='SEND_VIP_REWARD') {
+        var code=payload.maCode||'VIP2026', gt=payload.giaTri||20;
+        card.innerHTML='<div class="action-card-title" style="color:#818cf8"><span>💎</span><span>AI — Tri Ân Khách VIP</span></div>'
+            +'<div class="payload-grid"><div class="payload-item"><div class="payload-label">👑 Mã</div><div class="payload-value" style="color:#818cf8">'+code+'</div></div>'
+            +'<div class="payload-item"><div class="payload-label">🎁 Ưu đãi</div><div class="payload-value price">-'+gt+'%</div></div></div>'
+            +'<div class="action-buttons"><button class="btn-accept" id="acceptBtn" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">👑 Gửi quà!</button>'
+            +'<button class="btn-reject" id="rejectBtn">❌ Từ chối</button></div>';
+    } else {
+        _updateImportCard(card, payload);
+    }
+    _appendNode(card);
+    _bindCard(card, payload, actionType);
+}
+
+function _bindCard(cardEl, payload, actionType) {
+    var ab = cardEl.querySelector('#acceptBtn');
+    var rb = cardEl.querySelector('#rejectBtn');
+    if (ab) ab.addEventListener('click', async function() {
+        ab.disabled=true; ab.innerHTML='<div class="spinner-border spinner-border-sm" style="width:16px;height:16px"></div> Đang thực hiện...';
+        if (rb) rb.disabled=true;
+        try {
+            var r = await fetch('/Ai/ExecuteAction',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({actionType:actionType,actionPayload:payload})});
+            var d = await r.json();
+            cardEl.style.borderColor='rgba(16,185,129,0.5)'; cardEl.style.background='rgba(16,185,129,0.06)';
+            var btns=cardEl.querySelector('.action-buttons');
+            if(btns) btns.innerHTML='<span style="color:#10b981;font-size:13px;font-weight:700">✅ Đã thực hiện thành công!</span>';
+            _botMsg(d.message||'✅ Đã thực hiện tác vụ thành công!');
+        } catch(e) {
+            var btns=cardEl.querySelector('.action-buttons');
+            if(btns) btns.innerHTML='<span style="color:#ef4444;font-size:13px">❌ Lỗi: '+e.message+'</span>';
+        }
+    });
+    if (rb) rb.addEventListener('click', function() {
+        cardEl.style.opacity='0.4';
+        var btns=cardEl.querySelector('.action-buttons');
+        if(btns) btns.innerHTML='<span style="color:#64748b;font-size:13px">Đã bỏ qua.</span>';
+        _botMsg('👍 Đã bỏ qua. Bạn có muốn thử yêu cầu khác không?');
+    });
+}
+
+// ═══════════════════════════════════════════════════════
+// 4. DOM INIT
+// ═══════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+    var box = document.getElementById('msgBox');
+    var inp = document.getElementById('chatInput');
+    var btn = document.getElementById('sendBtn');
+    if (box) box.scrollTop = box.scrollHeight;
+    
+    // Parse Markdown for history messages loaded from server
+    try {
+        document.querySelectorAll('.ai-md').forEach(function(el) {
+            var raw = el.getAttribute('data-raw') || el.textContent;
+            if (raw) {
+                el.innerHTML = _md(raw);
+            }
+        });
+    } catch(e) { console.warn('Markdown history render error:', e); }
+
+    if (btn) btn.addEventListener('click', function() { window.sendMessage(); });
+    if (inp) inp.addEventListener('keydown', function(e) {
+        if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); window.sendMessage(); }
+    });
+});
 </script>
 }
+
