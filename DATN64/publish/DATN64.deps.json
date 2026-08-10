@@ -10,7 +10,7 @@
         "dependencies": {
           "ClosedXML": "0.102.3",
           "Microsoft.EntityFrameworkCore.SqlServer": "10.0.9",
-          "Microsoft.Extensions.Caching.SqlServer": "10.0.0-preview.2.25164.1"
+          "Microsoft.Extensions.Caching.SqlServer": "10.0.10"
         },
         "runtime": {
           "DATN64.dll": {}
@@ -234,15 +234,15 @@
           }
         }
       },
-      "Microsoft.Extensions.Caching.SqlServer/10.0.0-preview.2.25164.1": {
+      "Microsoft.Extensions.Caching.SqlServer/10.0.10": {
         "dependencies": {
           "Azure.Identity": "1.14.2",
           "Microsoft.Data.SqlClient": "6.1.1"
         },
         "runtime": {
           "lib/net10.0/Microsoft.Extensions.Caching.SqlServer.dll": {
-            "assemblyVersion": "10.0.0.0",
-            "fileVersion": "10.0.25.16401"
+            "assemblyVersion": "10.0.10.0",
+            "fileVersion": "10.0.1026.32716"
           }
         }
       },
@@ -524,12 +524,12 @@
       "path": "microsoft.entityframeworkcore.sqlserver/10.0.9",
       "hashPath": "microsoft.entityframeworkcore.sqlserver.10.0.9.nupkg.sha512"
     },
-    "Microsoft.Extensions.Caching.SqlServer/10.0.0-preview.2.25164.1": {
+    "Microsoft.Extensions.Caching.SqlServer/10.0.10": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-f/1hdxELTccHs7qWrUClUbRb4QwS4ZshGcrOCVmyFBQOZen4pMRXbV9owfBfThLAjCgN4OFzn4tR2qIffevs5Q==",
-      "path": "microsoft.extensions.caching.sqlserver/10.0.0-preview.2.25164.1",
-      "hashPath": "microsoft.extensions.caching.sqlserver.10.0.0-preview.2.25164.1.nupkg.sha512"
+      "sha512": "sha512-c5dyhJoeDapja0D3qbt+7iMsG3BFITaM77HCWHW/Yef4zgQSuKkooPw4/SWwc2HfZocbMp0mDvh40U9/iO1p/Q==",
+      "path": "microsoft.extensions.caching.sqlserver/10.0.10",
+      "hashPath": "microsoft.extensions.caching.sqlserver.10.0.10.nupkg.sha512"
     },
     "Microsoft.Identity.Client/4.73.1": {
       "type": "package",

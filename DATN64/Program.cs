@@ -2,6 +2,8 @@ using DATN64.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.DataProtection;
 using System.IO;
+using DATN64.Services;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +16,8 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<GeminiService>();
 builder.Services.AddScoped<OpenAIService>();
 builder.Services.AddScoped<DATN64.Services.IAttendanceService, DATN64.Services.AttendanceService>();
+builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("MailSettings"));
+builder.Services.AddScoped<EmailService>();
 
 // 1. Persist Data Protection keys to file system so cookie decryption works across App Pool recycles
 var keysFolder = Path.Combine(builder.Environment.ContentRootPath, "temp-keys");

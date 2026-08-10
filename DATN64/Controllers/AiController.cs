@@ -661,7 +661,7 @@ KHÔNG bao giờ trả về text bên ngoài JSON.";
                         var sp = item.Product;
                         decimal discountedPrice = sp.GiaBan * (1 - giaTri / 100m);
                         string imgSrc = !string.IsNullOrEmpty(sp.HinhAnh)
-                            ? (sp.HinhAnh.StartsWith("http") ? sp.HinhAnh : $"https://localhost:5001{sp.HinhAnh}")
+                            ? (sp.HinhAnh.StartsWith("http") ? sp.HinhAnh : sp.HinhAnh)
                             : "https://via.placeholder.com/80x80?text=SP";
                         return $@"
                         <tr>
