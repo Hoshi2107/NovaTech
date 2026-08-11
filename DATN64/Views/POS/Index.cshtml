@@ -513,67 +513,6 @@
             </div>
           </div>
 
-          <!-- Pay Option Cards -->
-          <div class="mb-3">
-            <label class="form-label text-xxs voucher-label fw-semibold mb-1.5">Phương thức thanh toán</label>
-            <div class="d-flex gap-2">
-              <div class="payment-card flex-grow-1 text-center" :class="{ active: paymentMethod === 'Tiền mặt' }" @@click="paymentMethod = 'Tiền mặt'">
-                <i class="fa-solid fa-money-bill-1-wave fs-6 mb-1"></i>
-                <span class="text-xxs fw-bold d-block">Tiền mặt</span>
-              </div>
-              <div class="payment-card flex-grow-1 text-center" :class="{ active: paymentMethod === 'Chuyển khoản' }" @@click="paymentMethod = 'Chuyển khoản'">
-                <i class="fa-solid fa-credit-card fs-6 mb-1"></i>
-                <span class="text-xxs fw-bold d-block">Chuyển khoản</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Cash Calculator Section -->
-          <div class="cash-calculator-section mb-3 p-3 rounded-3" v-if="paymentMethod === 'Tiền mặt'">
-            <div class="row g-2 mb-2">
-              <div class="col-6">
-                <label class="form-label text-xxs voucher-label fw-semibold mb-1">Tiền khách đưa</label>
-                <div class="input-group input-group-sm">
-                  <input type="number" v-model.number="cashReceived" class="form-control text-xs input-pos" placeholder="0">
-                  <span class="input-group-text bg-dark-custom text-xxs border-slate-800" style="color: var(--text-secondary) !important;">đ</span>
-                </div>
-              </div>
-              <div class="col-6">
-                <label class="form-label text-xxs voucher-label fw-semibold mb-1">Tiền thừa trả khách</label>
-                <div class="text-emerald text-sm fw-extrabold mt-1.5">
-                  ${ formatMoney(changeDue) } đ
-                </div>
-              </div>
-            </div>
-            <!-- Quick Cash Buttons -->
-            <div class="d-flex flex-wrap gap-1.5 quick-cash-buttons">
-              <button type="button" class="btn btn-xs btn-outline-slate rounded px-2 py-1 text-xxs fw-bold" @@click="cashReceived = totalAmount">Đủ tiền</button>
-              <button type="button" class="btn btn-xs btn-outline-slate rounded px-2 py-1 text-xxs fw-bold" v-if="totalAmount < 50000" @@click="cashReceived = 50000">50k</button>
-              <button type="button" class="btn btn-xs btn-outline-slate rounded px-2 py-1 text-xxs fw-bold" v-if="totalAmount < 100000" @@click="cashReceived = 100000">100k</button>
-              <button type="button" class="btn btn-xs btn-outline-slate rounded px-2 py-1 text-xxs fw-bold" v-if="totalAmount < 200000" @@click="cashReceived = 200000">200k</button>
-              <button type="button" class="btn btn-xs btn-outline-slate rounded px-2 py-1 text-xxs fw-bold" v-if="totalAmount < 500000" @@click="cashReceived = 500000">500k</button>
-              <button type="button" class="btn btn-xs btn-outline-slate rounded px-2 py-1 text-xxs fw-bold" v-if="totalAmount < 1000000" @@click="cashReceived = 1000000">1M</button>
-            </div>
-          </div>
-
-          <!-- Bank Transfer QR Section -->
-          <div class="qr-payment-section mb-3 p-3 rounded-3 text-center" v-if="paymentMethod === 'Chuyển khoản'">
-            <div v-if="cart.length === 0" class="py-3 text-warning text-xs fw-semibold">
-              <i class="fa-solid fa-circle-exclamation fs-5 mb-1.5 d-block text-warning animate-bounce"></i>
-              Bạn cần chọn 1 sản phẩm trước khi thanh toán
-            </div>
-            <div v-else>
-              <label class="form-label text-xxs voucher-label fw-semibold mb-2 d-block">Quét mã QR để chuyển khoản</label>
-              <div class="qr-container d-inline-block p-2 bg-white rounded-3 shadow-sm mb-2" @@click="zoomQR = true" style="cursor: zoom-in;">
-                <img :key="qrCodeUrl" :src="qrCodeUrl" @@error="handleQrError" alt="VietQR Thanh toán" class="img-fluid" style="max-width: 160px; display: block; margin: 0 auto;">
-              </div>
-              <div class="text-xxs text-secondary mt-1">
-                <div>Ngân hàng: <strong class="text-cyan">${ bankConfig.bankId }</strong> | STK: <strong class="text-cyan">${ bankConfig.accountNo }</strong></div>
-                <div>Chủ tài khoản: <strong class="text-cyan">${ bankConfig.accountName }</strong></div>
-              </div>
-            </div>
-          </div>
-
           <!-- Total Bill -->
           <div class="billing-summary d-flex justify-content-between align-items-center p-3 rounded-3 mb-3" style="background: var(--input-bg); border: 1px solid var(--border-color);">
             <div class="d-flex flex-column">
@@ -583,7 +522,7 @@
             <span class="fs-3 text-emerald fw-extrabold">${ formatMoney(totalAmount) } đ</span>
           </div>
 
-          <button type="submit" class="btn btn-checkout w-100 py-2.5 fw-bold text-sm" :disabled="cart.length === 0 || checkingOut">
+          <button type="button" class="btn btn-checkout w-100 py-2.5 fw-bold text-sm" :disabled="cart.length === 0 || checkingOut" @@click="openPaymentModal">
             <span v-if="checkingOut" class="spinner-border spinner-border-sm me-2"></span>
             <i class="fa-solid fa-circle-check me-2" v-if="!checkingOut"></i> Xác nhận & In hóa đơn
           </button>
@@ -592,98 +531,247 @@
       </div>
     </div>
 
+    <!-- ═══ Payment Method Selection Modal ═══ -->
+    <div class="payment-select-overlay d-flex align-items-center justify-content-center"
+         v-if="showPaymentModal"
+         @@click.self="showPaymentModal = false"
+         style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9997;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);">
+      <div class="payment-select-panel" style="background:var(--panel-bg, #0f172a);border:1px solid rgba(56,189,248,0.2);border-radius:20px;width:460px;max-width:95vw;padding:0;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,0.6);">
+
+        <!-- Header -->
+        <div class="d-flex align-items-center justify-content-between px-5 pt-5 pb-3" style="border-bottom:1px solid rgba(255,255,255,0.07);">
+          <div>
+            <div class="text-xxs text-cyan fw-semibold mb-1"><i class="fa-solid fa-wallet me-1"></i>THANH TOÁN ĐƠN HÀNG</div>
+            <div class="fw-bold" style="color:var(--text-primary,#f1f5f9);font-size:1.05rem;">Chọn phương thức thanh toán</div>
+            <div class="text-xxs mt-1" style="color:var(--text-secondary,#94a3b8);">Tổng: <strong class="text-emerald">${ formatMoney(totalAmount) } đ</strong></div>
+          </div>
+          <button type="button" class="btn-variant-close" @@click="showPaymentModal = false" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#94a3b8;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.85rem;cursor:pointer;">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <!-- Payment method cards -->
+        <div class="px-5 py-4">
+          <div class="d-flex gap-3 mb-4">
+
+            <!-- Tiền mặt -->
+            <div class="payment-select-card flex-grow-1"
+                 :class="{ 'payment-select-card-active': paymentMethod === 'Tiền mặt' }"
+                 @@click="paymentMethod = 'Tiền mặt'"
+                 style="cursor:pointer;border-radius:14px;padding:20px 16px;text-align:center;border:2px solid;transition:all 0.25s ease;"
+                 :style="paymentMethod === 'Tiền mặt' ? 'border-color:#38bdf8;background:rgba(56,189,248,0.1);' : 'border-color:rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);'">
+              <div style="font-size:2rem;margin-bottom:8px;">
+                <i class="fa-solid fa-money-bill-wave" :style="paymentMethod === 'Tiền mặt' ? 'color:#38bdf8' : 'color:#64748b'"></i>
+              </div>
+              <div class="fw-bold text-sm mb-1" :style="paymentMethod === 'Tiền mặt' ? 'color:#38bdf8' : 'color:#94a3b8'">Tiền mặt</div>
+              <div class="text-xxs" style="color:#64748b;">Thanh toán tiền mặt trực tiếp</div>
+              <div class="mt-2" v-if="paymentMethod === 'Tiền mặt'">
+                <i class="fa-solid fa-circle-check text-cyan" style="font-size:1.1rem;"></i>
+              </div>
+            </div>
+
+            <!-- Chuyển khoản -->
+            <div class="payment-select-card flex-grow-1"
+                 :class="{ 'payment-select-card-active': paymentMethod === 'Chuyển khoản' }"
+                 @@click="paymentMethod = 'Chuyển khoản'"
+                 style="cursor:pointer;border-radius:14px;padding:20px 16px;text-align:center;border:2px solid;transition:all 0.25s ease;"
+                 :style="paymentMethod === 'Chuyển khoản' ? 'border-color:#34d399;background:rgba(52,211,153,0.1);' : 'border-color:rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);'">
+              <div style="font-size:2rem;margin-bottom:8px;">
+                <i class="fa-solid fa-qrcode" :style="paymentMethod === 'Chuyển khoản' ? 'color:#34d399' : 'color:#64748b'"></i>
+              </div>
+              <div class="fw-bold text-sm mb-1" :style="paymentMethod === 'Chuyển khoản' ? 'color:#34d399' : 'color:#94a3b8'">Chuyển khoản</div>
+              <div class="text-xxs" style="color:#64748b;">QR VietQR — thanh toán online</div>
+              <div class="mt-2" v-if="paymentMethod === 'Chuyển khoản'">
+                <i class="fa-solid fa-circle-check" style="color:#34d399;font-size:1.1rem;"></i>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Cash section (only for Tiền mặt) -->
+          <div v-if="paymentMethod === 'Tiền mặt'" class="cash-calculator-section p-3 rounded-3 mb-4" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);">
+            <div class="row g-2 mb-2">
+              <div class="col-6">
+                <label class="form-label text-xxs voucher-label fw-semibold mb-1">Tiền khách đưa</label>
+                <div class="input-group input-group-sm">
+                  <input type="number" v-model.number="cashReceived" class="form-control text-xs input-pos" placeholder="0" autofocus>
+                  <span class="input-group-text bg-dark-custom text-xxs border-slate-800" style="color:var(--text-secondary,#94a3b8) !important;">đ</span>
+                </div>
+              </div>
+              <div class="col-6">
+                <label class="form-label text-xxs voucher-label fw-semibold mb-1">Tiền thừa trả khách</label>
+                <div class="fw-extrabold mt-1.5" style="font-size:1rem;" :class="changeDue >= 0 && cashReceived > 0 ? 'text-emerald' : 'text-danger'">
+                  ${ formatMoney(changeDue) } đ
+                </div>
+              </div>
+            </div>
+            <div class="d-flex flex-wrap gap-1.5 quick-cash-buttons">
+              <button type="button" class="btn btn-xs btn-outline-slate rounded px-2 py-1 text-xxs fw-bold" @@click="cashReceived = totalAmount">Đủ tiền</button>
+              <button type="button" class="btn btn-xs btn-outline-slate rounded px-2 py-1 text-xxs fw-bold" v-if="totalAmount < 50000" @@click="cashReceived = 50000">50k</button>
+              <button type="button" class="btn btn-xs btn-outline-slate rounded px-2 py-1 text-xxs fw-bold" v-if="totalAmount < 100000" @@click="cashReceived = 100000">100k</button>
+              <button type="button" class="btn btn-xs btn-outline-slate rounded px-2 py-1 text-xxs fw-bold" v-if="totalAmount < 200000" @@click="cashReceived = 200000">200k</button>
+              <button type="button" class="btn btn-xs btn-outline-slate rounded px-2 py-1 text-xxs fw-bold" v-if="totalAmount < 500000" @@click="cashReceived = 500000">500k</button>
+              <button type="button" class="btn btn-xs btn-outline-slate rounded px-2 py-1 text-xxs fw-bold" v-if="totalAmount < 1000000" @@click="cashReceived = 1000000">1M</button>
+              <button type="button" class="btn btn-xs btn-outline-slate rounded px-2 py-1 text-xxs fw-bold" v-if="totalAmount < 2000000" @@click="cashReceived = 2000000">2M</button>
+              <button type="button" class="btn btn-xs btn-outline-slate rounded px-2 py-1 text-xxs fw-bold" v-if="totalAmount < 5000000" @@click="cashReceived = 5000000">5M</button>
+            </div>
+          </div>
+
+          <!-- QR Code section (only for Chuyển khoản) -->
+          <div v-if="paymentMethod === 'Chuyển khoản'" class="qr-payment-section mb-4 p-3 rounded-3 text-center" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);">
+            <div v-if="cart.length === 0" class="py-2 text-warning text-xs fw-semibold">
+              <i class="fa-solid fa-circle-exclamation fs-5 mb-1 d-block"></i>Bạn cần chọn sản phẩm trước
+            </div>
+            <div v-else>
+              <label class="form-label text-xxs voucher-label fw-semibold mb-2 d-block">Quét mã QR để chuyển khoản</label>
+              <div class="qr-container d-inline-block p-2 bg-white rounded-3 shadow-sm mb-2" @@click="zoomQR = true" style="cursor:zoom-in;">
+                <img :key="qrCodeUrl" :src="qrCodeUrl" @@error="handleQrError" alt="VietQR" class="img-fluid" style="max-width:150px;display:block;margin:0 auto;">
+              </div>
+              <div class="text-xxs" style="color:var(--text-secondary,#94a3b8);">
+                <div>Ngân hàng: <strong class="text-cyan">${ bankConfig.bankId }</strong> | STK: <strong class="text-cyan">${ bankConfig.accountNo }</strong></div>
+                <div>Chủ TK: <strong class="text-cyan">${ bankConfig.accountName }</strong></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action buttons -->
+          <div class="d-flex gap-3">
+            <button type="button" class="btn flex-grow-1 py-2 fw-semibold text-xs"
+                    style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#94a3b8;border-radius:12px;"
+                    @@click="showPaymentModal = false">
+              <i class="fa-solid fa-arrow-left me-2"></i>Quay lại
+            </button>
+            <button type="button" class="btn flex-grow-1 py-2 fw-bold text-sm btn-checkout"
+                    style="border-radius:12px;"
+                    :disabled="checkingOut"
+                    @@click="confirmPaymentAndCheckout">
+              <span v-if="checkingOut" class="spinner-border spinner-border-sm me-2"></span>
+              <i class="fa-solid fa-circle-check me-2" v-if="!checkingOut"></i>
+              ${ paymentMethod === 'Tiền mặt' ? 'Xác nhận thanh toán' : 'Đã nhận tiền' }
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Printable Receipt Modal -->
     <div class="modal fade" id="receiptModal" tabindex="-1" aria-hidden="true" :class="{ show: showReceiptModal, 'd-block': showReceiptModal }" style="background: rgba(0,0,0,0.75);" v-if="showReceiptModal && lastOrder">
       <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
         <div class="modal-content border-0 text-dark bg-white shadow-lg" style="border-radius: 16px;">
-          <div class="modal-body p-4" id="printable-receipt">
-            <div class="text-center mb-3">
-              <h5 class="fw-bold m-0 text-dark">HÓA ĐƠN BÁN LẺ</h5>
-              <div class="text-xs text-muted mt-1">NovaTech Store - Hệ thống POS thông minh</div>
-              <div class="text-xxs text-muted">Đ/c: 123 Đường Ba Tháng Hai, Quận 10, TP.HCM</div>
-            </div>
-            
-            <hr class="border-secondary border-dashed my-2">
-            
-            <div class="text-xs mb-3 d-grid gap-1">
-              <div class="d-flex justify-content-between">
-                <span class="text-muted">Mã hóa đơn:</span>
-                <span class="fw-bold text-dark">${ lastOrder.orderCode }</span>
+          <div class="modal-body p-0" id="printable-receipt">
+
+            <!-- ── Receipt Header ── -->
+            <div style="background: linear-gradient(135deg, #0a1628 0%, #0f2444 100%); padding: 18px 22px 14px; border-radius: 16px 16px 0 0;">
+              <div class="d-flex align-items-center justify-content-between">
+                <!-- Logo trái -->
+                <div class="d-flex align-items-center gap-2">
+                  <img src="/assets/images/NovaTech-Logo.png" alt="NovaTech Logo"
+                       style="height: 42px; width: 42px; object-fit: contain; border-radius: 8px; background: rgba(255,255,255,0.08); padding: 3px;">
+                  <div>
+                    <div style="font-size: 0.8rem; font-weight: 800; color: #38bdf8; letter-spacing: 0.05em; line-height: 1.1;">NOVATECH</div>
+                    <div style="font-size: 0.55rem; color: #94a3b8; letter-spacing: 0.08em; text-transform: uppercase;">Laptops &amp; Accessories</div>
+                  </div>
+                </div>
+                <!-- Tiêu đề phải -->
+                <div class="text-end">
+                  <div style="font-size: 0.75rem; font-weight: 700; color: #ffffff; letter-spacing: 0.04em;">HÓA ĐƠN BÁN LẺ</div>
+                  <div style="font-size: 0.55rem; color: #64748b; margin-top: 2px;">RETAIL INVOICE</div>
+                </div>
               </div>
-              <div class="d-flex justify-content-between">
-                <span class="text-muted">Thời gian:</span>
-                <span class="text-dark">${ lastOrder.date }</span>
-              </div>
-              <div class="d-flex justify-content-between">
-                <span class="text-muted">Thu ngân:</span>
-                <span class="text-dark">${ lastOrder.cashier }</span>
-              </div>
-              <div class="d-flex justify-content-between">
-                <span class="text-muted">Khách hàng:</span>
-                <span class="text-dark">${ lastOrder.customerName }</span>
-              </div>
-              <div class="d-flex justify-content-between" v-if="lastOrder.customerPhone">
-                <span class="text-muted">SĐT:</span>
-                <span class="text-dark">${ lastOrder.customerPhone }</span>
+              <!-- Thông tin cửa hàng -->
+              <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08);">
+                <div style="font-size: 0.6rem; color: #64748b; line-height: 1.6;">
+                  <span style="color: #94a3b8;">📍</span> 123 Đường Ba Tháng Hai, Quận 10, TP.HCM &nbsp;|&nbsp;
+                  <span style="color: #94a3b8;">📞</span> 1800-NOVATECH &nbsp;|&nbsp;
+                  <span style="color: #94a3b8;">🌐</span> novatech.vn
+                </div>
               </div>
             </div>
 
-            <hr class="border-secondary border-dashed my-2">
+            <!-- ── Order Info ── -->
+            <div style="padding: 14px 22px 0;">
+              <div style="background: #f8fafc; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px;">
+                <div class="d-grid gap-1" style="font-size: 0.72rem;">
+                  <div class="d-flex justify-content-between">
+                    <span style="color: #64748b;">Mã hóa đơn</span>
+                    <span style="font-weight: 700; color: #0f172a;">${ lastOrder.orderCode }</span>
+                  </div>
+                  <div class="d-flex justify-content-between">
+                    <span style="color: #64748b;">Thời gian</span>
+                    <span style="color: #0f172a;">${ lastOrder.date }</span>
+                  </div>
+                  <div class="d-flex justify-content-between">
+                    <span style="color: #64748b;">Thu ngân</span>
+                    <span style="color: #0f172a;">${ lastOrder.cashier }</span>
+                  </div>
+                  <div class="d-flex justify-content-between">
+                    <span style="color: #64748b;">Khách hàng</span>
+                    <span style="color: #0f172a;">${ lastOrder.customerName }</span>
+                  </div>
+                  <div class="d-flex justify-content-between" v-if="lastOrder.customerPhone">
+                    <span style="color: #64748b;">Số điện thoại</span>
+                    <span style="color: #0f172a;">${ lastOrder.customerPhone }</span>
+                  </div>
+                </div>
+              </div>
 
-            <!-- Items table -->
-            <div class="mb-3">
-              <table class="w-100 text-xs">
+              <!-- ── Items table ── -->
+              <table style="width: 100%; font-size: 0.72rem; border-collapse: collapse; margin-bottom: 4px;">
                 <thead>
-                  <tr class="border-bottom text-muted">
-                    <th class="py-1 text-start">Sản phẩm</th>
-                    <th class="py-1 text-center" style="width: 50px;">SL</th>
-                    <th class="py-1 text-end" style="width: 100px;">Thành tiền</th>
+                  <tr style="border-bottom: 2px solid #e2e8f0;">
+                    <th style="padding: 6px 0; text-align: left; color: #64748b; font-weight: 600;">Sản phẩm</th>
+                    <th style="padding: 6px 0; text-align: center; color: #64748b; font-weight: 600; width: 40px;">SL</th>
+                    <th style="padding: 6px 0; text-align: right; color: #64748b; font-weight: 600; width: 100px;">Thành tiền</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="item in lastOrder.items" :key="item.id" class="border-bottom">
-                    <td class="py-2">
-                      <div class="fw-semibold text-dark">${ item.name }</div>
-                      <div class="text-xxs text-muted">${ formatMoney(item.price) } đ</div>
+                  <tr v-for="item in lastOrder.items" :key="item.id" style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 8px 0;">
+                      <div style="font-weight: 600; color: #0f172a;">${ item.name }</div>
+                      <div style="font-size: 0.62rem; color: #94a3b8;">${ formatMoney(item.price) } đ / cái</div>
                     </td>
-                    <td class="py-2 text-center text-dark">${ item.quantity }</td>
-                    <td class="py-2 text-end text-dark fw-bold">${ formatMoney(item.price * item.quantity) } đ</td>
+                    <td style="text-align: center; color: #0f172a; font-weight: 600;">${ item.quantity }</td>
+                    <td style="text-align: right; color: #0f172a; font-weight: 700;">${ formatMoney(item.price * item.quantity) } đ</td>
                   </tr>
                 </tbody>
               </table>
-            </div>
 
-            <div class="d-grid gap-1 pt-2">
-              <div class="d-flex justify-content-between text-xs" v-if="lastOrder.discount > 0">
-                <span class="text-muted">Tạm tính:</span>
-                <span class="text-dark fw-bold">${ formatMoney(lastOrder.subtotal) } đ</span>
+              <!-- ── Totals ── -->
+              <div style="background: #f8fafc; border-radius: 8px; padding: 10px 14px; margin: 10px 0; font-size: 0.72rem;">
+                <div class="d-flex justify-content-between mb-1" v-if="lastOrder.discount > 0">
+                  <span style="color: #64748b;">Tạm tính</span>
+                  <span style="color: #0f172a;">${ formatMoney(lastOrder.subtotal) } đ</span>
+                </div>
+                <div class="d-flex justify-content-between mb-1" style="color: #ef4444;" v-if="lastOrder.discount > 0">
+                  <span>Voucher (${ lastOrder.voucherCode })</span>
+                  <span>- ${ formatMoney(lastOrder.discount) } đ</span>
+                </div>
+                <div class="d-flex justify-content-between mb-1">
+                  <span style="color: #64748b;">Hình thức thanh toán</span>
+                  <span style="color: #0f172a; font-weight: 600;">${ lastOrder.paymentMethod }</span>
+                </div>
+                <div v-if="lastOrder.paymentMethod === 'Tiền mặt' && lastOrder.cashReceived > 0">
+                  <div class="d-flex justify-content-between mb-1">
+                    <span style="color: #64748b;">Tiền khách đưa</span>
+                    <span style="color: #0f172a;">${ formatMoney(lastOrder.cashReceived) } đ</span>
+                  </div>
+                  <div class="d-flex justify-content-between mb-1">
+                    <span style="color: #64748b;">Tiền thừa trả khách</span>
+                    <span style="color: #16a34a; font-weight: 700;">${ formatMoney(lastOrder.changeDue) } đ</span>
+                  </div>
+                </div>
+                <div style="border-top: 2px solid #e2e8f0; margin-top: 8px; padding-top: 8px;" class="d-flex justify-content-between align-items-center">
+                  <span style="font-size: 0.78rem; font-weight: 800; color: #0f172a;">TỔNG CỘNG</span>
+                  <span style="font-size: 1.1rem; font-weight: 900; color: #dc2626;">${ formatMoney(lastOrder.totalAmount) } đ</span>
+                </div>
               </div>
-              <div class="d-flex justify-content-between text-xs text-danger fw-semibold" v-if="lastOrder.discount > 0">
-                <span>Voucher giảm giá (${ lastOrder.voucherCode }):</span>
-                <span>- ${ formatMoney(lastOrder.discount) } đ</span>
+
+              <!-- ── Footer ── -->
+              <div style="text-align: center; padding: 12px 0 16px; border-top: 1px dashed #cbd5e1; margin-top: 4px;">
+                <div style="font-size: 0.7rem; font-weight: 700; color: #0f172a; margin-bottom: 3px;">Cảm ơn Quý khách đã mua hàng tại NovaTech! 🎉</div>
+                <div style="font-size: 0.6rem; color: #94a3b8;">Giữ lại hóa đơn này để được hỗ trợ bảo hành</div>
+                <div style="font-size: 0.6rem; color: #94a3b8; margin-top: 2px;">Hotline: 1800-NOVATECH &nbsp;•&nbsp; novatech.vn</div>
               </div>
-              <div class="d-flex justify-content-between text-xs">
-                <span class="text-muted">Hình thức:</span>
-                <span class="text-dark fw-bold">${ lastOrder.paymentMethod }</span>
-              </div>
-              <div class="d-flex justify-content-between align-items-center text-sm border-top border-secondary border-dashed pt-2 mt-1">
-                <span class="fw-bold text-dark">TỔNG CỘNG:</span>
-                <span class="fs-5 fw-extrabold text-danger">${ formatMoney(lastOrder.totalAmount) } đ</span>
-              </div>
-              
-              <!-- Cash Calculator Receipt Info -->
-              <div class="d-flex justify-content-between text-xs border-top border-secondary border-dashed pt-2 mt-1" v-if="lastOrder.paymentMethod === 'Tiền mặt' && lastOrder.cashReceived > 0">
-                <span class="text-muted">Tiền khách đưa:</span>
-                <span class="text-dark fw-bold">${ formatMoney(lastOrder.cashReceived) } đ</span>
-              </div>
-              <div class="d-flex justify-content-between text-xs" v-if="lastOrder.paymentMethod === 'Tiền mặt' && lastOrder.cashReceived > 0">
-                <span class="text-muted">Tiền thừa trả khách:</span>
-                <span class="text-dark fw-bold text-success">${ formatMoney(lastOrder.changeDue) } đ</span>
-              </div>
-            </div>
-            
-            <div class="text-center text-muted text-xxs mt-4">
-              Cảm ơn Quý khách. Hẹn gặp lại!
             </div>
           </div>
           <div class="modal-footer border-0 p-3 bg-light d-flex justify-content-end gap-2" style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">

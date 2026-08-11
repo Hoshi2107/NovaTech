@@ -71,7 +71,10 @@ var app = new Vue({
         showVariantModal: false,
         variantProduct: null,
         variantList: [],
-        variantLoading: false
+        variantLoading: false,
+
+        // Payment method modal
+        showPaymentModal: false
     },
     watch: {
         isDarkMode(newVal) {
@@ -525,23 +528,24 @@ var app = new Vue({
             if (this.sortBy === 'nameAsc') return 'Tên: A -> Z';
             return 'Mặc định';
         },
+        openPaymentModal() {
+            if (this.cart.length === 0) return;
+            this.paymentMethod = 'Tiền mặt'; // reset về mặc định mỗi lần mở
+            this.cashReceived = 0;
+            this.showPaymentModal = true;
+        },
+        async confirmPaymentAndCheckout() {
+            // Validation tiền mặt chưa đủ
+            if (this.paymentMethod === 'Tiền mặt' && this.cashReceived > 0 && this.cashReceived < this.totalAmount) {
+                this.errorMsg = 'Cảnh báo: Tiền khách đưa chưa đủ để thực hiện thanh toán!';
+                alert('Cảnh báo: Tiền khách đưa chưa đủ để thực hiện thanh toán!');
+                return;
+            }
+            this.showPaymentModal = false;
+            await this.handleCheckout();
+        },
         async handleCheckout() {
             if (this.cart.length === 0) return;
-
-            // Bỏ validation bắt buộc SĐT — khách vãng lai có thể checkout không cần SĐT
-
-            // 2. Validation for Cash Payment under-payment
-            if (this.paymentMethod === 'Tiền mặt' && this.cashReceived > 0 && this.cashReceived < this.totalAmount) {
-                this.errorMsg = "Cảnh báo: Tiền khách đưa chưa đủ để thực hiện thanh toán!";
-                alert("Cảnh báo: Tiền khách đưa chưa đủ để thực hiện thanh toán!");
-                return;
-            }
-
-            // 2. Confirmation before payment
-            const confirmPayment = confirm("Cảnh báo: Bạn có chắc chắn muốn xác nhận thanh toán và in hóa đơn cho đơn hàng này?");
-            if (!confirmPayment) {
-                return;
-            }
 
             this.checkingOut = true;
             this.errorMsg = "";
