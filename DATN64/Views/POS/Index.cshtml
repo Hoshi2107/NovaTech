@@ -247,7 +247,7 @@
                     </span>
                   </div>
                   <div class="card-body p-2.5 d-flex flex-column">
-                    <div class="text-xxs text-uppercase fw-bold text-muted mb-1" style="font-size: 0.65rem;">${ p.category }</div>
+                    <div class="text-xxs text-uppercase fw-bold mb-1" style="font-size: 0.65rem; color: var(--text-secondary);">${ p.category }</div>
                     <h6 class="text-xs text-truncate mb-1 fw-bold product-name-highlight" :title="p.name">${ p.name }</h6>
                     <div class="mb-1"><span class="sku-badge"><i class="fa-solid fa-barcode me-1" style="font-size:0.55rem;"></i>${ p.sku }</span></div>
 
@@ -516,8 +516,8 @@
           <!-- Total Bill -->
           <div class="billing-summary d-flex justify-content-between align-items-center p-3 rounded-3 mb-3" style="background: var(--input-bg); border: 1px solid var(--border-color);">
             <div class="d-flex flex-column">
-              <span class="fs-5 fw-bold text-white">Tổng tiền thanh toán</span>
-              <span class="text-xxs text-muted mt-1" v-if="voucherDiscountValue > 0" style="text-decoration: line-through;">Tạm tính: ${ formatMoney(subtotalAmount) } đ</span>
+              <span class="fs-5 fw-bold" style="color: var(--text-primary);">Tổng tiền thanh toán</span>
+              <span class="text-xxs mt-1" style="color: var(--text-secondary); text-decoration: line-through;" v-if="voucherDiscountValue > 0">Tạm tính: ${ formatMoney(subtotalAmount) } đ</span>
             </div>
             <span class="fs-3 text-emerald fw-extrabold">${ formatMoney(totalAmount) } đ</span>
           </div>
