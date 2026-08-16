@@ -47,7 +47,7 @@ namespace DATN64.Controllers
             if (syncType == "Đơn hàng")
             {
                 using var client = new HttpClient();
-                var simulatorUrl = "http://localhost:6060/api/tiktok/orders";
+                var simulatorUrl = "http://localhost:6060/api/stream/orders";
 
                 try
                 {

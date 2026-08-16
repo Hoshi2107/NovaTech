@@ -410,14 +410,24 @@ namespace FakeTikTokShop.Controllers
             {
                 return "";
             }
-            if (imageUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || 
-                imageUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            if (imageUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            {
+                // Upgrade HTTP to HTTPS to prevent Mixed Content warnings on HTTPS pages
+                return "https://" + imageUrl.Substring("http://".Length);
+            }
+            if (imageUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
                 return imageUrl;
             }
             
+            // Relative URL: prefix with base URL (use HTTPS if base is HTTP for safety)
+            string resolvedBase = baseUrl.TrimEnd('/');
+            if (resolvedBase.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            {
+                resolvedBase = "https://" + resolvedBase.Substring("http://".Length);
+            }
             string relativePath = imageUrl.StartsWith("/") ? imageUrl : "/" + imageUrl;
-            return baseUrl.TrimEnd('/') + relativePath;
+            return resolvedBase + relativePath;
         }
 
         // --- LIVESTREAM API ---
