@@ -45,12 +45,13 @@ namespace DATN64.Controllers
             status = (status ?? string.Empty).Trim();
 
             var query = _context.CustomerInboxThreads
+                .Include(t => t.Messages)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(keyword))
             {
                 query = query.Where(t =>
-                    t.CustomerName.Contains(keyword) ||
+                    (t.CustomerName != null && t.CustomerName.Contains(keyword)) ||
                     (t.CustomerPhone != null && t.CustomerPhone.Contains(keyword)) ||
                     (t.Subject != null && t.Subject.Contains(keyword)) ||
                     t.Messages.Any(m => m.Text.Contains(keyword))
@@ -74,31 +75,22 @@ namespace DATN64.Controllers
                 .OrderByDescending(t => t.UpdatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(t => new
-                {
-                    id = t.Id,
-                    customerId = t.CustomerId,
-                    customerName = t.CustomerName,
-                    customerPhone = t.CustomerPhone,
-                    channel = t.Channel,
-                    subject = t.Subject,
-                    status = t.Status,
-                    priority = t.Priority,
-                    updatedAt = t.UpdatedAt,
+                .ToList();
 
-                    lastMessage = t.Messages
-                        .OrderByDescending(m => m.Timestamp)
-                        .Select(m => m.Text)
-                        .FirstOrDefault(),
+            foreach (var thread in threads)
+            {
+                TryAttachCorrectCustomerProfileToThread(thread);
+            }
 
-                    unreadCount = t.Messages
-                        .Count(m => m.Sender == "customer" && !m.IsRead)
-                })
+            _context.SaveChanges();
+
+            var result = threads
+                .Select(ToThreadDto)
                 .ToList();
 
             return Json(new
             {
-                items = threads,
+                items = result,
                 currentPage = page,
                 pageSize = pageSize,
                 totalItems = totalItems,
@@ -122,6 +114,9 @@ namespace DATN64.Controllers
             {
                 return NotFound(new { message = "Không tìm thấy hội thoại." });
             }
+
+            TryAttachCorrectCustomerProfileToThread(thread);
+            _context.SaveChanges();
 
             return Json(ToThreadDto(thread));
         }
@@ -157,8 +152,9 @@ namespace DATN64.Controllers
                 thread.Status = "Processing";
             }
 
-            // Không cập nhật UpdatedAt ở đây.
-            // Nếu chỉ bấm xem chat mà cập nhật UpdatedAt thì danh sách sẽ bị đảo vị trí.
+            TryAttachCorrectCustomerProfileToThread(thread);
+
+            // Không cập nhật UpdatedAt ở đây để danh sách không bị đảo vị trí khi chỉ bấm xem.
             _context.SaveChanges();
 
             return Json(new
@@ -188,18 +184,23 @@ namespace DATN64.Controllers
                 return NotFound(new { message = "Không tìm thấy hội thoại." });
             }
 
+            if (thread.Status == "Closed")
+            {
+                return BadRequest(new { message = "Hội thoại đã đóng. Không thể gửi phản hồi mới." });
+            }
+
             if (string.IsNullOrWhiteSpace(messageText))
             {
                 return BadRequest(new { message = "Vui lòng nhập nội dung phản hồi." });
             }
 
-            var now = DateTime.Now;
+            TryAttachCorrectCustomerProfileToThread(thread);
 
             thread.Messages.Add(new CustomerInboxMessage
             {
                 Sender = "staff",
                 Text = messageText,
-                Timestamp = now,
+                Timestamp = DateTime.Now,
                 IsRead = true
             });
 
@@ -211,18 +212,54 @@ namespace DATN64.Controllers
                 }
             }
 
-            thread.Status = string.IsNullOrWhiteSpace(request.Status)
-                ? "Replied"
-                : request.Status;
-
-            // Có phản hồi mới thật sự thì cập nhật UpdatedAt là hợp lý.
-            thread.UpdatedAt = now;
+            thread.Status = string.IsNullOrWhiteSpace(request.Status) ? "Replied" : request.Status;
+            thread.UpdatedAt = DateTime.Now;
 
             _context.SaveChanges();
 
             return Json(new
             {
                 message = "Đã gửi phản hồi cho khách hàng.",
+                thread = ToThreadDto(thread)
+            });
+        }
+
+        [HttpPost]
+        [HasPermission("View_Order")]
+        public IActionResult CloseCustomerThread([FromBody] ThreadIdRequest request)
+        {
+            if (request == null || request.ThreadId <= 0)
+            {
+                return BadRequest(new { message = "Hội thoại không hợp lệ." });
+            }
+
+            var thread = _context.CustomerInboxThreads
+                .Include(t => t.Messages)
+                .FirstOrDefault(t => t.Id == request.ThreadId);
+
+            if (thread == null)
+            {
+                return NotFound(new { message = "Không tìm thấy hội thoại." });
+            }
+
+            TryAttachCorrectCustomerProfileToThread(thread);
+
+            thread.Status = "Closed";
+            thread.UpdatedAt = DateTime.Now;
+
+            foreach (var message in thread.Messages)
+            {
+                if (message.Sender == "customer")
+                {
+                    message.IsRead = true;
+                }
+            }
+
+            _context.SaveChanges();
+
+            return Json(new
+            {
+                message = "Đã đóng hội thoại.",
                 thread = ToThreadDto(thread)
             });
         }
@@ -267,31 +304,28 @@ namespace DATN64.Controllers
                 return Unauthorized(new { message = "Vui lòng đăng nhập để sử dụng chat." });
             }
 
-            if (request == null)
-            {
-                return BadRequest(new { message = "Dữ liệu không hợp lệ." });
-            }
-
-            var customerName = (request.CustomerName ?? "").Trim();
-            var customerPhone = (request.CustomerPhone ?? "").Trim();
+            var customerName = NormalizeText(request.CustomerName);
+            var customerPhone = NormalizePhone(request.CustomerPhone);
+            var customerEmail = NormalizeEmail(request.CustomerEmail);
+            var sessionEmail = NormalizeEmail(HttpContext.Session.GetString("UserEmail"));
 
             var subjectText = string.IsNullOrWhiteSpace(request.Subject)
                 ? "Chat hỗ trợ NovaTech"
                 : request.Subject.Trim();
 
-            var messageText = (request.Message ?? "").Trim();
+            var messageText = NormalizeText(request.Message);
 
             if (string.IsNullOrWhiteSpace(customerName) || string.IsNullOrWhiteSpace(messageText))
             {
                 return BadRequest(new { message = "Vui lòng nhập nội dung câu hỏi." });
             }
 
-            KhachHang? customer = null;
+            var customer = FindCustomerForNewInquiry(customerEmail, customerPhone, sessionEmail, customerName);
 
-            if (!string.IsNullOrWhiteSpace(customerPhone))
+            if (customer != null)
             {
-                customer = _context.KhachHangs
-                    .FirstOrDefault(k => k.SoDienThoai == customerPhone);
+                customerName = string.IsNullOrWhiteSpace(customer.HoTen) ? customerName : customer.HoTen.Trim();
+                customerPhone = string.IsNullOrWhiteSpace(customer.SoDienThoai) ? customerPhone : customer.SoDienThoai.Trim();
             }
 
             var now = DateTime.Now;
@@ -301,7 +335,7 @@ namespace DATN64.Controllers
                 CustomerId = customer?.MaKhachHang ?? 0,
                 CustomerName = customerName,
                 CustomerPhone = customerPhone,
-                Channel = "Store",
+                Channel = "Website",
                 Subject = subjectText,
                 Status = "Unread",
                 Priority = "Medium",
@@ -344,16 +378,11 @@ namespace DATN64.Controllers
                 return Unauthorized(new { message = "Vui lòng đăng nhập để sử dụng chat." });
             }
 
-            if (request == null || request.ThreadId <= 0)
-            {
-                return BadRequest(new { message = "Hội thoại không hợp lệ." });
-            }
-
             var thread = _context.CustomerInboxThreads
                 .Include(t => t.Messages)
                 .FirstOrDefault(t => t.Id == request.ThreadId);
 
-            var messageText = (request.Message ?? "").Trim();
+            var messageText = NormalizeText(request.Message);
 
             if (thread == null)
             {
@@ -365,18 +394,18 @@ namespace DATN64.Controllers
                 return BadRequest(new { message = "Vui lòng nhập nội dung tin nhắn." });
             }
 
-            var now = DateTime.Now;
+            TryAttachCorrectCustomerProfileToThread(thread);
 
             thread.Messages.Add(new CustomerInboxMessage
             {
                 Sender = "customer",
                 Text = messageText,
-                Timestamp = now,
+                Timestamp = DateTime.Now,
                 IsRead = false
             });
 
             thread.Status = "Unread";
-            thread.UpdatedAt = now;
+            thread.UpdatedAt = DateTime.Now;
 
             _context.SaveChanges();
 
@@ -393,11 +422,217 @@ namespace DATN64.Controllers
             return !string.IsNullOrWhiteSpace(email);
         }
 
+        private KhachHang? FindCustomerForNewInquiry(string? requestEmail, string? requestPhone, string? sessionEmail, string? requestName)
+        {
+            requestEmail = NormalizeEmail(requestEmail);
+            requestPhone = NormalizePhone(requestPhone);
+            sessionEmail = NormalizeEmail(sessionEmail);
+            requestName = NormalizeText(requestName);
+
+            KhachHang? customer = null;
+
+            if (!string.IsNullOrWhiteSpace(requestEmail))
+            {
+                customer = _context.KhachHangs
+                    .FirstOrDefault(k =>
+                        k.Email != null &&
+                        k.Email.ToLower() == requestEmail);
+            }
+
+            if (customer == null && !string.IsNullOrWhiteSpace(requestPhone))
+            {
+                customer = _context.KhachHangs
+                    .FirstOrDefault(k =>
+                        k.SoDienThoai != null &&
+                        k.SoDienThoai == requestPhone);
+            }
+
+            if (customer == null && !string.IsNullOrWhiteSpace(sessionEmail))
+            {
+                customer = _context.KhachHangs
+                    .FirstOrDefault(k =>
+                        k.Email != null &&
+                        k.Email.ToLower() == sessionEmail);
+            }
+
+            if (customer == null && !string.IsNullOrWhiteSpace(requestName))
+            {
+                customer = FindUniqueCustomerByName(requestName);
+            }
+
+            return customer;
+        }
+
+        private void TryAttachCorrectCustomerProfileToThread(CustomerInboxThread thread)
+        {
+            var matchedCustomer = ResolveCorrectCustomerForThread(thread);
+
+            if (matchedCustomer == null)
+            {
+                thread.CustomerId = 0;
+                return;
+            }
+
+            thread.CustomerId = matchedCustomer.MaKhachHang;
+
+            if (string.IsNullOrWhiteSpace(thread.CustomerPhone))
+            {
+                thread.CustomerPhone = matchedCustomer.SoDienThoai;
+            }
+
+            if (string.IsNullOrWhiteSpace(thread.CustomerName) ||
+                IsLikelyWrongCustomerName(thread.CustomerName, matchedCustomer.HoTen))
+            {
+                thread.CustomerName = matchedCustomer.HoTen;
+            }
+        }
+
+        private KhachHang? ResolveCorrectCustomerForThread(CustomerInboxThread thread)
+        {
+            var threadName = NormalizeText(thread.CustomerName);
+            var threadPhone = NormalizePhone(thread.CustomerPhone);
+
+            if (!string.IsNullOrWhiteSpace(threadPhone))
+            {
+                var byPhone = _context.KhachHangs
+                    .FirstOrDefault(k =>
+                        k.SoDienThoai != null &&
+                        k.SoDienThoai == threadPhone);
+
+                if (byPhone != null)
+                {
+                    return byPhone;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(threadName))
+            {
+                var byUniqueName = FindUniqueCustomerByName(threadName);
+
+                if (byUniqueName != null)
+                {
+                    return byUniqueName;
+                }
+            }
+
+            if (thread.CustomerId > 0)
+            {
+                var byId = _context.KhachHangs
+                    .FirstOrDefault(k => k.MaKhachHang == thread.CustomerId);
+
+                if (byId != null && IsThreadCompatibleWithCustomer(thread, byId))
+                {
+                    return byId;
+                }
+            }
+
+            return null;
+        }
+
+        private KhachHang? FindUniqueCustomerByName(string name)
+        {
+            name = NormalizeText(name);
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return null;
+            }
+
+            var matched = _context.KhachHangs
+                .Where(k =>
+                    k.HoTen != null &&
+                    k.HoTen.Trim().ToLower() == name.ToLower())
+                .Take(2)
+                .ToList();
+
+            if (matched.Count == 1)
+            {
+                return matched[0];
+            }
+
+            return null;
+        }
+
+        private bool IsThreadCompatibleWithCustomer(CustomerInboxThread thread, KhachHang customer)
+        {
+            var threadName = NormalizeText(thread.CustomerName);
+            var threadPhone = NormalizePhone(thread.CustomerPhone);
+            var customerName = NormalizeText(customer.HoTen);
+            var customerPhone = NormalizePhone(customer.SoDienThoai);
+
+            if (!string.IsNullOrWhiteSpace(threadPhone) &&
+                !string.IsNullOrWhiteSpace(customerPhone) &&
+                threadPhone == customerPhone)
+            {
+                return true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(threadName) &&
+                !string.IsNullOrWhiteSpace(customerName) &&
+                threadName.Equals(customerName, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool IsLikelyWrongCustomerName(string threadName, string? customerName)
+        {
+            threadName = NormalizeText(threadName);
+            customerName = NormalizeText(customerName);
+
+            if (string.IsNullOrWhiteSpace(threadName) || string.IsNullOrWhiteSpace(customerName))
+            {
+                return false;
+            }
+
+            return !threadName.Equals(customerName, StringComparison.OrdinalIgnoreCase);
+        }
+
         private object ToThreadDto(CustomerInboxThread thread)
         {
             var messages = thread.Messages
                 .OrderBy(m => m.Timestamp)
-                .Select(m => new
+                .ToList();
+
+            var lastMessage = messages.LastOrDefault();
+
+            var unreadCount = messages.Count(m =>
+                m.Sender == "customer" &&
+                !m.IsRead);
+
+            var customer = ResolveCorrectCustomerForThread(thread);
+
+            var finalCustomerId = customer?.MaKhachHang ?? 0;
+
+            var customerName = !string.IsNullOrWhiteSpace(thread.CustomerName)
+                ? thread.CustomerName
+                : customer?.HoTen ?? "Khách hàng";
+
+            var customerPhone = !string.IsNullOrWhiteSpace(thread.CustomerPhone)
+                ? thread.CustomerPhone
+                : customer?.SoDienThoai ?? "";
+
+            return new
+            {
+                id = thread.Id,
+                customerId = finalCustomerId,
+                customerName = customerName,
+                customerPhone = customerPhone,
+                customerEmail = customer?.Email ?? "",
+                customerAddress = customer?.DiaChi ?? "",
+                customerPoints = customer?.DiemTichLuy ?? 0,
+                customerStatus = customer?.TrangThai ?? "",
+                canOpenCustomerProfile = finalCustomerId > 0,
+                channel = string.IsNullOrWhiteSpace(thread.Channel) ? "Website" : thread.Channel,
+                subject = thread.Subject,
+                status = string.IsNullOrWhiteSpace(thread.Status) ? "Unread" : thread.Status,
+                priority = thread.Priority,
+                updatedAt = thread.UpdatedAt,
+                lastMessage = lastMessage?.Text ?? "",
+                unreadCount = unreadCount,
+                messages = messages.Select(m => new
                 {
                     id = m.Id,
                     threadId = m.ThreadId,
@@ -406,32 +641,29 @@ namespace DATN64.Controllers
                     timestamp = m.Timestamp,
                     isRead = m.IsRead,
                     isAutoReply = m.IsAutoReply
-                })
-                .ToList();
-
-            var lastMessage = messages
-                .OrderByDescending(m => m.timestamp)
-                .Select(m => m.text)
-                .FirstOrDefault();
-
-            var unreadCount = messages
-                .Count(m => m.sender == "customer" && !m.isRead);
-
-            return new
-            {
-                id = thread.Id,
-                customerId = thread.CustomerId,
-                customerName = thread.CustomerName,
-                customerPhone = thread.CustomerPhone,
-                channel = thread.Channel,
-                subject = thread.Subject,
-                status = thread.Status,
-                priority = thread.Priority,
-                updatedAt = thread.UpdatedAt,
-                lastMessage = lastMessage,
-                unreadCount = unreadCount,
-                messages = messages
+                }).ToList()
             };
+        }
+
+        private static string NormalizeEmail(string? email)
+        {
+            return string.IsNullOrWhiteSpace(email)
+                ? ""
+                : email.Trim().ToLowerInvariant();
+        }
+
+        private static string NormalizePhone(string? phone)
+        {
+            return string.IsNullOrWhiteSpace(phone)
+                ? ""
+                : phone.Trim();
+        }
+
+        private static string NormalizeText(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value)
+                ? ""
+                : value.Trim();
         }
 
         public class ThreadIdRequest
@@ -450,6 +682,7 @@ namespace DATN64.Controllers
         {
             public string? CustomerName { get; set; }
             public string? CustomerPhone { get; set; }
+            public string? CustomerEmail { get; set; }
             public string? Subject { get; set; }
             public string? Message { get; set; }
         }

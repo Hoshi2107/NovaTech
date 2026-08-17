@@ -3,9 +3,11 @@
 
 @{
     var session = HttpContextAccessor.HttpContext?.Session;
+
     var userEmail = session?.GetString("UserEmail") ?? "";
     var userName = session?.GetString("UserName") ?? "";
     var userRoles = session?.GetString("UserRoles") ?? "";
+    var customerPhone = session?.GetString("CustomerPhone") ?? "";
 
     var isLogged = !string.IsNullOrWhiteSpace(userEmail);
 
@@ -13,61 +15,1118 @@
     var loginUrl = Url.Action("Login", "Account", new { returnUrl = returnUrl });
 }
 
-<link rel="stylesheet" href="~/css/customer-messenger.css" asp-append-version="true" />
-
 @if (!isLogged)
 {
-    <div id="customerMessenger" class="customer-chat">
-        <a class="chat-toggle text-decoration-none" href="@loginUrl">
-            <span>💬</span>
-            <span>Đăng nhập để chat</span>
+    <div id="nova-chat-widget">
+        <a class="nova-chat-toggle nova-chat-login-link text-decoration-none" href="@loginUrl">
+            <span class="nova-chat-toggle-icon">
+                <i class="fa-solid fa-comment-dots"></i>
+            </span>
+
+            <span class="nova-chat-toggle-text">
+                Đăng nhập để chat
+            </span>
+
+            <span class="nova-chat-online-dot"></span>
         </a>
     </div>
 }
 else
 {
-    <div
-        id="customerMessenger"
-        class="customer-chat"
-        data-user-email="@userEmail"
-        data-user-name="@userName"
-        data-user-roles="@userRoles"
-    >
-        <button id="customerChatToggle" class="chat-toggle" type="button">
-            <span>💬</span>
-            <span>Chat với NovaTech</span>
-            <b id="customerChatBadge" style="display:none;">0</b>
+    <div id="nova-chat-widget"
+         data-user-name="@userName"
+         data-user-email="@userEmail"
+         data-user-roles="@userRoles"
+         data-customer-phone="@customerPhone">
+
+        <button id="novaChatToggle" type="button" class="nova-chat-toggle">
+            <span class="nova-chat-toggle-icon">
+                <i class="fa-solid fa-comment-dots"></i>
+            </span>
+
+            <span class="nova-chat-toggle-text">
+                Chat với NovaTech
+            </span>
+
+            <span id="novaChatBadge" class="nova-chat-badge nova-chat-hidden">0</span>
+            <span class="nova-chat-online-dot"></span>
         </button>
 
-        <div id="customerChatBox" class="chat-box" style="display:none;">
-            <div class="chat-header">
-                <div>
-                    <h3>NovaTech Support</h3>
-                    <p>Thường phản hồi trong vài phút</p>
+        <div id="novaChatPanel" class="nova-chat-panel nova-chat-hidden">
+            <div class="nova-chat-header">
+                <div class="nova-chat-header-left">
+                    <div class="nova-chat-avatar">
+                        <i class="fa-solid fa-headset"></i>
+                    </div>
+
+                    <div>
+                        <div class="nova-chat-title">NovaTech Support</div>
+                        <div class="nova-chat-subtitle">
+                            <span class="nova-live-dot"></span>
+                            Thường phản hồi trong vài phút
+                        </div>
+                    </div>
                 </div>
-                <button id="customerChatClose" type="button">×</button>
-            </div>
 
-            <div id="customerChatMessages" class="chat-messages">
-                <div class="chat-empty">
-                    Chào bạn 👋 Hãy nhập tin nhắn để bắt đầu chat với NovaTech.
+                <div class="nova-chat-header-actions">
+                    <button id="novaChatClear" type="button" class="nova-chat-icon-btn" title="Xóa lịch sử hiển thị">
+                        <i class="fa-solid fa-rotate-left"></i>
+                    </button>
+
+                    <button id="novaChatClose" type="button" class="nova-chat-icon-btn" title="Đóng">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
                 </div>
             </div>
 
-            <div class="chat-reply">
-                <textarea
-                    id="customerChatInput"
-                    placeholder="Nhập tin nhắn..."
-                ></textarea>
+            <div id="novaChatBody" class="nova-chat-body">
+                <div class="nova-chat-welcome">
+                    <div class="nova-chat-welcome-icon">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    </div>
 
-                <button id="customerChatSend" type="button">
-                    Gửi
-                </button>
+                    <div class="nova-chat-welcome-title">
+                        Xin chào, NovaTech có thể hỗ trợ gì cho anh/chị?
+                    </div>
+
+                    <div class="nova-chat-welcome-text">
+                        Gửi câu hỏi về đơn hàng, sản phẩm, bảo hành hoặc góp ý dịch vụ.
+                    </div>
+                </div>
             </div>
 
-            <div id="customerChatStatus" class="chat-status" style="display:none;"></div>
+            <div id="novaTyping" class="nova-typing nova-chat-hidden">
+                <div class="nova-typing-bubble">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+
+                <div class="nova-typing-text">NovaTech đang xử lý...</div>
+            </div>
+
+            <div class="nova-chat-footer">
+                <div id="novaChatStatus" class="nova-chat-status"></div>
+
+                <div class="nova-chat-input-wrap">
+                    <textarea id="novaChatInput"
+                              rows="2"
+                              placeholder="Nhập tin nhắn..."
+                              autocomplete="off"></textarea>
+
+                    <button id="novaChatSend" type="button" class="nova-chat-send">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </div>
+
+                <div class="nova-chat-hint">
+                    Nhấn Enter để gửi, Shift + Enter để xuống dòng.
+                </div>
+            </div>
+        </div>
+
+        <div id="novaConfirmModal" class="nova-confirm-modal nova-chat-hidden">
+            <div class="nova-confirm-backdrop"></div>
+
+            <div class="nova-confirm-box">
+                <div class="nova-confirm-icon">
+                    <i class="fa-solid fa-trash-can"></i>
+                </div>
+
+                <div class="nova-confirm-title">
+                    Xóa lịch sử chat?
+                </div>
+
+                <div class="nova-confirm-text">
+                    Bạn có chắc muốn xóa lịch sử chat đang lưu trên trình duyệt này không?
+                    <br />
+                    <span>Dữ liệu trong admin CSKH vẫn được giữ.</span>
+                </div>
+
+                <div class="nova-confirm-actions">
+                    <button type="button" id="novaConfirmCancel" class="nova-confirm-btn btn-cancel">
+                        Hủy
+                    </button>
+
+                    <button type="button" id="novaConfirmOk" class="nova-confirm-btn btn-ok">
+                        <i class="fa-solid fa-check me-1"></i>
+                        Xác nhận
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
+}
 
-    <script src="~/js/customer-messenger.js" asp-append-version="true"></script>
+<style>
+    #nova-chat-widget {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        z-index: 9999;
+        font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    .nova-chat-toggle {
+        position: relative;
+        border: 0;
+        outline: none;
+        cursor: pointer;
+        min-height: 48px;
+        padding: 12px 18px;
+        border-radius: 999px;
+        color: #ffffff;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+        font-weight: 800;
+        background: linear-gradient(135deg, #2563eb, #06b6d4, #2563eb);
+        background-size: 220% 220%;
+        box-shadow: 0 16px 36px rgba(37, 99, 235, 0.35);
+        animation: novaGradient 5s ease infinite, novaFloat 3s ease-in-out infinite;
+        transition: transform 0.22s ease, box-shadow 0.22s ease;
+        text-decoration: none;
+    }
+
+    .nova-chat-toggle:hover {
+        color: #ffffff;
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 22px 48px rgba(37, 99, 235, 0.45);
+        text-decoration: none;
+    }
+
+    .nova-chat-toggle-icon {
+        width: 26px;
+        height: 26px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.18);
+    }
+
+    .nova-chat-online-dot {
+        position: absolute;
+        top: 5px;
+        right: 8px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #22c55e;
+        box-shadow: 0 0 0 rgba(34, 197, 94, 0.7);
+        animation: novaPing 1.8s infinite;
+    }
+
+    .nova-chat-badge {
+        position: absolute;
+        top: -7px;
+        right: -7px;
+        min-width: 22px;
+        height: 22px;
+        padding: 0 6px;
+        border-radius: 999px;
+        background: #ef4444;
+        color: #ffffff;
+        font-size: 11px;
+        font-weight: 900;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid #ffffff;
+        box-shadow: 0 8px 18px rgba(239, 68, 68, 0.35);
+    }
+
+    .nova-chat-panel {
+        width: 390px;
+        height: 590px;
+        margin-top: 14px;
+        border-radius: 26px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        box-shadow: 0 28px 70px rgba(15, 23, 42, 0.24);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        transform-origin: bottom right;
+        animation: novaPanelIn 0.32s ease;
+    }
+
+    .nova-chat-hidden {
+        display: none !important;
+    }
+
+    .nova-chat-header {
+        padding: 16px 18px;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background:
+            radial-gradient(circle at top left, rgba(255, 255, 255, 0.24), transparent 32%),
+            linear-gradient(135deg, #0f172a, #2563eb 45%, #06b6d4);
+        background-size: 180% 180%;
+        animation: novaGradient 8s ease infinite;
+    }
+
+    .nova-chat-header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .nova-chat-avatar {
+        width: 46px;
+        height: 46px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.18);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        box-shadow: inset 0 0 14px rgba(255, 255, 255, 0.16);
+        border: 1px solid rgba(255, 255, 255, 0.22);
+    }
+
+    .nova-chat-title {
+        font-size: 16px;
+        font-weight: 900;
+        line-height: 1.2;
+    }
+
+    .nova-chat-subtitle {
+        margin-top: 4px;
+        font-size: 12px;
+        opacity: 0.92;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .nova-live-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #22c55e;
+        box-shadow: 0 0 0 rgba(34, 197, 94, 0.7);
+        animation: novaPingSmall 1.8s infinite;
+    }
+
+    .nova-chat-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .nova-chat-icon-btn {
+        width: 34px;
+        height: 34px;
+        border: 0;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.16);
+        color: #ffffff;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.22s ease;
+    }
+
+    .nova-chat-icon-btn:hover {
+        background: rgba(255, 255, 255, 0.28);
+        transform: rotate(8deg) scale(1.07);
+    }
+
+    .nova-chat-body {
+        flex: 1;
+        padding: 16px;
+        overflow-y: auto;
+        scroll-behavior: smooth;
+        background:
+            radial-gradient(circle at top right, rgba(6, 182, 212, 0.14), transparent 32%),
+            radial-gradient(circle at bottom left, rgba(37, 99, 235, 0.12), transparent 34%),
+            linear-gradient(180deg, #f8fbff, #eef6ff);
+    }
+
+    .nova-chat-body::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .nova-chat-body::-webkit-scrollbar-thumb {
+        background: rgba(37, 99, 235, 0.24);
+        border-radius: 999px;
+    }
+
+    .nova-chat-welcome {
+        margin: 6px 0 16px;
+        padding: 16px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.78);
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
+        animation: novaFadeUp 0.42s ease;
+    }
+
+    .nova-chat-welcome-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #2563eb, #06b6d4);
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 10px;
+    }
+
+    .nova-chat-welcome-title {
+        color: #0f172a;
+        font-size: 14px;
+        font-weight: 900;
+        line-height: 1.35;
+    }
+
+    .nova-chat-welcome-text {
+        margin-top: 5px;
+        color: #64748b;
+        font-size: 12px;
+        line-height: 1.45;
+    }
+
+    .nova-msg-row {
+        display: flex;
+        margin-bottom: 13px;
+        animation: novaFadeUp 0.28s ease;
+    }
+
+    .nova-msg-row.user {
+        justify-content: flex-end;
+    }
+
+    .nova-msg-row.support {
+        justify-content: flex-start;
+    }
+
+    .nova-msg {
+        max-width: 80%;
+        padding: 11px 13px;
+        border-radius: 18px;
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+        position: relative;
+        word-break: break-word;
+    }
+
+    .nova-msg.user {
+        color: #ffffff;
+        background: linear-gradient(135deg, #2563eb, #3b82f6);
+        border-bottom-right-radius: 6px;
+    }
+
+    .nova-msg.support {
+        color: #0f172a;
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid #e2e8f0;
+        border-bottom-left-radius: 6px;
+    }
+
+    .nova-msg-sender {
+        font-size: 11px;
+        font-weight: 900;
+        opacity: 0.82;
+        margin-bottom: 5px;
+    }
+
+    .nova-msg-text {
+        font-size: 14px;
+        line-height: 1.48;
+        white-space: pre-wrap;
+    }
+
+    .nova-msg-time {
+        margin-top: 6px;
+        font-size: 10.5px;
+        opacity: 0.7;
+    }
+
+    .nova-typing {
+        padding: 0 16px 10px;
+        background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.92));
+        display: flex;
+        align-items: center;
+        gap: 9px;
+    }
+
+    .nova-typing-bubble {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 9px 12px;
+        border-radius: 999px;
+        background: #ffffff;
+        border: 1px solid #dbeafe;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    }
+
+    .nova-typing-bubble span {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #2563eb;
+        animation: novaTypingDot 1.3s infinite ease-in-out;
+    }
+
+    .nova-typing-bubble span:nth-child(2) {
+        animation-delay: 0.16s;
+    }
+
+    .nova-typing-bubble span:nth-child(3) {
+        animation-delay: 0.32s;
+    }
+
+    .nova-typing-text {
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .nova-chat-footer {
+        padding: 14px;
+        background: rgba(255, 255, 255, 0.94);
+        border-top: 1px solid #e2e8f0;
+    }
+
+    .nova-chat-status {
+        min-height: 18px;
+        font-size: 12px;
+        font-weight: 700;
+        margin-bottom: 7px;
+        color: #64748b;
+    }
+
+    .nova-chat-status.success {
+        color: #16a34a;
+    }
+
+    .nova-chat-status.error {
+        color: #dc2626;
+    }
+
+    .nova-chat-input-wrap {
+        display: grid;
+        grid-template-columns: 1fr 48px;
+        gap: 9px;
+        align-items: end;
+    }
+
+    #novaChatInput {
+        resize: none;
+        min-height: 48px;
+        max-height: 110px;
+        width: 100%;
+        border: 1.5px solid #cbd5e1;
+        outline: none;
+        border-radius: 18px;
+        padding: 13px 14px;
+        font-size: 14px;
+        color: #0f172a;
+        background: #ffffff;
+        transition: all 0.22s ease;
+    }
+
+    #novaChatInput:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+    }
+
+    .nova-chat-send {
+        width: 48px;
+        height: 48px;
+        border: 0;
+        border-radius: 16px;
+        color: #ffffff;
+        background: linear-gradient(135deg, #2563eb, #06b6d4);
+        cursor: pointer;
+        box-shadow: 0 12px 24px rgba(37, 99, 235, 0.25);
+        transition: all 0.22s ease;
+    }
+
+    .nova-chat-send:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 16px 30px rgba(37, 99, 235, 0.32);
+    }
+
+    .nova-chat-send:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .nova-chat-hint {
+        margin-top: 8px;
+        font-size: 11px;
+        color: #94a3b8;
+        font-weight: 600;
+    }
+
+    .nova-confirm-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: novaConfirmFadeIn 0.22s ease;
+    }
+
+    .nova-confirm-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.48);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+    }
+
+    .nova-confirm-box {
+        position: relative;
+        width: min(430px, calc(100vw - 28px));
+        background: #ffffff;
+        border-radius: 26px;
+        padding: 26px 22px 22px;
+        box-shadow: 0 28px 70px rgba(15, 23, 42, 0.30);
+        border: 1px solid #e2e8f0;
+        text-align: center;
+        animation: novaConfirmZoomIn 0.25s ease;
+    }
+
+    .nova-confirm-icon {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 15px;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        color: #ef4444;
+        background: linear-gradient(135deg, #fee2e2, #fecaca);
+        box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.4);
+    }
+
+    .nova-confirm-title {
+        font-size: 22px;
+        font-weight: 900;
+        color: #0f172a;
+        margin-bottom: 10px;
+    }
+
+    .nova-confirm-text {
+        font-size: 14px;
+        line-height: 1.6;
+        color: #475569;
+        margin-bottom: 21px;
+    }
+
+    .nova-confirm-text span {
+        display: inline-block;
+        margin-top: 4px;
+        color: #2563eb;
+        font-weight: 800;
+    }
+
+    .nova-confirm-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+    }
+
+    .nova-confirm-btn {
+        min-width: 122px;
+        border: 0;
+        border-radius: 15px;
+        padding: 12px 16px;
+        font-size: 14px;
+        font-weight: 900;
+        cursor: pointer;
+        transition: all 0.22s ease;
+    }
+
+    .nova-confirm-btn.btn-cancel {
+        background: #f1f5f9;
+        color: #334155;
+    }
+
+    .nova-confirm-btn.btn-cancel:hover {
+        background: #e2e8f0;
+        transform: translateY(-1px);
+    }
+
+    .nova-confirm-btn.btn-ok {
+        color: #ffffff;
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        box-shadow: 0 12px 24px rgba(239, 68, 68, 0.25);
+    }
+
+    .nova-confirm-btn.btn-ok:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 16px 30px rgba(239, 68, 68, 0.32);
+    }
+
+    @@keyframes novaPanelIn {
+        from {
+            opacity: 0;
+            transform: translateY(18px) scale(0.96);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    @@keyframes novaFadeUp {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @@keyframes novaFloat {
+        0%, 100% {
+            transform: translateY(0);
+        }
+
+        50% {
+            transform: translateY(-4px);
+        }
+    }
+
+    @@keyframes novaPing {
+        0% {
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.75);
+        }
+
+        70% {
+            box-shadow: 0 0 0 12px rgba(34, 197, 94, 0);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+        }
+    }
+
+    @@keyframes novaPingSmall {
+        0% {
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.65);
+        }
+
+        70% {
+            box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+        }
+    }
+
+    @@keyframes novaTypingDot {
+        0%, 80%, 100% {
+            transform: translateY(0);
+            opacity: 0.45;
+        }
+
+        40% {
+            transform: translateY(-4px);
+            opacity: 1;
+        }
+    }
+
+    @@keyframes novaGradient {
+        0% {
+            background-position: 0% 50%;
+        }
+
+        50% {
+            background-position: 100% 50%;
+        }
+
+        100% {
+            background-position: 0% 50%;
+        }
+    }
+
+    @@keyframes novaConfirmFadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    @@keyframes novaConfirmZoomIn {
+        from {
+            opacity: 0;
+            transform: scale(0.92) translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+    }
+
+    @@media (max-width: 576px) {
+        #nova-chat-widget {
+            left: 12px;
+            right: 12px;
+            bottom: 12px;
+        }
+
+        .nova-chat-toggle {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .nova-chat-panel {
+            width: 100%;
+            height: 76vh;
+            border-radius: 22px;
+        }
+
+        .nova-confirm-actions {
+            flex-direction: column;
+        }
+
+        .nova-confirm-btn {
+            width: 100%;
+        }
+    }
+</style>
+
+@if (isLogged)
+{
+    <script>
+        (function () {
+            const widget = document.getElementById('nova-chat-widget');
+            const toggle = document.getElementById('novaChatToggle');
+            const panel = document.getElementById('novaChatPanel');
+            const closeBtn = document.getElementById('novaChatClose');
+            const clearBtn = document.getElementById('novaChatClear');
+            const body = document.getElementById('novaChatBody');
+            const input = document.getElementById('novaChatInput');
+            const sendBtn = document.getElementById('novaChatSend');
+            const status = document.getElementById('novaChatStatus');
+            const typing = document.getElementById('novaTyping');
+
+            const confirmModal = document.getElementById('novaConfirmModal');
+            const confirmOkBtn = document.getElementById('novaConfirmOk');
+            const confirmCancelBtn = document.getElementById('novaConfirmCancel');
+
+            const sessionUserName = (widget.dataset.userName || '').trim();
+            const sessionUserEmail = (widget.dataset.userEmail || '').trim();
+            const sessionCustomerPhone = (widget.dataset.customerPhone || '').trim();
+
+            const storageKey = 'novatech_customer_chat_thread_id_v3_' + (sessionUserEmail || 'guest');
+
+            let currentThreadId = localStorage.getItem(storageKey);
+            let isSending = false;
+
+            function escapeHtml(value) {
+                return String(value || '')
+                    .replaceAll('&', '&amp;')
+                    .replaceAll('<', '&lt;')
+                    .replaceAll('>', '&gt;')
+                    .replaceAll('"', '&quot;')
+                    .replaceAll("'", '&#039;');
+            }
+
+            function formatTime(value) {
+                const date = value ? new Date(value) : new Date();
+
+                if (Number.isNaN(date.getTime())) {
+                    return '';
+                }
+
+                return date.toLocaleTimeString('vi-VN', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+
+            function scrollToBottom() {
+                body.scrollTop = body.scrollHeight;
+            }
+
+            function setStatus(message, type) {
+                status.textContent = message || '';
+                status.className = 'nova-chat-status';
+
+                if (type) {
+                    status.classList.add(type);
+                }
+            }
+
+            function showTyping(show) {
+                typing.classList.toggle('nova-chat-hidden', !show);
+                scrollToBottom();
+            }
+
+            function setSendingState(sending) {
+                isSending = sending;
+                sendBtn.disabled = sending;
+                input.disabled = sending;
+
+                if (sending) {
+                    sendBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                } else {
+                    sendBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i>';
+                }
+            }
+
+            function appendMessage(sender, text, timestamp) {
+                const isUser = sender === 'customer' || sender === 'user';
+
+                const row = document.createElement('div');
+                row.className = 'nova-msg-row ' + (isUser ? 'user' : 'support');
+
+                row.innerHTML = `
+                    <div class="nova-msg ${isUser ? 'user' : 'support'}">
+                        <div class="nova-msg-sender">${isUser ? 'Bạn' : 'NovaTech'}</div>
+                        <div class="nova-msg-text">${escapeHtml(text)}</div>
+                        <div class="nova-msg-time">${formatTime(timestamp)}</div>
+                    </div>
+                `;
+
+                body.appendChild(row);
+                scrollToBottom();
+            }
+
+            function clearMessagesOnly() {
+                body.innerHTML = `
+                    <div class="nova-chat-welcome">
+                        <div class="nova-chat-welcome-icon">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        </div>
+
+                        <div class="nova-chat-welcome-title">
+                            Xin chào, NovaTech có thể hỗ trợ gì cho anh/chị?
+                        </div>
+
+                        <div class="nova-chat-welcome-text">
+                            Gửi câu hỏi về đơn hàng, sản phẩm, bảo hành hoặc góp ý dịch vụ.
+                        </div>
+                    </div>
+                `;
+            }
+
+            function openConfirmModal() {
+                return new Promise((resolve) => {
+                    confirmModal.classList.remove('nova-chat-hidden');
+
+                    function cleanup() {
+                        confirmOkBtn.removeEventListener('click', handleOk);
+                        confirmCancelBtn.removeEventListener('click', handleCancel);
+                        confirmModal.removeEventListener('click', handleBackdrop);
+                        document.removeEventListener('keydown', handleEsc);
+                        confirmModal.classList.add('nova-chat-hidden');
+                    }
+
+                    function handleOk() {
+                        cleanup();
+                        resolve(true);
+                    }
+
+                    function handleCancel() {
+                        cleanup();
+                        resolve(false);
+                    }
+
+                    function handleBackdrop(event) {
+                        if (event.target.classList.contains('nova-confirm-backdrop')) {
+                            cleanup();
+                            resolve(false);
+                        }
+                    }
+
+                    function handleEsc(event) {
+                        if (event.key === 'Escape') {
+                            cleanup();
+                            resolve(false);
+                        }
+                    }
+
+                    confirmOkBtn.addEventListener('click', handleOk);
+                    confirmCancelBtn.addEventListener('click', handleCancel);
+                    confirmModal.addEventListener('click', handleBackdrop);
+                    document.addEventListener('keydown', handleEsc);
+                });
+            }
+
+            async function postJson(url, bodyData) {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(bodyData)
+                });
+
+                let data = {};
+
+                try {
+                    data = await response.json();
+                } catch {
+                    data = {};
+                }
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Có lỗi xảy ra khi gửi tin nhắn.');
+                }
+
+                return data;
+            }
+
+            async function loadCurrentThread() {
+                if (!currentThreadId) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/SalesCSKH/GetCustomerThread?id=${encodeURIComponent(currentThreadId)}`);
+
+                    if (!response.ok) {
+                        localStorage.removeItem(storageKey);
+                        currentThreadId = null;
+                        return;
+                    }
+
+                    const thread = await response.json();
+                    const messages = Array.isArray(thread.messages) ? thread.messages : [];
+
+                    clearMessagesOnly();
+
+                    messages.forEach(message => {
+                        appendMessage(message.sender, message.text, message.timestamp);
+                    });
+
+                    setStatus('Đã tải lại hội thoại gần nhất.', 'success');
+                } catch {
+                    setStatus('Không thể tải lại hội thoại cũ.', 'error');
+                }
+            }
+
+            async function sendMessage() {
+                const message = input.value.trim();
+
+                if (!message || isSending) {
+                    return;
+                }
+
+                input.value = '';
+                input.style.height = 'auto';
+
+                appendMessage('customer', message, new Date().toISOString());
+                setStatus('');
+                setSendingState(true);
+                showTyping(true);
+
+                try {
+                    let result;
+
+                    if (!currentThreadId) {
+                        result = await postJson('/SalesCSKH/CreateCustomerInquiry', {
+                            customerName: sessionUserName || 'Khách hàng NovaTech',
+                            customerPhone: sessionCustomerPhone || '',
+                            customerEmail: sessionUserEmail || '',
+                            subject: 'Chat hỗ trợ NovaTech',
+                            message: message
+                        });
+                    } else {
+                        result = await postJson('/SalesCSKH/AddCustomerInquiryMessage', {
+                            threadId: Number(currentThreadId),
+                            message: message
+                        });
+                    }
+
+                    const thread = result.thread;
+
+                    if (thread && thread.id) {
+                        currentThreadId = String(thread.id);
+                        localStorage.setItem(storageKey, currentThreadId);
+                    }
+
+                    showTyping(false);
+
+                    if (thread && Array.isArray(thread.messages)) {
+                        clearMessagesOnly();
+
+                        thread.messages.forEach(msg => {
+                            appendMessage(msg.sender, msg.text, msg.timestamp);
+                        });
+                    } else {
+                        appendMessage('staff', 'NovaTech đã nhận tin nhắn của anh/chị. Nhân viên sẽ phản hồi sớm nhất ạ.', new Date().toISOString());
+                    }
+
+                    setStatus(result.message || 'Đã gửi tin nhắn.', 'success');
+                } catch (error) {
+                    showTyping(false);
+                    appendMessage('staff', 'Tin nhắn chưa gửi được. Anh/chị vui lòng thử lại sau.', new Date().toISOString());
+                    setStatus(error.message, 'error');
+                } finally {
+                    setSendingState(false);
+                    input.focus();
+                }
+            }
+
+            toggle.addEventListener('click', async function () {
+                const isHidden = panel.classList.contains('nova-chat-hidden');
+
+                panel.classList.toggle('nova-chat-hidden');
+
+                if (isHidden) {
+                    input.focus();
+                    await loadCurrentThread();
+                }
+            });
+
+            closeBtn.addEventListener('click', function () {
+                panel.classList.add('nova-chat-hidden');
+            });
+
+            clearBtn.addEventListener('click', async function () {
+                const confirmed = await openConfirmModal();
+
+                if (!confirmed) {
+                    return;
+                }
+
+                localStorage.removeItem(storageKey);
+                currentThreadId = null;
+                clearMessagesOnly();
+                setStatus('Đã xóa lịch sử hiển thị trên trình duyệt.', 'success');
+            });
+
+            sendBtn.addEventListener('click', sendMessage);
+
+            input.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            input.addEventListener('input', function () {
+                input.style.height = 'auto';
+                input.style.height = Math.min(input.scrollHeight, 110) + 'px';
+            });
+        })();
+    </script>
 }

@@ -8,7 +8,7 @@
     <style>
         .cskh-shell {
             display: grid;
-            grid-template-columns: 380px 1fr;
+            grid-template-columns: 360px 1fr;
             gap: 18px;
             min-height: 660px;
         }
@@ -22,7 +22,7 @@
         }
 
         .thread-list {
-            max-height: 520px;
+            max-height: 500px;
             overflow-y: auto;
         }
 
@@ -31,6 +31,7 @@
             border-bottom: 1px solid #e2e8f0;
             cursor: pointer;
             transition: all 0.2s ease;
+            background: #ffffff;
         }
 
         .thread-item:hover,
@@ -67,29 +68,32 @@
             font-weight: 800;
         }
 
-        .thread-delete-btn {
-            width: 30px;
-            height: 30px;
-            min-width: 30px;
-            border: none;
+        .thread-status {
             border-radius: 999px;
+            padding: 3px 8px;
+            font-size: 11px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .thread-status.unread {
             background: #fee2e2;
-            color: #dc2626;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transition: all 0.2s ease;
-        }
-
-        .thread-item:hover .thread-delete-btn,
-        .thread-item.active .thread-delete-btn {
-            opacity: 1;
-        }
-
-        .thread-delete-btn:hover {
-            background: #fecaca;
             color: #b91c1c;
+        }
+
+        .thread-status.processing {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .thread-status.replied {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .thread-status.closed {
+            background: #e2e8f0;
+            color: #475569;
         }
 
         .chat-main {
@@ -102,6 +106,27 @@
             padding: 18px;
             border-bottom: 1px solid #e2e8f0;
             background: #f8fafc;
+        }
+
+        .customer-mini-card {
+            margin-top: 12px;
+            padding: 12px;
+            border-radius: 14px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+        }
+
+        .customer-mini-label {
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .customer-mini-value {
+            font-size: 13px;
+            color: #0f172a;
+            font-weight: 700;
         }
 
         .chat-messages {
@@ -176,18 +201,203 @@
             text-align: center;
         }
 
-        .inbox-filter {
-            background: #ffffff;
-        }
-
-        .inbox-pagination {
-            min-height: 56px;
-        }
-
-        .pagination-info {
+        .reply-disabled-note {
             font-size: 12px;
             color: #64748b;
-            line-height: 1.35;
+            font-weight: 600;
+        }
+
+        .inbox-footer {
+            padding: 10px 14px;
+            border-top: 1px solid #e2e8f0;
+            background: #f8fafc;
+            font-size: 12px;
+            color: #64748b;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .page-mini-btn {
+            border: 1px solid #bae6fd;
+            background: #ffffff;
+            color: #0284c7;
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .page-mini-btn:disabled {
+            color: #94a3b8;
+            background: #f1f5f9;
+            border-color: #e2e8f0;
+        }
+
+        .thread-action-btn {
+            font-weight: 800;
+            box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
+            transition: all 0.18s ease;
+        }
+
+        .thread-action-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .cskh-confirm-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: cskhFadeIn 0.2s ease;
+        }
+
+        .cskh-confirm-modal.d-none {
+            display: none !important;
+        }
+
+        .cskh-confirm-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.48);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+
+        .cskh-confirm-box {
+            position: relative;
+            width: min(440px, calc(100vw - 28px));
+            background: #ffffff;
+            border-radius: 26px;
+            padding: 26px 22px 22px;
+            box-shadow: 0 28px 70px rgba(15, 23, 42, 0.30);
+            border: 1px solid #e2e8f0;
+            text-align: center;
+            animation: cskhZoomIn 0.25s ease;
+        }
+
+        .cskh-confirm-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 15px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #ffffff;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            box-shadow: 0 14px 28px rgba(239, 68, 68, 0.25);
+        }
+
+        .cskh-confirm-icon.warning {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            box-shadow: 0 14px 28px rgba(245, 158, 11, 0.25);
+        }
+
+        .cskh-confirm-title {
+            font-size: 22px;
+            font-weight: 900;
+            color: #0f172a;
+            margin-bottom: 10px;
+        }
+
+        .cskh-confirm-text {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #475569;
+            margin-bottom: 22px;
+        }
+
+        .cskh-confirm-text strong {
+            color: #dc2626;
+        }
+
+        .cskh-confirm-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .cskh-confirm-btn {
+            min-width: 122px;
+            border: 0;
+            border-radius: 15px;
+            padding: 12px 16px;
+            font-size: 14px;
+            font-weight: 900;
+            cursor: pointer;
+            transition: all 0.22s ease;
+        }
+
+        .cskh-confirm-btn.btn-cancel {
+            background: #f1f5f9;
+            color: #334155;
+        }
+
+        .cskh-confirm-btn.btn-cancel:hover {
+            background: #e2e8f0;
+            transform: translateY(-1px);
+        }
+
+        .cskh-confirm-btn.btn-ok {
+            color: #ffffff;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            box-shadow: 0 12px 24px rgba(239, 68, 68, 0.25);
+        }
+
+        .cskh-confirm-btn.btn-ok.warning {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            box-shadow: 0 12px 24px rgba(245, 158, 11, 0.25);
+        }
+
+        .cskh-confirm-btn.btn-ok:hover {
+            transform: translateY(-2px);
+        }
+
+        @@keyframes cskhFadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @@keyframes cskhZoomIn {
+            from {
+                opacity: 0;
+                transform: scale(0.92) translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        @@media (max-width: 992px) {
+            .cskh-shell {
+                grid-template-columns: 1fr;
+            }
+
+            .thread-list {
+                max-height: 360px;
+            }
+        }
+
+        @@media (max-width: 576px) {
+            .cskh-confirm-actions {
+                flex-direction: column;
+            }
+
+            .cskh-confirm-btn {
+                width: 100%;
+            }
         }
     </style>
 }
@@ -201,41 +411,42 @@
         <div class="text-muted small">Quản lý hội thoại khách hàng từ website NovaTech Store.</div>
     </div>
 
-    <button class="btn btn-outline-primary rounded-pill" onclick="loadInbox(true, inboxPage)">
+    <button class="btn btn-outline-primary rounded-pill" onclick="loadInbox(true)">
         <i class="fa-solid fa-rotate me-2"></i>Làm mới
     </button>
 </div>
 
 <div class="cskh-shell">
     <div class="cskh-panel">
-        <div class="p-3 border-bottom inbox-filter">
+        <div class="p-3 border-bottom bg-white">
             <h6 class="fw-bold mb-3">Hộp thư khách hàng</h6>
 
-            <div class="mb-2">
-                <input type="text"
-                       id="inboxKeyword"
-                       class="form-control form-control-sm"
-                       placeholder="Tìm tên, SĐT, nội dung chat...">
+            <input id="inboxKeyword"
+                   type="text"
+                   class="form-control form-control-sm mb-2"
+                   placeholder="Tìm tên, SĐT, nội dung chat..." />
+
+            <div class="row g-2">
+                <div class="col-6">
+                    <select id="inboxStatus" class="form-select form-select-sm">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="Unread">Chưa đọc</option>
+                        <option value="Processing">Đang xử lý</option>
+                        <option value="Replied">Đã phản hồi</option>
+                        <option value="Closed">Đã đóng</option>
+                    </select>
+                </div>
+
+                <div class="col-6">
+                    <select id="inboxPageSize" class="form-select form-select-sm">
+                        <option value="10">10 dòng</option>
+                        <option value="20" selected>20 dòng</option>
+                        <option value="50">50 dòng</option>
+                    </select>
+                </div>
             </div>
 
-            <div class="d-flex gap-2">
-                <select id="inboxStatus" class="form-select form-select-sm">
-                    <option value="">Tất cả trạng thái</option>
-                    <option value="Unread">Chưa đọc</option>
-                    <option value="Processing">Đang xử lý</option>
-                    <option value="Replied">Đã phản hồi</option>
-                </select>
-
-                <select id="inboxPageSize" class="form-select form-select-sm">
-                    <option value="10">10 dòng</option>
-                    <option value="20" selected>20 dòng</option>
-                    <option value="50">50 dòng</option>
-                </select>
-            </div>
-
-            <button type="button"
-                    class="btn btn-sm btn-info text-white rounded-pill w-100 mt-2"
-                    onclick="searchInbox()">
+            <button class="btn btn-info text-white w-100 rounded-pill mt-2 fw-bold" onclick="applyInboxFilter()">
                 <i class="fa-solid fa-magnifying-glass me-1"></i>
                 Lọc hội thoại
             </button>
@@ -245,7 +456,17 @@
             <div class="p-4 text-center text-muted">Đang tải hội thoại...</div>
         </div>
 
-        <div id="inboxPagination" class="p-2 border-top bg-white inbox-pagination"></div>
+        <div class="inbox-footer">
+            <button id="prevInboxPage" class="page-mini-btn" onclick="changeInboxPage(-1)" disabled>
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
+
+            <span id="inboxPageInfo">Tổng: 0 hội thoại</span>
+
+            <button id="nextInboxPage" class="page-mini-btn" onclick="changeInboxPage(1)" disabled>
+                <i class="fa-solid fa-chevron-right"></i>
+            </button>
+        </div>
     </div>
 
     <div class="cskh-panel chat-main">
@@ -264,13 +485,56 @@
         </div>
 
         <div class="reply-box">
-            <textarea id="replyText" class="form-control mb-2" rows="3" placeholder="Nhập phản hồi cho khách hàng..."></textarea>
-            <div class="d-flex justify-content-between align-items-center">
-                <div id="replyStatus" class="small text-muted"></div>
-                <button class="btn btn-primary rounded-pill px-4" onclick="sendReply()">
-                    <i class="fa-solid fa-paper-plane me-2"></i>Gửi phản hồi
+            <textarea id="replyText"
+                      class="form-control mb-2"
+                      rows="3"
+                      placeholder="Vui lòng chọn hội thoại trước khi phản hồi..."
+                      disabled></textarea>
+
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <div id="replyStatus" class="small text-muted"></div>
+                    <div id="replyLockNote" class="reply-disabled-note">
+                        Ô phản hồi sẽ mở sau khi chọn hội thoại.
+                    </div>
+                </div>
+
+                <button id="sendReplyBtn"
+                        class="btn btn-primary rounded-pill px-4"
+                        onclick="sendReply()"
+                        disabled>
+                    <i class="fa-solid fa-paper-plane me-2"></i>
+                    Gửi phản hồi
                 </button>
             </div>
+        </div>
+    </div>
+</div>
+
+<div id="cskhConfirmModal" class="cskh-confirm-modal d-none">
+    <div class="cskh-confirm-backdrop"></div>
+
+    <div class="cskh-confirm-box">
+        <div id="cskhConfirmIcon" class="cskh-confirm-icon">
+            <i id="cskhConfirmIconClass" class="fa-solid fa-trash-can"></i>
+        </div>
+
+        <div id="cskhConfirmTitle" class="cskh-confirm-title">
+            Xác nhận thao tác
+        </div>
+
+        <div id="cskhConfirmText" class="cskh-confirm-text">
+            Bạn có chắc muốn thực hiện thao tác này không?
+        </div>
+
+        <div class="cskh-confirm-actions">
+            <button type="button" id="cskhConfirmCancel" class="cskh-confirm-btn btn-cancel">
+                Hủy
+            </button>
+
+            <button type="button" id="cskhConfirmOk" class="cskh-confirm-btn btn-ok">
+                Xác nhận
+            </button>
         </div>
     </div>
 </div>
@@ -278,20 +542,21 @@
 @section Scripts {
     <script>
         let selectedThreadId = null;
+        let selectedThreadStatus = null;
         let currentThreads = [];
+        let currentInboxPage = 1;
+        let currentInboxTotalPages = 1;
+        let currentInboxTotalItems = 0;
+        let inboxLoadedOnce = false;
         let inboxRequestRunning = false;
         let threadRequestToken = 0;
-
-        let inboxPage = 1;
-        let inboxPageSize = 20;
-        let inboxTotalItems = 0;
-        let inboxTotalPages = 1;
-        let inboxKeyword = '';
-        let inboxStatus = '';
+        let isUserBusy = false;
+        let lastThreadRenderKey = "";
+        let lastInboxRenderKey = "";
 
         const CSKH_REFRESH_INTERVAL = 60 * 1000;
 
-        const formatTime = (value) => {
+        function formatTime(value) {
             if (!value) return '';
 
             return new Date(value).toLocaleString('vi-VN', {
@@ -300,22 +565,82 @@
                 day: '2-digit',
                 month: '2-digit'
             });
-        };
+        }
 
-        const escapeHtml = (value) => {
+        function escapeHtml(value) {
             return String(value || '')
                 .replaceAll('&', '&amp;')
                 .replaceAll('<', '&lt;')
                 .replaceAll('>', '&gt;')
                 .replaceAll('"', '&quot;')
                 .replaceAll("'", '&#039;');
-        };
+        }
 
-        const sameId = (a, b) => {
+        function sameId(a, b) {
             return String(a) === String(b);
-        };
+        }
 
-        const postJson = async (url, body) => {
+        function statusMeta(status) {
+            switch (status) {
+                case 'Unread':
+                    return { label: 'Chưa đọc', className: 'unread' };
+                case 'Processing':
+                    return { label: 'Đang xử lý', className: 'processing' };
+                case 'Replied':
+                    return { label: 'Đã phản hồi', className: 'replied' };
+                case 'Closed':
+                    return { label: 'Đã đóng', className: 'closed' };
+                default:
+                    return { label: 'Chưa đọc', className: 'unread' };
+            }
+        }
+
+        function getRank(points) {
+            points = Number(points || 0);
+
+            if (points >= 3000) return 'Kim Cương';
+            if (points >= 1500) return 'Vàng';
+            if (points >= 500) return 'Bạc';
+            return 'Đồng';
+        }
+
+        function buildInboxRenderKey(items) {
+            return [
+                currentInboxPage,
+                currentInboxTotalPages,
+                currentInboxTotalItems,
+                selectedThreadId || '',
+                ...items.map(t => [
+                    t.id,
+                    t.status,
+                    t.unreadCount,
+                    t.updatedAt,
+                    t.lastMessage,
+                    t.customerName
+                ].join(':'))
+            ].join('|');
+        }
+
+        function buildThreadRenderKey(thread) {
+            const messages = Array.isArray(thread.messages) ? thread.messages : [];
+            const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+
+            return [
+                thread.id,
+                thread.status,
+                thread.customerId,
+                thread.customerName,
+                thread.customerPhone,
+                thread.customerEmail,
+                thread.customerPoints,
+                messages.length,
+                lastMessage ? lastMessage.id : '',
+                lastMessage ? lastMessage.text : '',
+                lastMessage ? lastMessage.timestamp : ''
+            ].join('|');
+        }
+
+        async function postJson(url, body) {
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
@@ -324,16 +649,121 @@
                 body: JSON.stringify(body)
             });
 
-            const data = await response.json();
+            let data = {};
+
+            try {
+                data = await response.json();
+            } catch {
+                data = {};
+            }
 
             if (!response.ok) {
                 throw new Error(data.message || 'Có lỗi xảy ra.');
             }
 
             return data;
-        };
+        }
 
-        const renderInbox = () => {
+        function openCskhConfirm(options) {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('cskhConfirmModal');
+                const iconBox = document.getElementById('cskhConfirmIcon');
+                const icon = document.getElementById('cskhConfirmIconClass');
+                const title = document.getElementById('cskhConfirmTitle');
+                const text = document.getElementById('cskhConfirmText');
+                const okBtn = document.getElementById('cskhConfirmOk');
+                const cancelBtn = document.getElementById('cskhConfirmCancel');
+
+                title.textContent = options.title || 'Xác nhận thao tác';
+                text.innerHTML = options.html || escapeHtml(options.text || 'Bạn có chắc muốn thực hiện thao tác này không?');
+                okBtn.innerHTML = options.okText || 'Xác nhận';
+
+                icon.className = options.icon || 'fa-solid fa-trash-can';
+                iconBox.className = options.warning
+                    ? 'cskh-confirm-icon warning'
+                    : 'cskh-confirm-icon';
+
+                okBtn.className = options.warning
+                    ? 'cskh-confirm-btn btn-ok warning'
+                    : 'cskh-confirm-btn btn-ok';
+
+                modal.classList.remove('d-none');
+
+                function cleanup() {
+                    okBtn.removeEventListener('click', handleOk);
+                    cancelBtn.removeEventListener('click', handleCancel);
+                    modal.removeEventListener('click', handleBackdrop);
+                    document.removeEventListener('keydown', handleEsc);
+                    modal.classList.add('d-none');
+                }
+
+                function handleOk() {
+                    cleanup();
+                    resolve(true);
+                }
+
+                function handleCancel() {
+                    cleanup();
+                    resolve(false);
+                }
+
+                function handleBackdrop(event) {
+                    if (event.target.classList.contains('cskh-confirm-backdrop')) {
+                        cleanup();
+                        resolve(false);
+                    }
+                }
+
+                function handleEsc(event) {
+                    if (event.key === 'Escape') {
+                        cleanup();
+                        resolve(false);
+                    }
+                }
+
+                okBtn.addEventListener('click', handleOk);
+                cancelBtn.addEventListener('click', handleCancel);
+                modal.addEventListener('click', handleBackdrop);
+                document.addEventListener('keydown', handleEsc);
+            });
+        }
+
+        function updateReplyState(enabled, placeholder, note) {
+            const input = document.getElementById('replyText');
+            const button = document.getElementById('sendReplyBtn');
+            const lockNote = document.getElementById('replyLockNote');
+
+            input.disabled = !enabled;
+            button.disabled = !enabled;
+            input.placeholder = placeholder;
+            lockNote.textContent = note || '';
+        }
+
+        function resetChatPane(message) {
+            document.getElementById('chatHeader').innerHTML = `
+                <div class="fw-bold text-dark">Chưa chọn hội thoại</div>
+                <div class="text-muted small">Chọn một khách hàng bên trái để xem nội dung.</div>
+            `;
+
+            document.getElementById('chatMessages').innerHTML = `
+                <div class="empty-state">
+                    <div>
+                        <i class="fa-regular fa-comments fs-1 mb-3 text-info"></i>
+                        <div>${escapeHtml(message || 'Chọn hội thoại để bắt đầu chăm sóc khách hàng.')}</div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('replyText').value = '';
+
+            updateReplyState(
+                false,
+                'Vui lòng chọn hội thoại trước khi phản hồi...',
+                'Ô phản hồi sẽ mở sau khi chọn hội thoại.'
+            );
+        }
+
+        function renderInbox() {
             const list = document.getElementById('threadList');
 
             if (!currentThreads.length) {
@@ -341,141 +771,132 @@
                 return;
             }
 
-            list.innerHTML = currentThreads.map(thread => `
-                <div class="thread-item ${sameId(selectedThreadId, thread.id) ? 'active' : ''}" onclick="selectThread(${thread.id})">
-                    <div class="d-flex justify-content-between align-items-start gap-2">
-                        <div class="flex-grow-1">
-                            <div class="d-flex justify-content-between align-items-start gap-2">
-                                <div class="thread-name">${escapeHtml(thread.customerName || 'Khách vãng lai')}</div>
+            list.innerHTML = currentThreads.map(thread => {
+                const meta = statusMeta(thread.status);
+
+                return `
+                    <div class="thread-item ${sameId(selectedThreadId, thread.id) ? 'active' : ''}" onclick="selectThread(${thread.id})">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div class="thread-name">${escapeHtml(thread.customerName || 'Khách hàng')}</div>
+                            <div class="d-flex gap-1 align-items-center flex-wrap justify-content-end">
                                 ${thread.unreadCount > 0 ? `<span class="badge-unread">${thread.unreadCount}</span>` : ''}
+                                <span class="thread-status ${meta.className}">${meta.label}</span>
                             </div>
-                            <div class="thread-subject">${escapeHtml(thread.subject || '')}</div>
-                            <div class="thread-last">${escapeHtml(thread.lastMessage || '')}</div>
-                            <div class="small text-muted mt-1">${formatTime(thread.updatedAt)}</div>
                         </div>
 
-                        <button type="button"
-                                class="thread-delete-btn"
-                                title="Xóa hội thoại"
-                                onclick="deleteThread(event, ${thread.id})">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        };
-
-        const renderInboxPagination = () => {
-            const box = document.getElementById('inboxPagination');
-
-            if (!box) {
-                return;
-            }
-
-            if (inboxTotalPages <= 1) {
-                box.innerHTML = `
-                    <div class="pagination-info text-center">
-                        Tổng: ${inboxTotalItems} hội thoại
+                        <div class="thread-subject">${escapeHtml(thread.subject || 'Chat hỗ trợ NovaTech')}</div>
+                        <div class="thread-last">${escapeHtml(thread.lastMessage || '')}</div>
+                        <div class="small text-muted mt-1">${formatTime(thread.updatedAt)}</div>
                     </div>
                 `;
-                return;
+            }).join('');
+        }
+
+        function renderInboxPageInfo() {
+            const info = document.getElementById('inboxPageInfo');
+            const prev = document.getElementById('prevInboxPage');
+            const next = document.getElementById('nextInboxPage');
+
+            info.textContent = `Trang ${currentInboxPage}/${currentInboxTotalPages} · Tổng: ${currentInboxTotalItems} hội thoại`;
+
+            prev.disabled = currentInboxPage <= 1;
+            next.disabled = currentInboxPage >= currentInboxTotalPages;
+        }
+
+        function getInboxQuery() {
+            const keyword = document.getElementById('inboxKeyword').value.trim();
+            const status = document.getElementById('inboxStatus').value;
+            const pageSize = document.getElementById('inboxPageSize').value;
+
+            const params = new URLSearchParams();
+            params.set('page', currentInboxPage);
+            params.set('pageSize', pageSize);
+
+            if (keyword) {
+                params.set('keyword', keyword);
             }
 
-            const prevDisabled = inboxPage <= 1 ? 'disabled' : '';
-            const nextDisabled = inboxPage >= inboxTotalPages ? 'disabled' : '';
+            if (status) {
+                params.set('status', status);
+            }
 
-            box.innerHTML = `
-                <div class="d-flex justify-content-between align-items-center gap-2">
-                    <button type="button"
-                            class="btn btn-sm btn-outline-secondary"
-                            ${prevDisabled}
-                            onclick="loadInbox(true, ${inboxPage - 1})">
-                        Trước
-                    </button>
+            return params.toString();
+        }
 
-                    <div class="pagination-info text-center">
-                        Trang ${inboxPage}/${inboxTotalPages}
-                        <br>
-                        ${inboxTotalItems} hội thoại
-                    </div>
-
-                    <button type="button"
-                            class="btn btn-sm btn-outline-secondary"
-                            ${nextDisabled}
-                            onclick="loadInbox(true, ${inboxPage + 1})">
-                        Sau
-                    </button>
-                </div>
-            `;
-        };
-
-        const loadInbox = async (showLoading = false, page = inboxPage) => {
+        async function loadInbox(showLoading = false) {
             const list = document.getElementById('threadList');
 
-            if (inboxRequestRunning) {
+            if (inboxRequestRunning || isUserBusy) {
                 return;
             }
 
             inboxRequestRunning = true;
 
-            if (showLoading) {
+            if (showLoading && !inboxLoadedOnce) {
                 list.innerHTML = '<div class="p-4 text-center text-muted">Đang tải hội thoại...</div>';
             }
 
             try {
-                inboxPage = page;
-                inboxPageSize = Number(document.getElementById('inboxPageSize')?.value || inboxPageSize);
-                inboxKeyword = document.getElementById('inboxKeyword')?.value.trim() || '';
-                inboxStatus = document.getElementById('inboxStatus')?.value || '';
-
-                const url =
-                    `/SalesCSKH/GetCustomerInbox?page=${inboxPage}` +
-                    `&pageSize=${inboxPageSize}` +
-                    `&keyword=${encodeURIComponent(inboxKeyword)}` +
-                    `&status=${encodeURIComponent(inboxStatus)}`;
-
-                const response = await fetch(url);
+                const response = await fetch(`/SalesCSKH/GetCustomerInbox?${getInboxQuery()}`);
 
                 if (!response.ok) {
                     throw new Error('Không tải được danh sách hội thoại.');
                 }
 
-                const data = await response.json();
+                const result = await response.json();
+                const incomingThreads = Array.isArray(result) ? result : (result.items || []);
 
-                currentThreads = Array.isArray(data.items) ? data.items : [];
-                inboxPage = data.currentPage || 1;
-                inboxPageSize = data.pageSize || 20;
-                inboxTotalItems = data.totalItems || 0;
-                inboxTotalPages = data.totalPages || 1;
+                currentThreads = incomingThreads;
+                currentInboxPage = result.currentPage || currentInboxPage;
+                currentInboxTotalPages = result.totalPages || 1;
+                currentInboxTotalItems = result.totalItems || incomingThreads.length;
+                inboxLoadedOnce = true;
 
-                renderInbox();
-                renderInboxPagination();
+                const newInboxKey = buildInboxRenderKey(currentThreads);
+
+                if (showLoading || newInboxKey !== lastInboxRenderKey) {
+                    lastInboxRenderKey = newInboxKey;
+                    renderInbox();
+                    renderInboxPageInfo();
+                }
             } catch (err) {
                 list.innerHTML = `<div class="p-4 text-danger text-center">${escapeHtml(err.message)}</div>`;
             } finally {
                 inboxRequestRunning = false;
             }
-        };
+        }
 
-        const searchInbox = () => {
-            selectedThreadId = null;
-            inboxPage = 1;
-            clearSelectedThreadView();
-            loadInbox(true, 1);
-        };
+        async function applyInboxFilter() {
+            currentInboxPage = 1;
+            lastInboxRenderKey = "";
+            await loadInbox(true);
+        }
 
-        const selectThread = async (id) => {
+        async function changeInboxPage(step) {
+            const nextPage = currentInboxPage + step;
+
+            if (nextPage < 1 || nextPage > currentInboxTotalPages) {
+                return;
+            }
+
+            currentInboxPage = nextPage;
+            lastInboxRenderKey = "";
+            await loadInbox(true);
+        }
+
+        async function selectThread(id) {
             selectedThreadId = id;
 
             document.getElementById('replyStatus').textContent = '';
             document.getElementById('replyText').value = '';
 
+            lastInboxRenderKey = "";
             renderInbox();
 
-            await loadThread(id, false);
+            await loadThread(id, false, true);
 
             try {
-                await postJson('/SalesCSKH/MarkCustomerThreadRead', {
+                const result = await postJson('/SalesCSKH/MarkCustomerThreadRead', {
                     threadId: id
                 });
 
@@ -489,70 +910,18 @@
                     }
                 }
 
+                if (result.thread) {
+                    selectedThreadStatus = result.thread.status;
+                }
+
+                lastInboxRenderKey = "";
                 renderInbox();
             } catch (err) {
                 console.error(err);
             }
-        };
+        }
 
-        const clearSelectedThreadView = () => {
-            selectedThreadId = null;
-
-            document.getElementById('replyStatus').textContent = '';
-            document.getElementById('replyText').value = '';
-
-            document.getElementById('chatHeader').innerHTML = `
-                <div class="fw-bold text-dark">Chưa chọn hội thoại</div>
-                <div class="text-muted small">Chọn một khách hàng bên trái để xem nội dung.</div>
-            `;
-
-            document.getElementById('chatMessages').innerHTML = `
-                <div class="empty-state">
-                    <div>
-                        <i class="fa-regular fa-comments fs-1 mb-3 text-info"></i>
-                        <div>Chọn hội thoại để bắt đầu chăm sóc khách hàng.</div>
-                    </div>
-                </div>
-            `;
-        };
-
-        const deleteThread = async (event, id) => {
-            event.preventDefault();
-            event.stopPropagation();
-
-            const thread = currentThreads.find(t => sameId(t.id, id));
-            const customerName = thread?.customerName || 'Khách vãng lai';
-
-            const ok = confirm(`Bạn có chắc muốn xóa toàn bộ hội thoại của "${customerName}" không?`);
-
-            if (!ok) {
-                return;
-            }
-
-            try {
-                await postJson('/SalesCSKH/DeleteCustomerThread', {
-                    threadId: id
-                });
-
-                currentThreads = currentThreads.filter(t => !sameId(t.id, id));
-
-                if (sameId(selectedThreadId, id)) {
-                    clearSelectedThreadView();
-                }
-
-                renderInbox();
-
-                if (currentThreads.length === 0 && inboxPage > 1) {
-                    await loadInbox(true, inboxPage - 1);
-                } else {
-                    await loadInbox(false, inboxPage);
-                }
-            } catch (err) {
-                alert(err.message || 'Xóa hội thoại thất bại.');
-            }
-        };
-
-        const loadThread = async (id, silent = false) => {
+        async function loadThread(id, silent = false, forceRender = false) {
             const header = document.getElementById('chatHeader');
             const messagesBox = document.getElementById('chatMessages');
 
@@ -575,11 +944,86 @@
                     return;
                 }
 
+                const newThreadKey = buildThreadRenderKey(thread);
+
+                if (silent && !forceRender && newThreadKey === lastThreadRenderKey) {
+                    return;
+                }
+
+                lastThreadRenderKey = newThreadKey;
+                selectedThreadStatus = thread.status;
+
+                const meta = statusMeta(thread.status);
+                const rank = getRank(thread.customerPoints);
+
+                const profileButton = thread.canOpenCustomerProfile
+                    ? `<a href="/Customer/Detail?id=${encodeURIComponent(thread.customerId)}" class="btn btn-sm btn-outline-info rounded-pill px-3 thread-action-btn">
+                           <i class="fa-solid fa-id-card me-1"></i>Xem hồ sơ
+                       </a>`
+                    : `<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 thread-action-btn" disabled>
+                           <i class="fa-solid fa-id-card me-1"></i>Chưa có hồ sơ
+                       </button>`;
+
+                const closeButton = thread.status === 'Closed'
+                    ? `<button type="button" class="btn btn-sm btn-secondary rounded-pill px-3 thread-action-btn" disabled>
+                           <i class="fa-solid fa-lock me-1"></i>Đã đóng
+                       </button>`
+                    : `<button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 thread-action-btn" onclick="closeThread()">
+                           <i class="fa-solid fa-circle-xmark me-1"></i>Đóng hội thoại
+                       </button>`;
+
+                const deleteButton = `
+                    <button type="button"
+                            class="btn btn-sm btn-danger rounded-pill px-3 thread-action-btn"
+                            onclick="deleteThread()">
+                        <i class="fa-solid fa-trash-can me-1"></i>
+                        Xóa hội thoại
+                    </button>
+                `;
+
                 header.innerHTML = `
-                    <div class="fw-bold text-dark">${escapeHtml(thread.customerName || 'Khách vãng lai')}</div>
-                    <div class="text-muted small">
-                        ${escapeHtml(thread.subject || '')}
-                        ${thread.customerPhone ? ` · ${escapeHtml(thread.customerPhone)}` : ''}
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                        <div>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <div class="fw-bold text-dark fs-5">${escapeHtml(thread.customerName || 'Khách hàng')}</div>
+                                <span class="thread-status ${meta.className}">${meta.label}</span>
+                            </div>
+
+                            <div class="text-muted small mt-1">
+                                ${escapeHtml(thread.subject || 'Chat hỗ trợ NovaTech')}
+                                ${thread.customerPhone ? ` · ${escapeHtml(thread.customerPhone)}` : ''}
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 flex-wrap justify-content-end">
+                            ${profileButton}
+                            ${closeButton}
+                            ${deleteButton}
+                        </div>
+                    </div>
+
+                    <div class="customer-mini-card">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <div class="customer-mini-label">SĐT</div>
+                                <div class="customer-mini-value">${escapeHtml(thread.customerPhone || 'Chưa có')}</div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <div class="customer-mini-label">Email</div>
+                                <div class="customer-mini-value">${escapeHtml(thread.customerEmail || 'Chưa có')}</div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <div class="customer-mini-label">Điểm / Hạng</div>
+                                <div class="customer-mini-value">${Number(thread.customerPoints || 0)} điểm · ${rank}</div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <div class="customer-mini-label">Kênh</div>
+                                <div class="customer-mini-value">${escapeHtml(thread.channel || 'Website')}</div>
+                            </div>
+                        </div>
                     </div>
                 `;
 
@@ -587,28 +1031,49 @@
 
                 if (!messages.length) {
                     messagesBox.innerHTML = '<div class="empty-state">Hội thoại chưa có tin nhắn.</div>';
-                    return;
+                } else {
+                    messagesBox.innerHTML = messages.map(message => `
+                        <div class="chat-message ${message.sender === 'customer' ? 'customer' : 'staff'}">
+                            <div class="chat-bubble">
+                                <div class="chat-sender">${message.sender === 'customer' ? 'Khách hàng' : 'NovaTech'}</div>
+                                <div>${escapeHtml(message.text)}</div>
+                                <span class="chat-time">${formatTime(message.timestamp)}</span>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    messagesBox.scrollTop = messagesBox.scrollHeight;
                 }
 
-                messagesBox.innerHTML = messages.map(message => `
-                    <div class="chat-message ${message.sender === 'customer' ? 'customer' : 'staff'}">
-                        <div class="chat-bubble">
-                            <div class="chat-sender">${message.sender === 'customer' ? 'Khách hàng' : 'NovaTech'}</div>
-                            <div>${escapeHtml(message.text)}</div>
-                            <span class="chat-time">${formatTime(message.timestamp)}</span>
-                        </div>
-                    </div>
-                `).join('');
-
-                messagesBox.scrollTop = messagesBox.scrollHeight;
+                if (thread.status === 'Closed') {
+                    updateReplyState(
+                        false,
+                        'Hội thoại đã đóng, không thể phản hồi.',
+                        'Hội thoại này đã đóng. Mở hội thoại mới nếu khách cần hỗ trợ tiếp.'
+                    );
+                } else {
+                    updateReplyState(
+                        true,
+                        'Nhập phản hồi cho khách hàng...',
+                        'Nhân viên có thể phản hồi và hệ thống sẽ đánh dấu đã phản hồi.'
+                    );
+                }
             } catch (err) {
                 if (!silent) {
                     messagesBox.innerHTML = `<div class="p-4 text-danger text-center">${escapeHtml(err.message)}</div>`;
                 }
             }
-        };
+        }
 
-        const sendReply = async () => {
+        async function loadThreadIfChanged(id) {
+            if (!id || isUserBusy || document.hidden) {
+                return;
+            }
+
+            await loadThread(id, true, false);
+        }
+
+        async function sendReply() {
             const status = document.getElementById('replyStatus');
             const input = document.getElementById('replyText');
             const message = input.value.trim();
@@ -621,6 +1086,12 @@
                 return;
             }
 
+            if (selectedThreadStatus === 'Closed') {
+                status.textContent = 'Hội thoại đã đóng. Không thể gửi phản hồi.';
+                status.className = 'small text-danger';
+                return;
+            }
+
             if (!message) {
                 status.textContent = 'Vui lòng nhập nội dung phản hồi.';
                 status.className = 'small text-danger';
@@ -628,10 +1099,11 @@
             }
 
             try {
+                isUserBusy = true;
                 status.textContent = 'Đang gửi...';
                 status.className = 'small text-muted';
 
-                await postJson('/SalesCSKH/ReplyCustomerMessage', {
+                const result = await postJson('/SalesCSKH/ReplyCustomerMessage', {
                     threadId: selectedThreadId,
                     message: message,
                     status: 'Replied'
@@ -650,40 +1122,163 @@
                     thread.unreadCount = 0;
                 }
 
+                if (result.thread) {
+                    selectedThreadStatus = result.thread.status;
+                    lastThreadRenderKey = "";
+                }
+
+                lastInboxRenderKey = "";
                 renderInbox();
 
-                await loadThread(selectedThreadId, false);
-                await loadInbox(false, inboxPage);
+                await loadThread(selectedThreadId, false, true);
+                await loadInbox(false);
             } catch (err) {
                 status.textContent = err.message;
                 status.className = 'small text-danger';
+            } finally {
+                isUserBusy = false;
             }
-        };
+        }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const keywordInput = document.getElementById('inboxKeyword');
-            const statusSelect = document.getElementById('inboxStatus');
-            const pageSizeSelect = document.getElementById('inboxPageSize');
+        async function closeThread() {
+            if (!selectedThreadId) {
+                return;
+            }
 
-            keywordInput?.addEventListener('keydown', function (event) {
-                if (event.key === 'Enter') {
-                    event.preventDefault();
-                    searchInbox();
-                }
+            const confirmed = await openCskhConfirm({
+                title: 'Đóng hội thoại?',
+                html: 'Hội thoại sẽ được chuyển sang trạng thái <strong>Đã đóng</strong>.<br />Lịch sử chat vẫn được giữ để tra cứu sau này.',
+                okText: '<i class="fa-solid fa-lock me-1"></i>Đóng hội thoại',
+                icon: 'fa-solid fa-lock',
+                warning: true
             });
 
-            statusSelect?.addEventListener('change', searchInbox);
-            pageSizeSelect?.addEventListener('change', searchInbox);
+            if (!confirmed) {
+                return;
+            }
 
-            loadInbox(true, 1);
+            const status = document.getElementById('replyStatus');
 
-            setInterval(async () => {
-                await loadInbox(false, inboxPage);
+            try {
+                isUserBusy = true;
+                status.textContent = 'Đang đóng hội thoại...';
+                status.className = 'small text-muted';
 
-                if (selectedThreadId) {
-                    await loadThread(selectedThreadId, true);
+                const result = await postJson('/SalesCSKH/CloseCustomerThread', {
+                    threadId: selectedThreadId
+                });
+
+                selectedThreadStatus = 'Closed';
+
+                const thread = currentThreads.find(t => sameId(t.id, selectedThreadId));
+
+                if (thread) {
+                    thread.status = 'Closed';
+                    thread.unreadCount = 0;
+                    thread.updatedAt = new Date().toISOString();
                 }
-            }, CSKH_REFRESH_INTERVAL);
+
+                status.textContent = result.message || 'Đã đóng hội thoại.';
+                status.className = 'small text-success';
+
+                updateReplyState(
+                    false,
+                    'Hội thoại đã đóng, không thể phản hồi.',
+                    'Hội thoại này đã đóng.'
+                );
+
+                lastInboxRenderKey = "";
+                lastThreadRenderKey = "";
+
+                renderInbox();
+
+                await loadThread(selectedThreadId, false, true);
+                await loadInbox(false);
+            } catch (err) {
+                status.textContent = err.message;
+                status.className = 'small text-danger';
+            } finally {
+                isUserBusy = false;
+            }
+        }
+
+        async function deleteThread() {
+            if (!selectedThreadId) {
+                return;
+            }
+
+            const confirmed = await openCskhConfirm({
+                title: 'Xóa hội thoại?',
+                html: 'Toàn bộ tin nhắn trong hội thoại này sẽ bị <strong>xóa khỏi hệ thống</strong>.<br />Thao tác này nên dùng cho dữ liệu test, spam hoặc hội thoại rác.',
+                okText: '<i class="fa-solid fa-trash-can me-1"></i>Xóa hội thoại',
+                icon: 'fa-solid fa-trash-can',
+                warning: false
+            });
+
+            if (!confirmed) {
+                return;
+            }
+
+            const status = document.getElementById('replyStatus');
+
+            try {
+                isUserBusy = true;
+                status.textContent = 'Đang xóa hội thoại...';
+                status.className = 'small text-muted';
+
+                const result = await postJson('/SalesCSKH/DeleteCustomerThread', {
+                    threadId: selectedThreadId
+                });
+
+                currentThreads = currentThreads.filter(t => !sameId(t.id, selectedThreadId));
+                selectedThreadId = null;
+                selectedThreadStatus = null;
+                lastThreadRenderKey = "";
+                lastInboxRenderKey = "";
+
+                resetChatPane('Hội thoại đã được xóa khỏi hệ thống.');
+
+                status.textContent = result.message || 'Đã xóa hội thoại.';
+                status.className = 'small text-success';
+
+                renderInbox();
+                await loadInbox(true);
+            } catch (err) {
+                status.textContent = err.message;
+                status.className = 'small text-danger';
+            } finally {
+                isUserBusy = false;
+            }
+        }
+
+        document.getElementById('inboxKeyword').addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                applyInboxFilter();
+            }
         });
+
+        document.getElementById('inboxStatus').addEventListener('change', applyInboxFilter);
+        document.getElementById('inboxPageSize').addEventListener('change', applyInboxFilter);
+
+        updateReplyState(
+            false,
+            'Vui lòng chọn hội thoại trước khi phản hồi...',
+            'Ô phản hồi sẽ mở sau khi chọn hội thoại.'
+        );
+
+        loadInbox(true);
+
+        setInterval(async () => {
+            if (isUserBusy || document.hidden) {
+                return;
+            }
+
+            await loadInbox(false);
+
+            if (selectedThreadId) {
+                await loadThreadIfChanged(selectedThreadId);
+            }
+        }, CSKH_REFRESH_INTERVAL);
     </script>
 }
