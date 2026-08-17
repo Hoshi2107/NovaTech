@@ -168,6 +168,45 @@
         gap: 6px;
     }
 
+    .customer-action-btn {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #ffffff;
+        color: #64748b;
+        border: 1px solid #e2e8f0;
+        transition: all 0.18s ease;
+    }
+
+    .customer-action-btn:hover {
+        background: #e0f2fe;
+        color: #0284c7;
+        border-color: #7dd3fc;
+        transform: translateY(-1px);
+    }
+
+    .customer-action-menu {
+        min-width: 170px;
+        border-radius: 14px;
+        padding: 8px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+    }
+
+    .customer-action-menu .dropdown-item {
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 600;
+        padding: 9px 10px;
+    }
+
+    .customer-action-menu .dropdown-item:hover {
+        background: #f1f5f9;
+    }
+
     @@media (max-width: 768px) {
         .nt-pagination-wrap {
             justify-content: center;
@@ -383,6 +422,7 @@
                             <th>Tiến độ</th>
                             <th>Ngày gia nhập</th>
                             <th>Trạng thái</th>
+                            <th class="text-end">Thao tác</th>
                         </tr>
                     </thead>
 
@@ -390,7 +430,7 @@
                         @if (Model == null || !Model.Any())
                         {
                             <tr>
-                                <td colspan="7" class="text-center text-muted py-4">
+                                <td colspan="8" class="text-center text-muted py-4">
                                     Không tìm thấy khách hàng phù hợp.
                                 </td>
                             </tr>
@@ -447,6 +487,36 @@
                                         <span class="badge rounded-pill px-2 @GetStatusBadgeClass(status)">
                                             @status
                                         </span>
+                                    </td>
+
+                                    <td class="text-end">
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm rounded-circle customer-action-btn"
+                                                    type="button"
+                                                    data-bs-toggle="dropdown"
+                                                    aria-expanded="false"
+                                                    title="Thao tác">
+                                                <i class="fa-solid fa-ellipsis-vertical"></i>
+                                            </button>
+
+                                            <ul class="dropdown-menu dropdown-menu-end customer-action-menu">
+                                                <li>
+                                                    <a class="dropdown-item d-flex align-items-center gap-2"
+                                                       href="@Url.Action("Detail", "Customer", new { id = item.MaKhachHang })">
+                                                        <i class="fa-solid fa-eye text-info"></i>
+                                                        <span>Xem chi tiết</span>
+                                                    </a>
+                                                </li>
+
+                                                <li>
+                                                    <a class="dropdown-item d-flex align-items-center gap-2"
+                                                       href="@Url.Action("Edit", "Customer", new { id = item.MaKhachHang })">
+                                                        <i class="fa-solid fa-pen-to-square text-warning"></i>
+                                                        <span>Chỉnh sửa</span>
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
                                     </td>
                                 </tr>
                             }

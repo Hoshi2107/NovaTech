@@ -1,0 +1,314 @@
+@model DATN64.Models.KhachHang
+@using DATN64.Models
+
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Chi tiết khách hàng";
+    ViewData["BreadcrumbActive"] = "Chi tiết khách hàng";
+
+    var orders = ViewBag.Orders as List<DonHang> ?? new List<DonHang>();
+    var totalOrders = ViewBag.TotalOrders as int? ?? orders.Count;
+    var completedOrders = ViewBag.CompletedOrders as int? ?? 0;
+    var totalSpent = ViewBag.TotalSpent is decimal value ? value : 0m;
+}
+
+@functions {
+    string GetRank(int points)
+    {
+        if (points >= 3000) return "Kim Cương";
+        if (points >= 1500) return "Vàng";
+        if (points >= 500) return "Bạc";
+        return "Đồng";
+    }
+
+    string GetRankBadgeClass(string rank)
+    {
+        return rank switch
+        {
+            "Kim Cương" => "bg-primary text-white",
+            "Vàng" => "bg-warning text-dark",
+            "Bạc" => "bg-secondary text-white",
+            _ => "bg-info text-dark"
+        };
+    }
+
+    string GetStatusBadgeClass(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status) || status == "Hoạt động")
+        {
+            return "bg-success text-white";
+        }
+
+        return "bg-danger text-white";
+    }
+
+    string FormatMoney(decimal? value)
+    {
+        return value.HasValue ? value.Value.ToString("N0") + " đ" : "0 đ";
+    }
+
+    string FormatDate(DateTime? value)
+    {
+        return value.HasValue ? value.Value.ToString("HH:mm - dd/MM/yyyy") : "";
+    }
+
+    string GetOrderCode(DonHang item)
+    {
+        var date = item.NgayDat ?? DateTime.Now;
+        return $"ORD-{date:yyMMdd}{item.MaDonHang:D2}";
+    }
+}
+
+<style>
+    .customer-detail-hero {
+        border-radius: 22px;
+        padding: 22px;
+        background: linear-gradient(135deg, #0ea5e9, #06b6d4);
+        color: white;
+        box-shadow: 0 14px 34px rgba(14, 165, 233, 0.25);
+    }
+
+    .customer-avatar-lg {
+        width: 74px;
+        height: 74px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.22);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        font-weight: 800;
+        border: 2px solid rgba(255, 255, 255, 0.35);
+    }
+
+    .customer-info-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 18px;
+        background: #ffffff;
+        padding: 18px;
+        height: 100%;
+    }
+
+    .customer-info-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        color: #64748b;
+        font-weight: 800;
+        margin-bottom: 4px;
+    }
+
+    .customer-info-value {
+        font-size: 14px;
+        color: #0f172a;
+        font-weight: 700;
+    }
+
+    .customer-stat-card {
+        border-radius: 18px;
+        border: 1px solid #e2e8f0;
+        padding: 16px;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+    }
+
+    .customer-stat-number {
+        font-size: 24px;
+        font-weight: 900;
+        color: #0f172a;
+    }
+
+    .customer-stat-label {
+        font-size: 12px;
+        color: #64748b;
+        font-weight: 700;
+    }
+</style>
+
+<div class="customer-detail-hero mb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div class="d-flex align-items-center gap-3">
+            <div class="customer-avatar-lg">
+                @(string.IsNullOrWhiteSpace(Model.HoTen) ? "KH" : Model.HoTen.Trim().Substring(0, 1).ToUpper())
+            </div>
+
+            <div>
+                <h3 class="fw-bold mb-1">@Model.HoTen</h3>
+
+                <div class="opacity-75">
+                    Mã khách hàng: #@Model.MaKhachHang
+                </div>
+
+                <div class="mt-2 d-flex flex-wrap gap-2">
+                    @{
+                        var rank = GetRank(Model.DiemTichLuy);
+                        var status = string.IsNullOrWhiteSpace(Model.TrangThai) ? "Hoạt động" : Model.TrangThai;
+                    }
+
+                    <span class="badge rounded-pill px-3 py-2 @GetRankBadgeClass(rank)">
+                        @rank
+                    </span>
+
+                    <span class="badge rounded-pill px-3 py-2 @GetStatusBadgeClass(status)">
+                        @status
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="@Url.Action("Edit", "Customer", new { id = Model.MaKhachHang })"
+               class="btn btn-light rounded-pill px-4 fw-bold">
+                <i class="fa-solid fa-pen-to-square me-1"></i>
+                Chỉnh sửa
+            </a>
+
+            <a href="@Url.Action("Index", "Customer")"
+               class="btn btn-outline-light rounded-pill px-4 fw-bold">
+                <i class="fa-solid fa-arrow-left me-1"></i>
+                Quay lại
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="customer-stat-card">
+            <div class="customer-stat-label">Điểm tích lũy</div>
+            <div class="customer-stat-number">@Model.DiemTichLuy</div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="customer-stat-card">
+            <div class="customer-stat-label">Tổng đơn hàng</div>
+            <div class="customer-stat-number">@totalOrders</div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="customer-stat-card">
+            <div class="customer-stat-label">Đơn hoàn thành</div>
+            <div class="customer-stat-number">@completedOrders</div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="customer-stat-card">
+            <div class="customer-stat-label">Tổng chi tiêu</div>
+            <div class="customer-stat-number">@totalSpent.ToString("N0") đ</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card card-glass p-4">
+            <h5 class="fw-bold text-cyan mb-4">
+                <i class="fa-solid fa-id-card me-2"></i>
+                Hồ sơ khách hàng
+            </h5>
+
+            <div class="d-grid gap-3">
+                <div class="customer-info-card">
+                    <div class="customer-info-label">Họ tên</div>
+                    <div class="customer-info-value">@Model.HoTen</div>
+                </div>
+
+                <div class="customer-info-card">
+                    <div class="customer-info-label">Số điện thoại</div>
+                    <div class="customer-info-value">
+                        @(string.IsNullOrWhiteSpace(Model.SoDienThoai) ? "Chưa có SĐT" : Model.SoDienThoai)
+                    </div>
+                </div>
+
+                <div class="customer-info-card">
+                    <div class="customer-info-label">Email</div>
+                    <div class="customer-info-value">
+                        @(string.IsNullOrWhiteSpace(Model.Email) ? "Chưa có email" : Model.Email)
+                    </div>
+                </div>
+
+                <div class="customer-info-card">
+                    <div class="customer-info-label">Địa chỉ</div>
+                    <div class="customer-info-value">
+                        @(string.IsNullOrWhiteSpace(Model.DiaChi) ? "Chưa có địa chỉ" : Model.DiaChi)
+                    </div>
+                </div>
+
+                <div class="customer-info-card">
+                    <div class="customer-info-label">Ngày tham gia</div>
+                    <div class="customer-info-value">@Model.NgayTao.ToString("dd/MM/yyyy HH:mm")</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card card-glass p-4">
+            <h5 class="fw-bold text-cyan mb-4">
+                <i class="fa-solid fa-clock-rotate-left me-2"></i>
+                Lịch sử đơn hàng
+            </h5>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle text-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Mã đơn</th>
+                            <th>Ngày đặt</th>
+                            <th>Tổng tiền</th>
+                            <th>Trạng thái</th>
+                            <th class="text-end">Chi tiết</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @if (!orders.Any())
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    Khách hàng chưa có đơn hàng nào.
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            foreach (var order in orders)
+                            {
+                                var orderStatus = string.IsNullOrWhiteSpace(order.TrangThai) ? "Đơn mới" : order.TrangThai;
+
+                                <tr>
+                                    <td>
+                                        <code class="text-danger fw-bold">@GetOrderCode(order)</code>
+                                    </td>
+
+                                    <td>@FormatDate(order.NgayDat)</td>
+
+                                    <td class="fw-bold text-info">
+                                        @FormatMoney(order.TongTien)
+                                    </td>
+
+                                    <td>
+                                        <span class="badge rounded-pill bg-secondary text-white">
+                                            @orderStatus
+                                        </span>
+                                    </td>
+
+                                    <td class="text-end">
+                                        <a href="@Url.Action("Detail", "Order", new { id = order.MaDonHang })"
+                                           class="btn btn-sm btn-outline-info rounded-pill px-3">
+                                            <i class="fa-solid fa-circle-info me-1"></i>
+                                            Xem
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
