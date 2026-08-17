@@ -20,9 +20,13 @@ namespace DATN64.Controllers
         [HasPermission("View_Customer")]
         public IActionResult Index(string? keyword, string? rank, string? status, int page = 1, int pageSize = 20)
         {
-            if (page < 1) page = 1;
+            if (page < 1)
+            {
+                page = 1;
+            }
 
             var allowedPageSizes = new[] { 10, 20, 50 };
+
             if (!allowedPageSizes.Contains(pageSize))
             {
                 pageSize = 20;
@@ -40,7 +44,6 @@ namespace DATN64.Controllers
              * Khách vãng lai nếu có tồn tại trong database thì không hiển thị ở đây.
              */
             query = query.Where(k =>
-                // Không lấy khách có trạng thái vãng lai
                 (
                     k.TrangThai == null ||
                     (
@@ -50,8 +53,6 @@ namespace DATN64.Controllers
                         k.TrangThai != "Vãng Lai"
                     )
                 )
-
-                // Không lấy khách có tên là khách vãng lai
                 &&
                 (
                     k.HoTen == null ||
@@ -66,8 +67,6 @@ namespace DATN64.Controllers
                         !EF.Functions.Like(k.HoTen, "%Khach vang lai%")
                     )
                 )
-
-                // Không lấy khách có email/phone dạng guest
                 &&
                 (
                     k.Email == null ||
@@ -77,7 +76,6 @@ namespace DATN64.Controllers
                         !EF.Functions.Like(k.Email, "%khachvanglai%")
                     )
                 )
-
                 &&
                 (
                     k.SoDienThoai == null ||
@@ -149,10 +147,10 @@ namespace DATN64.Controllers
         [HasPermission("View_Customer")]
         public IActionResult Create(string HoTen, string SoDienThoai, string Email, string DiaChi, string MatKhau)
         {
-            HoTen = (HoTen ?? "").Trim();
-            SoDienThoai = (SoDienThoai ?? "").Trim();
-            Email = (Email ?? "").Trim();
-            DiaChi = (DiaChi ?? "").Trim();
+            HoTen = NormalizeName(HoTen);
+            SoDienThoai = NormalizePhone(SoDienThoai);
+            Email = NormalizeEmail(Email);
+            DiaChi = NormalizeName(DiaChi);
             MatKhau = (MatKhau ?? "").Trim();
 
             if (string.IsNullOrWhiteSpace(HoTen) ||
@@ -164,26 +162,32 @@ namespace DATN64.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            var existedEmail = _context.KhachHangs.Any(k => k.Email == Email)
-                || _context.NhanViens.Any(nv => nv.Email == Email);
-
-            if (existedEmail)
+            if (!IsValidEmailBasic(Email))
             {
-                TempData["ToastMessage"] = "Email này đã tồn tại trong hệ thống.";
+                TempData["ToastMessage"] = "Email không hợp lệ.";
                 TempData["ToastType"] = "danger";
                 return RedirectToAction(nameof(Index));
             }
 
-            if (!string.IsNullOrWhiteSpace(SoDienThoai))
+            if (CustomerEmailExists(Email))
             {
-                var existedPhone = _context.KhachHangs.Any(k => k.SoDienThoai == SoDienThoai);
+                TempData["ToastMessage"] = "Email này đã được khách hàng khác sử dụng.";
+                TempData["ToastType"] = "danger";
+                return RedirectToAction(nameof(Index));
+            }
 
-                if (existedPhone)
-                {
-                    TempData["ToastMessage"] = "Số điện thoại này đã tồn tại.";
-                    TempData["ToastType"] = "danger";
-                    return RedirectToAction(nameof(Index));
-                }
+            if (EmployeeEmailExists(Email))
+            {
+                TempData["ToastMessage"] = "Email này đã được nhân viên sử dụng. Vui lòng dùng email khác.";
+                TempData["ToastType"] = "danger";
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (!string.IsNullOrWhiteSpace(SoDienThoai) && CustomerPhoneExists(SoDienThoai))
+            {
+                TempData["ToastMessage"] = "Số điện thoại này đã được khách hàng khác sử dụng.";
+                TempData["ToastType"] = "danger";
+                return RedirectToAction(nameof(Index));
             }
 
             var khachHang = new KhachHang
@@ -200,13 +204,97 @@ namespace DATN64.Controllers
             var hasher = new PasswordHasher<KhachHang>();
             khachHang.MatKhau = hasher.HashPassword(khachHang, MatKhau);
 
-            _context.KhachHangs.Add(khachHang);
-            _context.SaveChanges();
+            try
+            {
+                _context.KhachHangs.Add(khachHang);
+                _context.SaveChanges();
 
-            TempData["ToastMessage"] = "Tạo khách hàng thành công. Mật khẩu đã được mã hóa.";
-            TempData["ToastType"] = "success";
+                TempData["ToastMessage"] = "Tạo khách hàng thành công. Mật khẩu đã được mã hóa.";
+                TempData["ToastType"] = "success";
+            }
+            catch (InvalidOperationException ex)
+            {
+                TempData["ToastMessage"] = ex.Message;
+                TempData["ToastType"] = "danger";
+            }
+            catch (DbUpdateException)
+            {
+                TempData["ToastMessage"] = "Email hoặc số điện thoại đã tồn tại. Vui lòng kiểm tra lại.";
+                TempData["ToastType"] = "danger";
+            }
+            catch
+            {
+                TempData["ToastMessage"] = "Có lỗi xảy ra khi tạo khách hàng. Vui lòng thử lại.";
+                TempData["ToastType"] = "danger";
+            }
 
             return RedirectToAction(nameof(Index));
+        }
+
+        private bool CustomerEmailExists(string email)
+        {
+            email = NormalizeEmail(email);
+
+            return _context.KhachHangs
+                .AsNoTracking()
+                .Any(k =>
+                    k.Email != null &&
+                    k.Email.ToLower() == email);
+        }
+
+        private bool CustomerPhoneExists(string phone)
+        {
+            phone = NormalizePhone(phone);
+
+            return _context.KhachHangs
+                .AsNoTracking()
+                .Any(k =>
+                    k.SoDienThoai != null &&
+                    k.SoDienThoai == phone);
+        }
+
+        private bool EmployeeEmailExists(string email)
+        {
+            email = NormalizeEmail(email);
+
+            return _context.NhanViens
+                .AsNoTracking()
+                .Any(nv =>
+                    nv.Email != null &&
+                    nv.Email.ToLower() == email);
+        }
+
+        private static string NormalizeEmail(string? email)
+        {
+            return string.IsNullOrWhiteSpace(email)
+                ? ""
+                : email.Trim().ToLowerInvariant();
+        }
+
+        private static string NormalizePhone(string? phone)
+        {
+            return string.IsNullOrWhiteSpace(phone)
+                ? ""
+                : phone.Trim();
+        }
+
+        private static string NormalizeName(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value)
+                ? ""
+                : value.Trim();
+        }
+
+        private static bool IsValidEmailBasic(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            { 
+                return false;
+            }
+
+            return email.Contains("@") &&
+                   email.Contains(".") &&
+                   !email.Contains(" ");
         }
     }
 }

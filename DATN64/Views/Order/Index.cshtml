@@ -56,10 +56,37 @@
         return $"ORD-{date:yyMMdd}{item.MaDonHang:D2}";
     }
 
+    string NormalizeOrderStatus(string? status)
+    {
+        status = (status ?? "Đơn mới").Trim();
+
+        if (status == "Đã giao")
+        {
+            return "Hoàn thành";
+        }
+
+        return status;
+    }
+
     string GetOrderChannel(DATN64.Models.DonHang item)
     {
         var note = item.GhiChu ?? "";
         var payment = item.PhuongThucThanhToan ?? "";
+
+        if (
+            note.Contains("[TikTokShop#", StringComparison.OrdinalIgnoreCase) ||
+            note.Contains("[StreamSim#", StringComparison.OrdinalIgnoreCase) ||
+            note.Contains("TikTok Shop", StringComparison.OrdinalIgnoreCase) ||
+            note.Contains("TikTok", StringComparison.OrdinalIgnoreCase) ||
+            note.Contains("Livestream", StringComparison.OrdinalIgnoreCase) ||
+            payment.Contains("TikTok Shop", StringComparison.OrdinalIgnoreCase) ||
+            payment.Contains("TikTok", StringComparison.OrdinalIgnoreCase) ||
+            payment.Contains("Stream", StringComparison.OrdinalIgnoreCase) ||
+            payment.Contains("Livestream", StringComparison.OrdinalIgnoreCase)
+        )
+        {
+            return "TikTok Shop";
+        }
 
         if (
             note.Contains("Địa chỉ giao hàng", StringComparison.OrdinalIgnoreCase) ||
@@ -67,10 +94,8 @@
             note.Contains("giao hàng", StringComparison.OrdinalIgnoreCase) ||
             note.Contains("website", StringComparison.OrdinalIgnoreCase) ||
             note.Contains("online", StringComparison.OrdinalIgnoreCase) ||
-            note.Contains("TikTok", StringComparison.OrdinalIgnoreCase) ||
             payment.Contains("online", StringComparison.OrdinalIgnoreCase) ||
-            payment.Contains("website", StringComparison.OrdinalIgnoreCase) ||
-            payment.Contains("TikTok", StringComparison.OrdinalIgnoreCase)
+            payment.Contains("website", StringComparison.OrdinalIgnoreCase)
         )
         {
             return "Website";
@@ -92,14 +117,36 @@
     {
         if (channel == "Website")
         {
-            return "fa-globe text-primary";
+            return "fa-solid fa-globe";
         }
 
-        return "fa-store text-warning";
+        if (channel == "TikTok Shop")
+        {
+            return "fa-solid fa-cart-shopping";
+        }
+
+        return "fa-solid fa-store";
+    }
+
+    string GetChannelBadgeClass(string channel)
+    {
+        if (channel == "Website")
+        {
+            return "bg-primary-subtle text-primary border border-primary-subtle";
+        }
+
+        if (channel == "TikTok Shop")
+        {
+            return "bg-dark text-white";
+        }
+
+        return "bg-warning-subtle text-warning border border-warning-subtle";
     }
 
     string GetStatusBadge(string? status)
     {
+        status = NormalizeOrderStatus(status);
+
         return status switch
         {
             "Đơn mới" => "bg-info text-dark",
@@ -219,6 +266,22 @@
         gap: 6px;
     }
 
+    .nt-channel-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .nt-channel-pill i {
+        font-size: 12px;
+        line-height: 1;
+    }
+
     @@media (max-width: 768px) {
         .nt-pagination-wrap {
             justify-content: center;
@@ -290,6 +353,7 @@
                 <option value="">Tất cả kênh</option>
                 <option value="Website" selected="@(channelFilter == "Website")">Website</option>
                 <option value="Cửa hàng" selected="@(channelFilter == "Cửa hàng")">Cửa hàng</option>
+                <option value="TikTok Shop" selected="@(channelFilter == "TikTok Shop")">TikTok Shop</option>
             </select>
         </div>
 
@@ -347,7 +411,7 @@
                     foreach (var item in Model)
                     {
                         var channel = GetOrderChannel(item);
-                        var status = item.TrangThai ?? "Đơn mới";
+                        var status = NormalizeOrderStatus(item.TrangThai);
 
                         <tr>
                             <td>
@@ -369,8 +433,10 @@
                             </td>
 
                             <td>
-                                <i class="fa-solid @GetChannelIcon(channel)"></i>
-                                <span class="ms-1">@channel</span>
+                                <span class="nt-channel-pill @GetChannelBadgeClass(channel)">
+                                    <i class="@GetChannelIcon(channel)"></i>
+                                    @channel
+                                </span>
                             </td>
 
                             <td class="text-info fw-bold">

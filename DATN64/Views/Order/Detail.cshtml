@@ -5,12 +5,30 @@
     ViewData["Title"] = "Chi tiết đơn hàng";
     ViewData["BreadcrumbActive"] = "Chi tiết đơn hàng";
 
-    var isCompletedOrder = Model.TrangThai == "Hoàn thành";
+    var displayStatus = (Model.TrangThai ?? "Đơn mới").Trim();
+
+    if (displayStatus == "Đã giao")
+    {
+        displayStatus = "Hoàn thành";
+    }
+
+    var orderChannel = string.IsNullOrWhiteSpace(Model.KenhBan)
+        ? "Cửa hàng"
+        : Model.KenhBan.Trim();
+
+    var isCompletedOrder = displayStatus == "Hoàn thành";
 }
 
 @functions {
-    string GetStatusClass(string status)
+    string GetStatusClass(string? status)
     {
+        status = (status ?? "Đơn mới").Trim();
+
+        if (status == "Đã giao")
+        {
+            status = "Hoàn thành";
+        }
+
         return status switch
         {
             "Đơn mới" => "bg-info text-dark",
@@ -24,7 +42,97 @@
             _ => "bg-light text-dark"
         };
     }
+
+    string GetChannelIcon(string? channel)
+    {
+        channel = (channel ?? "").Trim();
+
+        if (channel == "Website")
+        {
+            return "fa-solid fa-globe";
+        }
+
+        if (channel == "TikTok Shop")
+        {
+            return "fa-brands fa-tiktok";
+        }
+
+        return "fa-solid fa-store";
+    }
+
+    string GetChannelBadgeClass(string? channel)
+    {
+        channel = (channel ?? "").Trim();
+
+        if (channel == "Website")
+        {
+            return "bg-primary text-white";
+        }
+
+        if (channel == "TikTok Shop")
+        {
+            return "bg-dark text-white";
+        }
+
+        return "bg-warning text-dark";
+    }
+
+    string GetCompletedText(string? channel)
+    {
+        channel = (channel ?? "").Trim();
+
+        if (channel == "Website")
+        {
+            return "Hoàn thành - Khách đã nhận hàng từ Website";
+        }
+
+        if (channel == "TikTok Shop")
+        {
+            return "Hoàn thành - Khách đã nhận hàng từ TikTok Shop";
+        }
+
+        return "Hoàn thành - Khách đã nhận tại cửa hàng";
+    }
+
+    string GetCompletedAlertText(string? channel)
+    {
+        channel = (channel ?? "").Trim();
+
+        if (channel == "Website")
+        {
+            return "Đơn hàng Website đã hoàn thành vì khách đã nhận hàng từ Website.";
+        }
+
+        if (channel == "TikTok Shop")
+        {
+            return "Đơn hàng TikTok Shop đã hoàn thành vì khách đã nhận hàng từ TikTok Shop.";
+        }
+
+        return "Đơn hàng cửa hàng đã hoàn thành vì khách đã nhận trực tiếp tại cửa hàng.";
+    }
 }
+
+<style>
+    .order-channel-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+        width: fit-content;
+    }
+
+    .status-note-box {
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+        border-radius: 16px;
+        padding: 12px 14px;
+        font-size: 13px;
+        color: #475569;
+    }
+</style>
 
 <div class="row g-4">
     <div class="col-lg-8">
@@ -40,9 +148,16 @@
                             Ngày đặt: @Model.NgayDat.ToString("HH:mm - dd/MM/yyyy")
                         </div>
 
-                        <span class="badge rounded-pill px-3 py-2 @GetStatusClass(Model.TrangThai)">
-                            @Model.TrangThai
-                        </span>
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <span class="badge rounded-pill px-3 py-2 @GetStatusClass(displayStatus)">
+                                @displayStatus
+                            </span>
+
+                            <span class="order-channel-pill @GetChannelBadgeClass(orderChannel)">
+                                <i class="@GetChannelIcon(orderChannel)"></i>
+                                @orderChannel
+                            </span>
+                        </div>
                     </div>
 
                     <div class="text-end">
@@ -184,7 +299,13 @@
 
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Kênh bán</label>
-                        <input class="form-control" value="@Model.KenhBan" readonly />
+
+                        <div>
+                            <span class="order-channel-pill @GetChannelBadgeClass(orderChannel)">
+                                <i class="@GetChannelIcon(orderChannel)"></i>
+                                @orderChannel
+                            </span>
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -198,22 +319,25 @@
                         <select name="trangThai"
                                 class="form-select @(isCompletedOrder ? "bg-light text-muted" : "")"
                                 disabled="@isCompletedOrder">
-                            <option value="Đơn mới" selected="@(Model.TrangThai == "Đơn mới")">Đơn mới</option>
-                            <option value="Chờ duyệt" selected="@(Model.TrangThai == "Chờ duyệt")">Chờ duyệt</option>
-                            <option value="Đã xác nhận" selected="@(Model.TrangThai == "Đã xác nhận")">Đã xác nhận</option>
-                            <option value="Đã thanh toán" selected="@(Model.TrangThai == "Đã thanh toán")">Đã thanh toán</option>
-                            <option value="Đang đóng gói" selected="@(Model.TrangThai == "Đang đóng gói")">Đang đóng gói</option>
-                            <option value="Đang giao" selected="@(Model.TrangThai == "Đang giao")">Đang giao</option>
-                            <option value="Hoàn thành" selected="@(Model.TrangThai == "Hoàn thành")">Hoàn thành</option>
-                            <option value="Đã hủy" selected="@(Model.TrangThai == "Đã hủy")">Đã hủy</option>
+
+                            <option value="Đơn mới" selected="@(displayStatus == "Đơn mới")">Đơn mới</option>
+                            <option value="Chờ duyệt" selected="@(displayStatus == "Chờ duyệt")">Chờ duyệt</option>
+                            <option value="Đã xác nhận" selected="@(displayStatus == "Đã xác nhận")">Đã xác nhận</option>
+                            <option value="Đã thanh toán" selected="@(displayStatus == "Đã thanh toán")">Đã thanh toán</option>
+                            <option value="Đang đóng gói" selected="@(displayStatus == "Đang đóng gói")">Đang đóng gói</option>
+                            <option value="Đang giao" selected="@(displayStatus == "Đang giao")">Đang giao</option>
+                            <option value="Hoàn thành" selected="@(displayStatus == "Hoàn thành")">
+                                @GetCompletedText(orderChannel)
+                            </option>
+                            <option value="Đã hủy" selected="@(displayStatus == "Đã hủy")">Đã hủy</option>
                         </select>
                     </div>
 
-                    @if (isCompletedOrder)
+                    @if (displayStatus == "Hoàn thành")
                     {
                         <div class="alert alert-success rounded-4 small mb-3">
-                            <i class="fa-solid fa-lock me-1"></i>
-                            Đơn hàng đã hoàn thành nên trạng thái đã bị khóa.
+                            <i class="fa-solid fa-check-circle me-1"></i>
+                            @GetCompletedAlertText(orderChannel)
                         </div>
 
                         <button type="button"
@@ -225,6 +349,17 @@
                     }
                     else
                     {
+                        <div class="status-note-box mb-3">
+                            <div class="fw-bold mb-1">
+                                <i class="fa-solid fa-circle-info me-1"></i>
+                                Khi chọn hoàn thành:
+                            </div>
+
+                            <div>
+                                @GetCompletedText(orderChannel)
+                            </div>
+                        </div>
+
                         <button type="submit"
                                 class="btn btn-info text-white w-100 rounded-pill fw-bold">
                             Cập nhật trạng thái
@@ -242,8 +377,9 @@
                 </h5>
 
                 <ul class="text-muted small ps-3 mb-0">
-                    <li>Chỉ nên cập nhật trạng thái, không sửa trực tiếp nội dung đơn hàng.</li>
-                    <li>Khi đơn hàng chuyển sang Hoàn thành, hệ thống có thể cộng điểm tích lũy cho khách hàng.</li>
+                    <li>Cửa hàng: hoàn thành khi khách nhận trực tiếp tại cửa hàng.</li>
+                    <li>Website: hoàn thành khi khách đã nhận hàng từ đơn Website.</li>
+                    <li>TikTok Shop: hoàn thành khi khách đã nhận hàng từ TikTok Shop.</li>
                     <li>Khi đơn đã Hoàn thành, trạng thái sẽ bị khóa và không thể cập nhật tiếp.</li>
                 </ul>
             </div>

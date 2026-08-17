@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using DATN64.Models;
 using DATN64.Helpers;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Net.Http;
@@ -31,6 +32,7 @@ namespace DATN64.Controllers
         public async Task<IActionResult> TriggerSync(string syncType)
         {
             var config = _context.TikTokShopConfigs.FirstOrDefault();
+
             if (config == null)
             {
                 config = new TikTokShopConfig
@@ -39,8 +41,9 @@ namespace DATN64.Controllers
                     ShopId = "TT-NOVATECH",
                     IsConnected = true,
                     SyncStatus = "Đã đồng bộ",
-                    LastSyncTime = System.DateTime.Now
+                    LastSyncTime = DateTime.Now
                 };
+
                 _context.TikTokShopConfigs.Add(config);
             }
 
@@ -52,6 +55,7 @@ namespace DATN64.Controllers
                 try
                 {
                     var response = await client.GetAsync(simulatorUrl);
+
                     if (!response.IsSuccessStatusCode)
                     {
                         var failLog = new TikTokSyncLog
@@ -59,19 +63,26 @@ namespace DATN64.Controllers
                             Type = syncType,
                             Message = $"Đồng bộ đơn hàng thất bại. Không thể kết nối tới Trình giả lập tại {simulatorUrl}. HTTP {(int)response.StatusCode}",
                             Status = "Thất bại",
-                            Timestamp = System.DateTime.Now
+                            Timestamp = DateTime.Now
                         };
+
                         _context.TikTokSyncLogs.Add(failLog);
                         await _context.SaveChangesAsync();
 
                         TempData["ToastMessage"] = $"Lỗi đồng bộ: Trình giả lập trả về HTTP {(int)response.StatusCode}!";
                         TempData["ToastType"] = "danger";
+
                         return RedirectToAction("Index");
                     }
 
                     var json = await response.Content.ReadAsStringAsync();
-                    var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                    var tiktokOrders = System.Text.Json.JsonSerializer.Deserialize<List<TikTokOrderPullDto>>(json, options);
+
+                    var options = new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    };
+
+                    var tiktokOrders = JsonSerializer.Deserialize<List<TikTokOrderPullDto>>(json, options);
 
                     int newOrdersCount = 0;
                     int updatedOrdersCount = 0;
@@ -83,25 +94,52 @@ namespace DATN64.Controllers
                             var identifier = $"[TikTokShop#{data.OrderId}]";
                             string mappedStatus = MapTikTokStatus(data.Status);
 
-                            // Check existing
                             var existingOrder = _context.DonHangs
                                 .FirstOrDefault(o => o.GhiChu != null && o.GhiChu.Contains(identifier));
 
                             if (existingOrder != null)
                             {
+                                var changed = false;
+
                                 if (existingOrder.TrangThai != mappedStatus)
                                 {
                                     existingOrder.TrangThai = mappedStatus;
+                                    changed = true;
+                                }
+
+                                if (string.IsNullOrWhiteSpace(existingOrder.PhuongThucThanhToan) ||
+                                    !existingOrder.PhuongThucThanhToan.Contains("TikTok Shop", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    existingOrder.PhuongThucThanhToan = $"TikTok Shop - {data.PaymentMethod}";
+                                    changed = true;
+                                }
+
+                                if (string.IsNullOrWhiteSpace(existingOrder.GhiChu))
+                                {
+                                    existingOrder.GhiChu = $"{identifier} Kênh bán: TikTok Shop. Nơi mua: TikTok Shop. Ghi chú khách: {data.Note ?? "Không có"}";
+                                    changed = true;
+                                }
+                                else if (!existingOrder.GhiChu.Contains("Kênh bán: TikTok Shop", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    existingOrder.GhiChu = $"{existingOrder.GhiChu} | Kênh bán: TikTok Shop. Nơi mua: TikTok Shop.";
+                                    changed = true;
+                                }
+
+                                if (changed)
+                                {
                                     updatedOrdersCount++;
                                 }
+
                                 continue;
                             }
 
-                            // Find or create customer (match both name and phone to prevent renaming existing ones)
-                            var customer = _context.KhachHangs.FirstOrDefault(k => k.SoDienThoai == data.Phone && k.HoTen == data.CustomerName);
+                            var customer = _context.KhachHangs
+                                .FirstOrDefault(k => k.SoDienThoai == data.Phone && k.HoTen == data.CustomerName);
+
                             if (customer == null)
                             {
                                 var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<KhachHang>();
+
                                 customer = new KhachHang
                                 {
                                     HoTen = data.CustomerName,
@@ -111,10 +149,11 @@ namespace DATN64.Controllers
                                     MatKhau = hasher.HashPassword(null!, "TikTok12345"),
                                     DiemTichLuy = 0,
                                     TrangThai = "Hoạt động",
-                                    NgayTao = System.DateTime.Now
+                                    NgayTao = DateTime.Now
                                 };
+
                                 _context.KhachHangs.Add(customer);
-                                _context.SaveChanges(); // get customer ID
+                                _context.SaveChanges();
                             }
                             else
                             {
@@ -124,8 +163,8 @@ namespace DATN64.Controllers
                                 }
                             }
 
-                            // Validate products for this order
                             bool allProductsExist = true;
+
                             foreach (var item in data.OrderItems)
                             {
                                 if (!_context.SanPhams.Any(p => p.MaSanPham == item.ProductId))
@@ -142,15 +181,17 @@ namespace DATN64.Controllers
                                     Type = syncType,
                                     Message = $"Bỏ qua đơn hàng TikTok #{data.OrderId} do chứa sản phẩm không tồn tại trên hệ thống NovaTech. Vui lòng đồng bộ danh mục sản phẩm trước!",
                                     Status = "Thất bại",
-                                    Timestamp = System.DateTime.Now
+                                    Timestamp = DateTime.Now
                                 };
+
                                 _context.TikTokSyncLogs.Add(failLog);
                                 continue;
                             }
 
-                            // Create Order
-                            System.DateTime orderDate = System.DateTime.Now;
-                            if (data.CreatedAt >= new System.DateTime(1753, 1, 1) && data.CreatedAt <= new System.DateTime(9999, 12, 31))
+                            DateTime orderDate = DateTime.Now;
+
+                            if (data.CreatedAt >= new DateTime(1753, 1, 1) &&
+                                data.CreatedAt <= new DateTime(9999, 12, 31))
                             {
                                 orderDate = data.CreatedAt;
                             }
@@ -161,19 +202,20 @@ namespace DATN64.Controllers
                                 NgayDat = orderDate,
                                 TongTien = data.TotalPrice,
                                 TrangThai = mappedStatus,
-                                PhuongThucThanhToan = $"TikTok - {data.PaymentMethod}",
-                                GhiChu = $"{identifier} Ghi chú khách: {data.Note ?? "Không có"}"
+                                PhuongThucThanhToan = $"TikTok Shop - {data.PaymentMethod}",
+                                GhiChu = $"{identifier} Kênh bán: TikTok Shop. Nơi mua: TikTok Shop. Ghi chú khách: {data.Note ?? "Không có"}"
                             };
-                            _context.DonHangs.Add(order);
-                            _context.SaveChanges(); // get order ID
 
-                            // Create details & deduct stock
+                            _context.DonHangs.Add(order);
+                            _context.SaveChanges();
+
                             foreach (var item in data.OrderItems)
                             {
                                 var product = _context.SanPhams.FirstOrDefault(p => p.MaSanPham == item.ProductId);
+
                                 if (product != null)
                                 {
-                                    product.SoLuongTon = System.Math.Max(0, product.SoLuongTon - item.Quantity);
+                                    product.SoLuongTon = Math.Max(0, product.SoLuongTon - item.Quantity);
                                 }
 
                                 var orderDetail = new ChiTietDonHang
@@ -183,53 +225,56 @@ namespace DATN64.Controllers
                                     SoLuong = item.Quantity,
                                     DonGia = item.Price
                                 };
+
                                 _context.ChiTietDonHangs.Add(orderDetail);
                             }
 
-                            // Add system notification
                             var notification = new SystemNotification
                             {
-                                Title = "Đơn hàng TikTok Shop mới (Pull)",
+                                Title = "Đơn hàng TikTok Shop mới",
                                 Message = $"Đơn hàng TikTok #{data.OrderId} trị giá {data.TotalPrice.ToString("N0")} đ được đồng bộ thành công.",
                                 Type = "Đơn mới",
-                                Timestamp = System.DateTime.Now,
+                                Timestamp = DateTime.Now,
                                 IsRead = false
                             };
+
                             _context.SystemNotifications.Add(notification);
 
                             newOrdersCount++;
                         }
                     }
 
-                    // Log success
                     var log = new TikTokSyncLog
                     {
                         Type = syncType,
                         Message = $"Đồng bộ đơn hàng thành công với TikTok Shop. Đã thêm mới {newOrdersCount} đơn, cập nhật {updatedOrdersCount} đơn.",
                         Status = "Thành công",
-                        Timestamp = System.DateTime.Now
+                        Timestamp = DateTime.Now
                     };
+
                     _context.TikTokSyncLogs.Add(log);
 
-                    config.LastSyncTime = System.DateTime.Now;
+                    config.LastSyncTime = DateTime.Now;
                     config.IsConnected = true;
                     config.ShopName = "NovaTech TikTok Shop (Fake)";
                     config.ShopId = "TT-NOVATECH";
                     config.SyncStatus = "Đã đồng bộ";
+
                     await _context.SaveChangesAsync();
 
                     TempData["ToastMessage"] = $"Đồng bộ thành công! Thêm {newOrdersCount} đơn hàng mới, cập nhật {updatedOrdersCount} đơn.";
                     TempData["ToastType"] = "success";
                 }
-                catch (System.Exception ex)
+                catch (Exception ex)
                 {
                     var failLog = new TikTokSyncLog
                     {
                         Type = syncType,
                         Message = $"Lỗi kết nối tới Trình giả lập: {ex.Message}",
                         Status = "Thất bại",
-                        Timestamp = System.DateTime.Now
+                        Timestamp = DateTime.Now
                     };
+
                     _context.TikTokSyncLogs.Add(failLog);
                     await _context.SaveChangesAsync();
 
@@ -239,18 +284,19 @@ namespace DATN64.Controllers
             }
             else
             {
-                // Sản phẩm sync
                 var log = new TikTokSyncLog
                 {
                     Type = syncType,
                     Message = $"Đồng bộ thành công dữ liệu sản phẩm với TikTok API.",
                     Status = "Thành công",
-                    Timestamp = System.DateTime.Now
+                    Timestamp = DateTime.Now
                 };
+
                 _context.TikTokSyncLogs.Add(log);
 
-                config.LastSyncTime = System.DateTime.Now;
+                config.LastSyncTime = DateTime.Now;
                 config.SyncStatus = "Đã đồng bộ";
+
                 await _context.SaveChangesAsync();
 
                 TempData["ToastMessage"] = $"Đồng bộ dữ liệu sản phẩm hoàn tất!";
@@ -262,18 +308,32 @@ namespace DATN64.Controllers
 
         private string MapTikTokStatus(string tikTokStatus)
         {
+            tikTokStatus = (tikTokStatus ?? "").Trim();
+
             return tikTokStatus switch
             {
                 "Awaiting Shipment" => "Chờ duyệt",
+                "Pending" => "Chờ duyệt",
+
+                "Paid" => "Đã thanh toán",
+                "Ready To Ship" => "Đang đóng gói",
+
                 "Shipped" => "Đang giao",
-                "Delivered" => "Đã giao",
+                "In Transit" => "Đang giao",
+
+                "Delivered" => "Hoàn thành",
+                "Completed" => "Hoàn thành",
+                "Buyer Received" => "Hoàn thành",
+                "Received" => "Hoàn thành",
+
                 "Cancelled" => "Đã hủy",
+                "Canceled" => "Đã hủy",
+
                 _ => "Chờ duyệt"
             };
         }
     }
 
-    // --- DTOs for Pull Integration ---
     public class TikTokOrderPullDto
     {
         public string OrderId { get; set; } = "";
@@ -284,8 +344,8 @@ namespace DATN64.Controllers
         public decimal TotalPrice { get; set; }
         public string PaymentMethod { get; set; } = "";
         public string Status { get; set; } = "";
-        public System.DateTime CreatedAt { get; set; }
-        public System.Collections.Generic.List<TikTokOrderItemPullDto> OrderItems { get; set; } = new();
+        public DateTime CreatedAt { get; set; }
+        public List<TikTokOrderItemPullDto> OrderItems { get; set; } = new();
     }
 
     public class TikTokOrderItemPullDto

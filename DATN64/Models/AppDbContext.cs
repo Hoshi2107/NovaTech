@@ -53,23 +53,195 @@ namespace DATN64.Models
                 .HasForeignKey(m => m.ThreadId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            /*
+             * CHẶN TRÙNG KHÁCH HÀNG
+             * Email và Số điện thoại không được trùng.
+             * Dùng filter để không khóa các dòng Email/SĐT rỗng hoặc null.
+             */
+            modelBuilder.Entity<KhachHang>()
+                .HasIndex(k => k.Email)
+                .IsUnique()
+                .HasFilter("[Email] IS NOT NULL AND [Email] <> ''");
+
+            modelBuilder.Entity<KhachHang>()
+                .HasIndex(k => k.SoDienThoai)
+                .IsUnique()
+                .HasFilter("[SoDienThoai] IS NOT NULL AND [SoDienThoai] <> ''");
+
             base.OnModelCreating(modelBuilder);
         }
 
         public override int SaveChanges()
         {
+            NormalizeCustomerContactFields();
+            ValidateDuplicateCustomerContactFields();
+
             var lowStock = GetLowStockProductsToAutoImport();
+
             int result = base.SaveChanges();
+
             ProcessAutoImports(lowStock);
+
             return result;
         }
 
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
+            NormalizeCustomerContactFields();
+            await ValidateDuplicateCustomerContactFieldsAsync(cancellationToken);
+
             var lowStock = GetLowStockProductsToAutoImport();
+
             int result = await base.SaveChangesAsync(cancellationToken);
+
             await ProcessAutoImportsAsync(lowStock, cancellationToken);
+
             return result;
+        }
+
+        private void NormalizeCustomerContactFields()
+        {
+            var customerEntries = ChangeTracker.Entries<KhachHang>()
+                .Where(e => e.State == EntityState.Added || e.State == EntityState.Modified)
+                .ToList();
+
+            foreach (var entry in customerEntries)
+            {
+                var customer = entry.Entity;
+
+                customer.Email = string.IsNullOrWhiteSpace(customer.Email)
+                    ? customer.Email
+                    : customer.Email.Trim().ToLowerInvariant();
+
+                customer.SoDienThoai = string.IsNullOrWhiteSpace(customer.SoDienThoai)
+                    ? customer.SoDienThoai
+                    : customer.SoDienThoai.Trim();
+            }
+        }
+
+        private void ValidateDuplicateCustomerContactFields()
+        {
+            var customerEntries = ChangeTracker.Entries<KhachHang>()
+                .Where(e => e.State == EntityState.Added || e.State == EntityState.Modified)
+                .Select(e => e.Entity)
+                .ToList();
+
+            if (!customerEntries.Any())
+            {
+                return;
+            }
+
+            ValidateDuplicateCustomerContactFieldsInsideCurrentSave(customerEntries);
+
+            foreach (var customer in customerEntries)
+            {
+                var email = customer.Email?.Trim().ToLowerInvariant();
+                var phone = customer.SoDienThoai?.Trim();
+
+                if (!string.IsNullOrWhiteSpace(email))
+                {
+                    bool emailExists = KhachHangs
+                        .AsNoTracking()
+                        .Any(k =>
+                            k.MaKhachHang != customer.MaKhachHang &&
+                            k.Email != null &&
+                            k.Email.ToLower() == email);
+
+                    if (emailExists)
+                    {
+                        throw new InvalidOperationException($"Email '{email}' đã tồn tại. Vui lòng dùng email khác.");
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(phone))
+                {
+                    bool phoneExists = KhachHangs
+                        .AsNoTracking()
+                        .Any(k =>
+                            k.MaKhachHang != customer.MaKhachHang &&
+                            k.SoDienThoai == phone);
+
+                    if (phoneExists)
+                    {
+                        throw new InvalidOperationException($"Số điện thoại '{phone}' đã tồn tại. Vui lòng dùng số điện thoại khác.");
+                    }
+                }
+            }
+        }
+
+        private async Task ValidateDuplicateCustomerContactFieldsAsync(CancellationToken cancellationToken)
+        {
+            var customerEntries = ChangeTracker.Entries<KhachHang>()
+                .Where(e => e.State == EntityState.Added || e.State == EntityState.Modified)
+                .Select(e => e.Entity)
+                .ToList();
+
+            if (!customerEntries.Any())
+            {
+                return;
+            }
+
+            ValidateDuplicateCustomerContactFieldsInsideCurrentSave(customerEntries);
+
+            foreach (var customer in customerEntries)
+            {
+                var email = customer.Email?.Trim().ToLowerInvariant();
+                var phone = customer.SoDienThoai?.Trim();
+
+                if (!string.IsNullOrWhiteSpace(email))
+                {
+                    bool emailExists = await KhachHangs
+                        .AsNoTracking()
+                        .AnyAsync(k =>
+                            k.MaKhachHang != customer.MaKhachHang &&
+                            k.Email != null &&
+                            k.Email.ToLower() == email,
+                            cancellationToken);
+
+                    if (emailExists)
+                    {
+                        throw new InvalidOperationException($"Email '{email}' đã tồn tại. Vui lòng dùng email khác.");
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(phone))
+                {
+                    bool phoneExists = await KhachHangs
+                        .AsNoTracking()
+                        .AnyAsync(k =>
+                            k.MaKhachHang != customer.MaKhachHang &&
+                            k.SoDienThoai == phone,
+                            cancellationToken);
+
+                    if (phoneExists)
+                    {
+                        throw new InvalidOperationException($"Số điện thoại '{phone}' đã tồn tại. Vui lòng dùng số điện thoại khác.");
+                    }
+                }
+            }
+        }
+
+        private void ValidateDuplicateCustomerContactFieldsInsideCurrentSave(List<KhachHang> customers)
+        {
+            var duplicateEmail = customers
+                .Where(k => !string.IsNullOrWhiteSpace(k.Email))
+                .GroupBy(k => k.Email!.Trim().ToLowerInvariant())
+                .FirstOrDefault(g => g.Count() > 1);
+
+            if (duplicateEmail != null)
+            {
+                throw new InvalidOperationException($"Email '{duplicateEmail.Key}' bị trùng trong dữ liệu đang lưu.");
+            }
+
+            var duplicatePhone = customers
+                .Where(k => !string.IsNullOrWhiteSpace(k.SoDienThoai))
+                .GroupBy(k => k.SoDienThoai!.Trim())
+                .FirstOrDefault(g => g.Count() > 1);
+
+            if (duplicatePhone != null)
+            {
+                throw new InvalidOperationException($"Số điện thoại '{duplicatePhone.Key}' bị trùng trong dữ liệu đang lưu.");
+            }
         }
 
         private List<SanPham> GetLowStockProductsToAutoImport()
@@ -84,14 +256,16 @@ namespace DATN64.Models
         private void ProcessAutoImports(List<SanPham> lowStockProducts)
         {
             if (lowStockProducts == null || !lowStockProducts.Any()) return;
-            
+
             bool autoImportCreated = false;
+
             foreach (var item in lowStockProducts)
             {
                 string skuStr = item.MaSanPham.ToString();
-                bool hasPending = InventoryTransactions.Any(t => 
-                    t.ProductSKU == skuStr && 
-                    t.TrangThai == "Chờ duyệt" && 
+
+                bool hasPending = InventoryTransactions.Any(t =>
+                    t.ProductSKU == skuStr &&
+                    t.TrangThai == "Chờ duyệt" &&
                     (t.Type == "Nhập kho" || t.Type == "Điều chỉnh"));
 
                 if (!hasPending)
@@ -128,14 +302,16 @@ namespace DATN64.Models
         private async Task ProcessAutoImportsAsync(List<SanPham> lowStockProducts, CancellationToken cancellationToken)
         {
             if (lowStockProducts == null || !lowStockProducts.Any()) return;
-            
+
             bool autoImportCreated = false;
+
             foreach (var item in lowStockProducts)
             {
                 string skuStr = item.MaSanPham.ToString();
-                bool hasPending = await InventoryTransactions.AnyAsync(t => 
-                    t.ProductSKU == skuStr && 
-                    t.TrangThai == "Chờ duyệt" && 
+
+                bool hasPending = await InventoryTransactions.AnyAsync(t =>
+                    t.ProductSKU == skuStr &&
+                    t.TrangThai == "Chờ duyệt" &&
                     (t.Type == "Nhập kho" || t.Type == "Điều chỉnh"),
                     cancellationToken);
 
@@ -172,16 +348,21 @@ namespace DATN64.Models
 
         public void AutoGenerateLowStockTickets()
         {
-            var lowStockProducts = SanPhams.Where(p => p.SoLuongTon <= 5).ToList();
+            var lowStockProducts = SanPhams
+                .Where(p => p.SoLuongTon <= 5)
+                .ToList();
+
             if (lowStockProducts.Any())
             {
                 bool autoImportCreated = false;
+
                 foreach (var item in lowStockProducts)
                 {
                     string skuStr = item.MaSanPham.ToString();
-                    bool hasPending = InventoryTransactions.Any(t => 
-                        t.ProductSKU == skuStr && 
-                        t.TrangThai == "Chờ duyệt" && 
+
+                    bool hasPending = InventoryTransactions.Any(t =>
+                        t.ProductSKU == skuStr &&
+                        t.TrangThai == "Chờ duyệt" &&
                         (t.Type == "Nhập kho" || t.Type == "Điều chỉnh"));
 
                     if (!hasPending)
@@ -218,16 +399,21 @@ namespace DATN64.Models
 
         public async Task AutoGenerateLowStockTicketsAsync()
         {
-            var lowStockProducts = await SanPhams.Where(p => p.SoLuongTon <= 5).ToListAsync();
+            var lowStockProducts = await SanPhams
+                .Where(p => p.SoLuongTon <= 5)
+                .ToListAsync();
+
             if (lowStockProducts.Any())
             {
                 bool autoImportCreated = false;
+
                 foreach (var item in lowStockProducts)
                 {
                     string skuStr = item.MaSanPham.ToString();
-                    bool hasPending = await InventoryTransactions.AnyAsync(t => 
-                        t.ProductSKU == skuStr && 
-                        t.TrangThai == "Chờ duyệt" && 
+
+                    bool hasPending = await InventoryTransactions.AnyAsync(t =>
+                        t.ProductSKU == skuStr &&
+                        t.TrangThai == "Chờ duyệt" &&
                         (t.Type == "Nhập kho" || t.Type == "Điều chỉnh"));
 
                     if (!hasPending)
