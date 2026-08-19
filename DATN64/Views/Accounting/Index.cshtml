@@ -968,10 +968,11 @@
                     const d = await res.json();
                     const paidPct = d.tongTien > 0 ? (d.daThanhToan / d.tongTien * 100).toFixed(1) : 0;
                     const hangRows = (d.chiTietHang || []).map(h => `
-                        <tr class="text-sm">
+                        <tr class="text-sm">    
                             <td>${h.tenSanPham}</td>
                             <td class="text-center">${h.soLuong}</td>
                             <td class="text-end">${fmt(h.giaNhap)}₫</td>
+                            <td class="text-end text-muted">${fmt(h.giaNiemYet)}₫</td>
                             <td class="text-end fw-bold">${fmt(h.thanhTien)}₫</td>
                         </tr>
                     `).join('');
@@ -1023,10 +1024,10 @@
                             <table class="table table-sm table-hover align-middle">
                                 <thead class="table-light">
                                     <tr class="text-xs text-muted">
-                                        <th>Sản phẩm</th><th class="text-center">Số lượng</th><th class="text-end">Giá nhập</th><th class="text-end">Thành tiền</th>
+                                        <th>Sản phẩm</th><th class="text-center">Số lượng</th><th class="text-end">Giá nhập thực tế</th><th class="text-end">Giá niêm yết</th><th class="text-end">Thành tiền</th>
                                     </tr>
                                 </thead>
-                                <tbody>${hangRows || '<tr><td colspan="4" class="text-center text-muted">Không có chi tiết</td></tr>'}</tbody>
+                                <tbody>${hangRows || '<tr><td colspan="5" class="text-center text-muted">Không có chi tiết</td></tr>'}</tbody>
                             </table>
                         </div>
                         <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-clock-rotate-left me-2 text-success"></i>Lịch sử thanh toán</h6>

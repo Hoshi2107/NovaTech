@@ -321,7 +321,8 @@ KHÔNG bao giờ trả về text bên ngoài JSON.";
                         MaPhieuNhap = phieuNhap.MaPhieuNhap,
                         MaSanPham = newProduct.MaSanPham,
                         SoLuong = payload.SoLuongNhap,
-                        GiaNhap = payload.GiaNhap
+                        GiaNhap = payload.GiaNhap,
+                        GiaNiemYetLucNhap = newProduct.GiaBan
                     };
                     _context.ChiTietPhieuNhaps.Add(chiTiet);
 

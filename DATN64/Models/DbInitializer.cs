@@ -375,6 +375,12 @@ namespace DATN64.Models
                     ALTER TABLE dbo.SoQuy ADD CongNoId INT NULL;
             ");
 
+            // Add GiaNiemYetLucNhap column to ChiTietPhieuNhap
+            ExecuteSql(db, @"
+                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ChiTietPhieuNhap') AND name = 'GiaNiemYetLucNhap')
+                    ALTER TABLE dbo.ChiTietPhieuNhap ADD GiaNiemYetLucNhap DECIMAL(18,2) NOT NULL DEFAULT 0;
+            ");
+
             // Ensure DonHang.MaNhanVien column allows NULL when the model is optional
             ExecuteSql(db, @"
                 IF OBJECT_ID('dbo.DonHang', 'U') IS NOT NULL

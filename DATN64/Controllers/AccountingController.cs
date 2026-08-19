@@ -431,6 +431,7 @@ namespace DATN64.Controllers
                     tenSanPham = ct.SanPham?.TenSanPham ?? $"SP #{ct.MaSanPham}",
                     soLuong = ct.SoLuong,
                     giaNhap = ct.GiaNhap,
+                    giaNiemYet = ct.GiaNiemYetLucNhap > 0 ? ct.GiaNiemYetLucNhap : (ct.SanPham?.GiaBan ?? 0),
                     thanhTien = ct.SoLuong * ct.GiaNhap
                 }),
                 lichSuThanhToan
@@ -567,7 +568,8 @@ namespace DATN64.Controllers
                                 MaPhieuNhap = pn.MaPhieuNhap,
                                 MaSanPham = product.MaSanPham,
                                 SoLuong = tx.QuantityChange,
-                                GiaNhap = product.GiaNhap
+                                GiaNhap = product.GiaNhap,
+                                GiaNiemYetLucNhap = product.GiaBan
                             };
                             _context.ChiTietPhieuNhaps.Add(ctpn);
 

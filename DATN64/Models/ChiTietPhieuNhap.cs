@@ -17,6 +17,9 @@ namespace DATN64.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal GiaNhap { get; set; }
 
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal GiaNiemYetLucNhap { get; set; } = 0;
+
         [ForeignKey("MaPhieuNhap")]
         public virtual PhieuNhap? PhieuNhap { get; set; }
 
