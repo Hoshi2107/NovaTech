@@ -45,6 +45,7 @@
                     <select class="form-select" v-model="filters.status" @@change="fetchProducts">
                         <option value="">Tất cả</option>
                         <option value="Đang bán">Đang bán</option>
+                        <option value="Biến thể">Biến thể</option>
                         <option value="Ngừng kinh doanh">Ngừng kinh doanh</option>
                         <option value="Hết hàng">Hết hàng</option>
                     </select>
@@ -110,7 +111,10 @@
                                 'bg-success': item.trangThai === 'Đang bán',
                                 'bg-danger': item.trangThai === 'Ngừng kinh doanh',
                                 'bg-secondary': item.trangThai === 'Hết hàng'
-                            }">${item.trangThai || 'Không rõ'}</span>
+                            }" :style="item.trangThai === 'Biến thể' ? 'background-color: #ede9fe; color: #7c3aed; border: 1px solid #ddd6fe;' : ''">
+                                <i class="fa-solid fa-layer-group me-1 text-xxs" v-if="item.trangThai === 'Biến thể'"></i>
+                                ${item.trangThai || 'Không rõ'}
+                            </span>
                         </td>
                         <td class="px-4 text-end">
                             <div class="d-flex justify-content-end gap-2">
@@ -197,6 +201,7 @@
                                 <label class="form-label fw-medium">Trạng thái</label>
                                 <select class="form-select" v-model="currentProduct.trangThai">
                                     <option value="Đang bán">Đang bán</option>
+                                    <option value="Biến thể">Biến thể</option>
                                     <option value="Ngừng kinh doanh">Ngừng kinh doanh</option>
                                     <option value="Hết hàng">Hết hàng</option>
                                 </select>

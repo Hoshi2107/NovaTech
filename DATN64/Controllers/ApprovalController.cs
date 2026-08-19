@@ -124,15 +124,70 @@ namespace DATN64.Controllers
                 txn.NguoiDuyet = approver;
                 txn.NgayDuyet  = DateTime.Now;
 
-                // Update actual stock if not yet applied (match by product name)
-                var product = _context.SanPhams.FirstOrDefault(p => p.TenSanPham == txn.ProductName);
-                if (product != null)
+                // Tìm sản phẩm theo SKU hoặc Tên sản phẩm
+                SanPham? product = null;
+                if (int.TryParse(txn.ProductSKU, out int pId) && pId > 0)
                 {
-                    product.SoLuongTon += txn.QuantityChange;
-                    if (product.SoLuongTon < 0) product.SoLuongTon = 0;
+                    product = _context.SanPhams.FirstOrDefault(p => p.MaSanPham == pId);
+                }
+                if (product == null)
+                {
+                    product = _context.SanPhams.FirstOrDefault(p => p.TenSanPham == txn.ProductName);
                 }
 
-                TempData["ToastMessage"] = $"Đã duyệt phiếu #{txn.Code} thành công.";
+                if (product != null)
+                {
+                    int beforeQty = product.SoLuongTon;
+                    product.SoLuongTon += txn.QuantityChange;
+                    if (product.SoLuongTon < 0) product.SoLuongTon = 0;
+                    
+                    txn.SoLuongTruoc = beforeQty;
+                    txn.SoLuongSau = product.SoLuongTon;
+
+                    if (txn.Type == "Nhập kho" && txn.QuantityChange > 0)
+                    {
+                        // Trích xuất đơn giá nhập từ Note nếu có
+                        decimal importCost = product.GiaNhap;
+                        if (txn.Note != null && txn.Note.Contains("Đơn giá nhập:"))
+                        {
+                            var match = System.Text.RegularExpressions.Regex.Match(txn.Note, @"Đơn giá nhập:\s*([\d\.,]+)");
+                            if (match.Success)
+                            {
+                                var numStr = match.Groups[1].Value.Replace(".", "").Replace(",", "");
+                                if (decimal.TryParse(numStr, out var parsedCost) && parsedCost > 0)
+                                {
+                                    importCost = parsedCost;
+                                }
+                            }
+                        }
+
+                        if (importCost > 0)
+                        {
+                            product.GiaNhap = importCost;
+                        }
+
+                        // Ghi nhận chính thức vào PhieuNhap & ChiTietPhieuNhap cho Báo Cáo Biến Động Giá
+                        var phieuNhap = new PhieuNhap
+                        {
+                            MaNCC = product.MaNCC > 0 ? product.MaNCC : 1,
+                            MaNhanVien = 1,
+                            NgayNhap = DateTime.Now
+                        };
+                        _context.PhieuNhaps.Add(phieuNhap);
+                        _context.SaveChanges();
+
+                        var ctPhieuNhap = new ChiTietPhieuNhap
+                        {
+                            MaPhieuNhap = phieuNhap.MaPhieuNhap,
+                            MaSanPham = product.MaSanPham,
+                            SoLuong = txn.QuantityChange,
+                            GiaNhap = importCost
+                        };
+                        _context.ChiTietPhieuNhaps.Add(ctPhieuNhap);
+                    }
+                }
+
+                TempData["ToastMessage"] = $"Đã duyệt phiếu #{txn.Code} thành công và đồng bộ vào Báo cáo biến động giá!";
                 TempData["ToastType"] = "success";
             }
             else if (action == "reject")

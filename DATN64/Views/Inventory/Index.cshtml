@@ -296,7 +296,7 @@
                                         Không tìm thấy sản phẩm nào!
                                     </td>
                                 </tr>
-                                <tr v-for="item in filteredProducts" :key="item.maSanPham" class="group-hover">
+                                <tr v-for="item in paginatedProducts" :key="item.maSanPham" class="group-hover">
                                     <td class="fw-medium text-secondary">#${ item.maSanPham }</td>
                                     <td>
                                         <div class="d-flex align-items-center">
@@ -329,6 +329,38 @@
                             </tbody>
                         </table>
                     </div>
+
+                    <!-- Pagination for Stock Table -->
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-3 pt-3 border-top border-secondary border-opacity-10 gap-3" v-if="!loading && filteredProducts.length > 0">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="text-muted text-sm">
+                                Hiển thị <strong>${ (stockPageDisplay - 1) * stockPageSize + 1 }</strong> – <strong>${ Math.min(stockPageDisplay * stockPageSize, filteredProducts.length) }</strong> / <strong>${ filteredProducts.length }</strong> sản phẩm
+                            </span>
+                            <div class="d-flex align-items-center gap-1">
+                                <span class="text-muted text-xs">Mỗi trang:</span>
+                                <select class="form-select form-select-sm py-0 px-2" style="width: auto; height: 28px; font-size: 12px;" v-model.number="stockPageSize" @@change="stockPage = 1">
+                                    <option :value="10">10</option>
+                                    <option :value="20">20</option>
+                                    <option :value="50">50</option>
+                                    <option :value="100">100</option>
+                                </select>
+                            </div>
+                        </div>
+                        <nav v-if="totalPagesStock > 1">
+                            <ul class="pagination pagination-sm mb-0">
+                                <li class="page-item" :class="{ disabled: stockPageDisplay === 1 }">
+                                    <a class="page-link rounded-start-3" href="#" @@click.prevent="stockPage = stockPageDisplay - 1">&laquo;</a>
+                                </li>
+                                <li class="page-item" v-for="(p, idx) in visibleStockPages" :key="idx" :class="{ active: p === stockPageDisplay, disabled: p === '...' }">
+                                    <span class="page-link" v-if="p === '...'">...</span>
+                                    <a class="page-link" href="#" v-else @@click.prevent="stockPage = p">${ p }</a>
+                                </li>
+                                <li class="page-item" :class="{ disabled: stockPageDisplay === totalPagesStock }">
+                                    <a class="page-link rounded-end-3" href="#" @@click.prevent="stockPage = stockPageDisplay + 1">&raquo;</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
                 </div>
             </div>
         </div>
@@ -336,16 +368,17 @@
         <!-- 3. IMPORT TAB -->
         <div class="tab-pane show active" v-if="activeTab === 'import'">
             <div class="row justify-content-center">
-                <div class="col-md-8 col-lg-6">
+                <div class="col-md-9 col-lg-7">
                     <div class="card border-0 card-premium p-4">
-                        <div class="card-title form-section-header d-flex align-items-center">
+                        <div class="card-title form-section-header d-flex align-items-center justify-content-between mb-3">
                             <h4 class="fw-bold mb-0 text-success"><i class="fa-solid fa-circle-down me-2"></i>Tạo Phiếu Nhập Kho</h4>
+                            <span class="badge bg-success-subtle text-success border border-success border-opacity-25 rounded-pill px-3 py-1.5 fw-bold">Theo dõi biến động giá</span>
                         </div>
                         <form @@submit.prevent="submitImport">
                             <!-- Product Select -->
                             <div class="mb-3">
                                 <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Chọn sản phẩm</label>
-                                <select class="form-select" v-model="forms.import.productId" required @@change="forms.import.variantId = ''; updateImportPreview()">
+                                <select class="form-select" v-model="forms.import.productId" required @@change="onImportProductChange">
                                     <option value="" disabled>--- Chọn sản phẩm cần nhập ---</option>
                                     <option v-for="p in activeProducts" :value="p.maSanPham">
                                         ${ p.tenSanPham } (Mã: #${ p.maSanPham }) - Hiện có: ${ p.soLuongTon } cái
@@ -359,12 +392,56 @@
                                     <i class="fa-solid fa-layer-group"></i> Chọn biến thể
                                     <span class="badge bg-purple-subtle text-purple rounded-pill px-2" style="background:#ede9fe; color:#7c3aed; font-size:10px;">${ variantsForImport.length } biến thể</span>
                                 </label>
-                                <select class="form-select border-purple" style="border-color: #7c3aed;" v-model="forms.import.variantId" required @@change="updateImportPreview()">
+                                <select class="form-select border-purple" style="border-color: #7c3aed;" v-model="forms.import.variantId" required @@change="onImportVariantChange">
                                     <option value="" disabled>--- Chọn biến thể ---</option>
                                     <option v-for="v in variantsForImport" :value="v.maSanPham">
                                         ${ v.tenSanPham } - Tồn: ${ v.soLuongTon } cái
                                     </option>
                                 </select>
+                            </div>
+
+                            <!-- Khung tóm tắt Giá Hiện Tại & Tồn Kho khi đã chọn SP -->
+                            <div class="p-3 bg-light rounded-4 border border-secondary border-opacity-10 mb-3 animate-fade-in" v-if="forms.import.productId">
+                                <div class="row g-2 text-center">
+                                    <div class="col-4 border-end">
+                                        <small class="text-muted text-xs d-block fw-bold text-uppercase">Giá nhập hiện tại</small>
+                                        <span class="fw-bold text-dark fs-6">${ formatCurrency(effectiveImportProduct.giaNhap) }</span>
+                                    </div>
+                                    <div class="col-4 border-end">
+                                        <small class="text-muted text-xs d-block fw-bold text-uppercase">Giá bán niêm yết</small>
+                                        <span class="fw-bold text-success fs-6">${ formatCurrency(effectiveImportProduct.giaBan) }</span>
+                                    </div>
+                                    <div class="col-4">
+                                        <small class="text-muted text-xs d-block fw-bold text-uppercase">Tồn kho hiện tại</small>
+                                        <span class="fw-bold text-primary fs-6">${ effectiveImportProduct.soLuongTon } cái</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Giá nhập biến động đợt này -->
+                            <div class="mb-3" v-if="forms.import.productId">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label fw-bold text-xs text-uppercase text-muted-custom mb-0">
+                                        <i class="fa-solid fa-money-bill-wave text-success me-1"></i>Đơn giá nhập đợt này (VNĐ)
+                                    </label>
+                                    <!-- Badge biến động giá tức thì -->
+                                    <span v-if="forms.import.price > effectiveImportProduct.giaNhap" class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 rounded-pill px-2.5 py-1 text-xs fw-bold">
+                                        <i class="fa-solid fa-arrow-trend-up me-1"></i>Tăng +${ formatCurrency(forms.import.price - effectiveImportProduct.giaNhap) } (+${ getPriceDiffPercent }%)
+                                    </span>
+                                    <span v-else-if="forms.import.price < effectiveImportProduct.giaNhap && forms.import.price > 0" class="badge bg-success-subtle text-success border border-success border-opacity-25 rounded-pill px-2.5 py-1 text-xs fw-bold">
+                                        <i class="fa-solid fa-arrow-trend-down me-1"></i>Giảm -${ formatCurrency(effectiveImportProduct.giaNhap - forms.import.price) } (-${ getPriceDiffPercent }%)
+                                    </span>
+                                    <span v-else class="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1 text-xs">
+                                        <i class="fa-solid fa-minus me-1"></i>Giá không đổi
+                                    </span>
+                                </div>
+                                <div class="input-group">
+                                    <input type="number" class="form-control fw-bold fs-6 text-dark" v-model.number="forms.import.price" min="0" step="1000" required placeholder="Nhập đơn giá nhập đợt này...">
+                                    <span class="input-group-text bg-light fw-bold text-muted">VNĐ</span>
+                                </div>
+                                <div class="form-text text-xs text-muted">
+                                    <i class="fa-solid fa-circle-info me-1"></i>Giá nhập có thể biến động liên tục theo thời gian từ nhà cung cấp.
+                                </div>
                             </div>
 
                             <!-- Source Select -->
@@ -383,16 +460,29 @@
                                 <input type="number" class="form-control" v-model.number="forms.import.quantity" min="1" required @@input="updateImportPreview">
                             </div>
 
-                            <!-- Preview Diff Stock -->
-                            <div class="p-3 bg-success bg-opacity-10 border border-success border-opacity-20 rounded-4 mb-4 d-flex align-items-center justify-content-between" v-if="forms.import.productId && forms.import.quantity > 0">
-                                <div>
-                                    <span class="text-xs text-success fw-bold d-block text-uppercase" style="letter-spacing: 0.05em;">Xem trước tồn kho</span>
-                                    <span class="fw-bold text-dark text-sm">${ selectedImportProduct.tenSanPham }</span>
+                            <!-- Preview Diff Stock & Total Cost -->
+                            <div class="p-3 bg-success bg-opacity-10 border border-success border-opacity-20 rounded-4 mb-3 d-flex flex-column gap-2" v-if="forms.import.productId && forms.import.quantity > 0">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <span class="text-xs text-success fw-bold d-block text-uppercase" style="letter-spacing: 0.05em;">Xem trước tồn kho</span>
+                                        <span class="fw-bold text-dark text-sm">${ selectedImportProduct.tenSanPham }</span>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="text-secondary fw-semibold">${ selectedImportProduct.soLuongTon } cái</span>
+                                        <i class="fa-solid fa-right-long mx-2 text-success"></i>
+                                        <span class="text-success fw-extrabold fs-6">${ selectedImportProduct.soLuongTon + forms.import.quantity } cái (+${ forms.import.quantity })</span>
+                                    </div>
                                 </div>
-                                <div class="text-end">
-                                    <span class="text-secondary fw-semibold">${ selectedImportProduct.soLuongTon } cái</span>
-                                    <i class="fa-solid fa-right-long mx-2 text-success"></i>
-                                    <span class="text-success fw-extrabold fs-5">${ selectedImportProduct.soLuongTon + forms.import.quantity } cái (+${ forms.import.quantity })</span>
+                                <hr class="my-1 border-success border-opacity-25" />
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span class="text-xs fw-bold text-dark text-uppercase"><i class="fa-solid fa-calculator text-success me-1"></i>Tổng Tiền Phiếu Nhập:</span>
+                                    <span class="fw-extrabold text-success fs-5">${ formatCurrency(forms.import.quantity * (forms.import.price || 0)) }</span>
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between text-xs text-muted" v-if="effectiveImportProduct.giaBan">
+                                    <span>Lợi nhuận gộp ước tính / 1 SP:</span>
+                                    <span class="fw-bold" :class="(effectiveImportProduct.giaBan - forms.import.price) >= 0 ? 'text-success' : 'text-danger'">
+                                        ${ formatCurrency(effectiveImportProduct.giaBan - forms.import.price) }
+                                    </span>
                                 </div>
                             </div>
 
@@ -882,9 +972,11 @@
                                     <th>Thời gian</th>
                                     <th>Loại giao dịch</th>
                                     <th>Sản phẩm</th>
+                                    <th class="text-end">Giá nhập / Giá bán</th>
                                     <th class="text-center">Trước GD</th>
                                     <th class="text-center">Thay đổi</th>
                                     <th class="text-center">Sau GD</th>
+                                    <th class="text-end">Thành tiền</th>
                                     <th class="text-center">Trạng thái</th>
                                     <th>Người tạo</th>
                                     <th>Ghi chú / Lý do</th>
@@ -893,7 +985,7 @@
                             </thead>
                             <tbody>
                                 <tr v-if="filteredTransactions.length === 0">
-                                    <td colspan="11" class="text-center py-5 text-muted">
+                                    <td colspan="13" class="text-center py-5 text-muted">
                                         <i class="fa-solid fa-clock-rotate-left fs-2 mb-2 d-block"></i>
                                         Không tìm thấy giao dịch nào phù hợp!
                                     </td>
@@ -915,6 +1007,11 @@
                                         <span class="fw-bold text-xs d-block">${ tx.productName }</span>
                                         <small class="text-muted text-xxs">Mã: #${ tx.productSKU }</small>
                                     </td>
+                                    <!-- Cột Giá nhập & Giá bán -->
+                                    <td class="text-end text-xs">
+                                        <div class="fw-bold text-dark" title="Giá vốn nhập">${ formatCurrency(tx.giaNhap) }</div>
+                                        <small class="text-success fw-semibold" title="Giá bán niêm yết">Bán: ${ formatCurrency(tx.giaBan) }</small>
+                                    </td>
                                     <td class="text-center text-xs text-muted-custom">
                                         ${ tx.soLuongTruoc != null ? tx.soLuongTruoc + ' cái' : '---' }
                                     </td>
@@ -925,6 +1022,10 @@
                                     </td>
                                     <td class="text-center text-xs text-dark fw-bold">
                                         ${ tx.soLuongSau != null ? tx.soLuongSau + ' cái' : '---' }
+                                    </td>
+                                    <!-- Cột Thành tiền -->
+                                    <td class="text-end text-xs fw-extrabold text-primary">
+                                        ${ formatCurrency(tx.thanhTien) }
                                     </td>
                                     <td class="text-center text-xs">
                                         <span class="badge rounded-pill mb-1" :class="{
@@ -1000,16 +1101,39 @@
                     </div>
                 </div>
                 
-                <!-- Filter bar -->
+                <!-- Filter bar & Product Info Cards -->
                 <div class="row g-3 mb-4">
-                    <div class="col-md-6 col-lg-4">
+                    <div class="col-md-6 col-lg-5">
                         <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Chọn sản phẩm cần theo dõi</label>
                         <select class="form-select" v-model="ledgerProductId" @@change="generateLedger">
                             <option value="" disabled>--- Chọn sản phẩm ---</option>
                             <option v-for="p in products" :value="p.maSanPham">
-                                ${ p.tenSanPham } (Mã: #${ p.maSanPham }) - Hiện tại: ${ p.soLuongTon } cái
+                                ${ p.tenSanPham } (Mã: #${ p.maSanPham }) - Tồn: ${ p.soLuongTon } cái
                             </option>
                         </select>
+                    </div>
+                    <!-- Khung xem nhanh Giá nhập - Giá bán - Tồn kho của sản phẩm trong Thẻ kho -->
+                    <div class="col-md-6 col-lg-7" v-if="selectedLedgerProduct">
+                        <div class="p-3 bg-light rounded-4 border border-secondary border-opacity-10">
+                            <div class="row g-2 text-center">
+                                <div class="col-3 border-end">
+                                    <small class="text-muted text-xxs d-block fw-bold text-uppercase">Giá vốn nhập</small>
+                                    <span class="fw-bold text-dark text-xs">${ formatCurrency(selectedLedgerProduct.giaNhap) }</span>
+                                </div>
+                                <div class="col-3 border-end">
+                                    <small class="text-muted text-xxs d-block fw-bold text-uppercase">Giá bán</small>
+                                    <span class="fw-bold text-success text-xs">${ formatCurrency(selectedLedgerProduct.giaBan) }</span>
+                                </div>
+                                <div class="col-3 border-end">
+                                    <small class="text-muted text-xxs d-block fw-bold text-uppercase">Tồn kho</small>
+                                    <span class="fw-bold text-primary text-xs">${ selectedLedgerProduct.soLuongTon } cái</span>
+                                </div>
+                                <div class="col-3">
+                                    <small class="text-muted text-xxs d-block fw-bold text-uppercase">Tổng giá trị</small>
+                                    <span class="fw-bold text-warning text-xs">${ formatCurrency(selectedLedgerProduct.soLuongTon * selectedLedgerProduct.giaNhap) }</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
@@ -1027,15 +1151,17 @@
                                 <th>Mã phiếu</th>
                                 <th>Loại giao dịch</th>
                                 <th>Người thực hiện</th>
+                                <th class="text-end">Đơn giá vốn</th>
                                 <th class="text-center">Số lượng trước</th>
                                 <th class="text-center">Nhập (+)</th>
                                 <th class="text-center">Xuất (-)</th>
                                 <th class="text-center">Tồn lũy kế</th>
+                                <th class="text-end">Thành tiền</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-if="ledgerRows.length === 0">
-                                <td colspan="8" class="text-center py-5 text-muted">
+                                <td colspan="10" class="text-center py-5 text-muted">
                                     <i class="fa-solid fa-folder-open fs-2 mb-2 d-block"></i>
                                     Không tìm thấy bất kỳ giao dịch nào cho sản phẩm này!
                                 </td>
@@ -1054,6 +1180,10 @@
                                     }">${ row.type }</span>
                                 </td>
                                 <td class="text-xs text-secondary">${ row.creator }</td>
+                                <!-- Cột Đơn giá vốn -->
+                                <td class="text-end text-xs fw-bold text-dark">
+                                    ${ formatCurrency(row.giaNhap) }
+                                </td>
                                 <td class="text-center text-xs text-muted-custom">
                                     ${ row.soLuongTruoc } cái
                                 </td>
@@ -1065,6 +1195,10 @@
                                 </td>
                                 <td class="text-center text-dark fw-bold">
                                     ${ row.soLuongSau } cái
+                                </td>
+                                <!-- Cột Thành tiền -->
+                                <td class="text-end text-xs fw-extrabold text-primary">
+                                    ${ formatCurrency(row.thanhTien) }
                                 </td>
                             </tr>
                         </tbody>
@@ -1300,6 +1434,8 @@
                 isManager: @(isManager ? "true" : "false"),
                 exportError: '',
                 adjustError: '',
+                stockPage: 1,
+                stockPageSize: 10,
                 historyPage: 1,
                 historyPageSize: 10,
                 ledgerProductId: '',
@@ -1317,6 +1453,7 @@
                         productId: '',
                         variantId: '',
                         quantity: 10,
+                        price: 0,
                         source: 'Nhà cung cấp',
                         note: ''
                     },
@@ -1344,6 +1481,15 @@
                 }
             },
             computed: {
+                getPriceDiffPercent() {
+                    if (!this.effectiveImportProduct || !this.effectiveImportProduct.giaNhap || !this.forms.import.price) return 0;
+                    const diff = this.forms.import.price - this.effectiveImportProduct.giaNhap;
+                    return Math.abs(Math.round((diff / this.effectiveImportProduct.giaNhap) * 1000) / 10);
+                },
+                selectedLedgerProduct() {
+                    if (!this.ledgerProductId) return null;
+                    return this.products.find(p => p.maSanPham === this.ledgerProductId) || null;
+                },
                 activeProducts() {
                     return this.products.filter(p => p.trangThai === 'Đang bán');
                 },
@@ -1402,6 +1548,31 @@
                         list = list.filter(p => p.maThuongHieu === parseInt(this.filters.brand));
                     }
                     return list;
+                },
+                totalPagesStock() {
+                    return Math.max(1, Math.ceil(this.filteredProducts.length / this.stockPageSize));
+                },
+                stockPageDisplay() {
+                    return Math.min(this.stockPage, this.totalPagesStock);
+                },
+                paginatedProducts() {
+                    const page = this.stockPageDisplay;
+                    const start = (page - 1) * this.stockPageSize;
+                    return this.filteredProducts.slice(start, start + this.stockPageSize);
+                },
+                visibleStockPages() {
+                    const total = this.totalPagesStock;
+                    const current = this.stockPageDisplay;
+                    const range = 2;
+                    const pages = [];
+                    for (let i = 1; i <= total; i++) {
+                        if (i === 1 || i === total || (i >= current - range && i <= current + range)) {
+                            pages.push(i);
+                        } else if (pages[pages.length - 1] !== '...') {
+                            pages.push('...');
+                        }
+                    }
+                    return pages;
                 },
                 filteredTransactions() {
                     let list = this.transactions;
@@ -1514,6 +1685,15 @@
                 }
             },
             watch: {
+                'filters.search'() {
+                    this.stockPage = 1;
+                },
+                'filters.category'() {
+                    this.stockPage = 1;
+                },
+                'filters.brand'() {
+                    this.stockPage = 1;
+                },
                 'filters.historySearch'() {
                     this.historyPage = 1;
                 },
@@ -1717,6 +1897,9 @@
                             code: t.code,
                             type: t.type,
                             creator: t.creator,
+                            giaNhap: t.giaNhap || (this.selectedLedgerProduct ? this.selectedLedgerProduct.giaNhap : 0),
+                            giaBan: t.giaBan || (this.selectedLedgerProduct ? this.selectedLedgerProduct.giaBan : 0),
+                            thanhTien: t.thanhTien || ((t.giaNhap || (this.selectedLedgerProduct ? this.selectedLedgerProduct.giaNhap : 0)) * Math.Abs(t.quantityChange)),
                             soLuongTruoc: before,
                             quantityChange: t.quantityChange,
                             soLuongSau: after
@@ -1859,11 +2042,13 @@
                     this.filters.search = '';
                     this.filters.category = '';
                     this.filters.brand = '';
+                    this.stockPage = 1;
                 },
                 resetHistoryFilters() {
                     this.filters.historySearch = '';
                     this.filters.historyType = '';
                     this.filters.historyTime = 'all';
+                    this.historyPage = 1;
                 },
                 selectAuditProductQuick(p) {
                     this.forms.audit.productId = p.maSanPham;
@@ -1872,9 +2057,23 @@
                     this.setTab('audit');
                 },
 
-                // Validation previews
+                // Validation & Changes previews
+                onImportProductChange() {
+                    this.forms.import.variantId = '';
+                    this.$nextTick(() => {
+                        this.forms.import.price = this.effectiveImportProduct.giaNhap || 0;
+                    });
+                },
+                onImportVariantChange() {
+                    this.$nextTick(() => {
+                        this.forms.import.price = this.effectiveImportProduct.giaNhap || 0;
+                    });
+                },
                 updateImportPreview() {
-                    // No validation logic needed
+                    // Cập nhật giá nếu chưa có
+                    if (this.forms.import.price === 0 && this.effectiveImportProduct.giaNhap) {
+                        this.forms.import.price = this.effectiveImportProduct.giaNhap;
+                    }
                 },
                 updateExportPreview() {
                     this.exportError = '';
@@ -1920,6 +2119,7 @@
                         const payload = {
                             productId: effectiveId,
                             quantity: this.forms.import.quantity,
+                            importPrice: this.forms.import.price,
                             source: this.forms.import.source,
                             note: this.forms.import.note
                         };
@@ -1927,9 +2127,9 @@
                         const res = await axios.post('/api/inventory/import', payload);
                         
                         await Swal.fire({
-                            title: 'Đã gửi yêu cầu!',
+                            title: 'Đã tạo phiếu nhập kho!',
                             text: res.data.message || 'Phiếu nhập kho đã được tạo và đang chờ quản lý duyệt.',
-                            icon: 'info',
+                            icon: 'success',
                             confirmButtonText: 'Đồng ý'
                         });
 
@@ -1937,6 +2137,7 @@
                         this.forms.import.productId = '';
                         this.forms.import.variantId = '';
                         this.forms.import.quantity = 10;
+                        this.forms.import.price = 0;
                         this.forms.import.note = '';
 
                         // Refresh and redirect to Stock

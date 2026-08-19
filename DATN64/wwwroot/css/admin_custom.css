@@ -91,6 +91,7 @@ body {
 .main-content {
     margin-left: 260px;
     min-height: 100vh;
+    min-width: 0;
 }
 
 /* Sidebar links */

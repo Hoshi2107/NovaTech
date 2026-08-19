@@ -51,13 +51,15 @@ namespace DATN64.Services
                 throw new InvalidOperationException("Mật khẩu SMTP chưa được cấu hình. Vui lòng cập nhật MailSettings:Password với mật khẩu ứng dụng email hoặc mật khẩu đăng nhập SMTP.");
             }
 
-            using var client = new SmtpClient(_settings.Host, _settings.Port)
+            var cleanPassword = (_settings.Password ?? "").Replace(" ", "").Trim();
+
+            using var client = new SmtpClient(_settings.Host.Trim(), _settings.Port)
             {
-                EnableSsl = _settings.EnableSsl,
-                Credentials = new NetworkCredential(_settings.Username, _settings.Password),
-                DeliveryMethod = SmtpDeliveryMethod.Network,
                 UseDefaultCredentials = false,
-                Timeout = 15000
+                Credentials = new NetworkCredential(_settings.Username.Trim(), cleanPassword),
+                EnableSsl = _settings.EnableSsl,
+                DeliveryMethod = SmtpDeliveryMethod.Network,
+                Timeout = 20000
             };
 
             using var message = new MailMessage()

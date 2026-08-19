@@ -5,3 +5,8 @@
 *.suo
 .vs/
 *.log
+
+# Secret configuration files - DO NOT commit
+appsettings.Development.json
+appsettings.Production.json
+temp-keys/

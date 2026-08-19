@@ -208,12 +208,13 @@ Trả về CHÍNH XÁC cấu trúc JSON:
 2. Khi user muốn KHUYẾN MÃI / XẢ HÀNG TỒN (ActionType: CREATE_PROMOTION_CAMPAIGN):
    actionPayload: {{ ""maCode"": ""SALE15"", ""giaTri"": 15, ""soLuongNhap"": 50, ""lyDoDeXuat"": ""Tạo khuyến mãi 15% kích cầu sản phẩm tồn kho cao"" }}
 
-3. Khi user muốn TRI ÂN KHÁCH HÀNG VIP (ActionType: SEND_VIP_REWARD):
-   actionPayload: {{ ""maCode"": ""VIP2026"", ""giaTri"": 20, ""soLuongNhap"": 20, ""danhSachKhachHang"": ""{topCustomersText}"", ""lyDoDeXuat"": ""Tặng mã giảm giá 20% cho Top 5 khách hàng VIP"" }}
+3. Khi user muốn TRI ÂN KHÁCH HÀNG VIP hoặc GỬI VOUCHER CHO EMAIL CỤ THỂ (ActionType: SEND_VIP_REWARD):
+   actionPayload: {{ ""maCode"": ""VIP2026"", ""giaTri"": 20, ""soLuongNhap"": 20, ""targetEmail"": null, ""danhSachKhachHang"": ""{topCustomersText}"", ""lyDoDeXuat"": ""Tặng mã giảm giá cho khách hàng"" }}
+   QUY TẮC BẮT BUỘC: Nếu câu nói của user có chứa địa chỉ email cụ thể (ví dụ: khathtb01844@gmail.com, ...), bạn PHẢI trích xuất và gán chính xác vào trường ""targetEmail"": ""địa_chỉ_email"" và điều chỉnh mức giảm ""giaTri"" theo đúng yêu cầu của user.
 
 4. Khi user muốn TÌM SP BÁN CHẬM + TẠO VOUCHER 15% + GỬI EMAIL CHO KHÁCH HÀNG ĐỒNG TRỞ LÊN (ActionType: SEND_PROMO_EMAIL_DONG_PLUS):
-   actionPayload: {{ ""maCode"": ""SALE15_{DateTime.Now:MMyy}"", ""giaTri"": 15, ""soLuongNhap"": 100, ""lyDoDeXuat"": ""Top 3 SP bán chậm tháng {DateTime.Now.Month}: {slowMovingTop3.FirstOrDefault()?.Product.TenSanPham}..."" }}
-   Điều kiện trigger: khi user đề cập đến việc gửi email khuyến mãi cho khách hàng Đồng/tất cả khách, tìm sản phẩm bán chậm và gửi email.
+   actionPayload: {{ ""maCode"": ""SALE15_{DateTime.Now:MMyy}"", ""giaTri"": 15, ""soLuongNhap"": 100, ""targetEmail"": null, ""lyDoDeXuat"": ""Top 3 SP bán chậm tháng {DateTime.Now.Month}: {slowMovingTop3.FirstOrDefault()?.Product.TenSanPham}..."" }}
+   QUY TẮC: Nếu user chỉ định gửi cho 1 email cụ thể, PHẢI gán vào ""targetEmail"".
 
 Nếu là câu hỏi thông thường, đặt hasAction = false, actionType = null, actionPayload = null.
 KHÔNG bao giờ trả về text bên ngoài JSON.";
@@ -241,6 +242,22 @@ KHÔNG bao giờ trả về text bên ngoài JSON.";
                     Message = rawJson,
                     HasAction = false
                 };
+            }
+
+            // ─── Tự động trích xuất Email từ tin nhắn của người dùng nếu có ───
+            var emailMatch = System.Text.RegularExpressions.Regex.Match(req.Message ?? "", @"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}");
+            if (emailMatch.Success && aiResp.HasAction && aiResp.ActionPayload.HasValue)
+            {
+                try
+                {
+                    var payloadDict = JsonSerializer.Deserialize<Dictionary<string, object>>(aiResp.ActionPayload.Value.GetRawText());
+                    if (payloadDict != null)
+                    {
+                        payloadDict["targetEmail"] = emailMatch.Value.Trim();
+                        aiResp.ActionPayload = JsonSerializer.SerializeToElement(payloadDict);
+                    }
+                }
+                catch { }
             }
 
             // Save AI message with per-user isolation
@@ -413,32 +430,188 @@ KHÔNG bao giờ trả về text bên ngoài JSON.";
                     string code = string.IsNullOrWhiteSpace(p.MaCode) ? $"VIP{DateTime.Now:MMddHH}" : p.MaCode.ToUpper();
                     decimal giaTri = p.GiaTri > 0 ? p.GiaTri : 20;
 
-                    var voucher = new Voucher
+                    // Tạo voucher vào DB
+                    var existingVoucher = await _context.Vouchers.FirstOrDefaultAsync(v => v.MaCode == code);
+                    if (existingVoucher == null)
                     {
-                        MaCode = code,
-                        GiaTri = giaTri,
-                        SoLuong = 20,
-                        NgayBatDau = DateTime.Now,
-                        NgayKetThuc = DateTime.Now.AddDays(15)
-                    };
-                    _context.Vouchers.Add(voucher);
-                    await _context.SaveChangesAsync();
+                        _context.Vouchers.Add(new Voucher
+                        {
+                            MaCode = code,
+                            GiaTri = giaTri,
+                            SoLuong = 20,
+                            NgayBatDau = DateTime.Now,
+                            NgayKetThuc = DateTime.Now.AddDays(15)
+                        });
+                        await _context.SaveChangesAsync();
+                    }
+
+                    // ─── Lấy danh sách khách hàng VIP có email hợp lệ ───
+                    var emailRegex = new System.Text.RegularExpressions.Regex(
+                        @"^[^@\s]+@[^@\s]+\.[^@\s]{2,}$",
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+                    var allCandidates = await _context.KhachHangs
+                        .Where(k => !string.IsNullOrEmpty(k.Email))
+                        .ToListAsync();
+
+                    string? explicitTargetEmail = req.ActionPayload?.TargetEmail;
+
+                    List<DATN64.Models.KhachHang> vipCustomers;
+
+                    if (!string.IsNullOrEmpty(explicitTargetEmail) && emailRegex.IsMatch(explicitTargetEmail))
+                    {
+                        var explicitKh = allCandidates.FirstOrDefault(k => (k.Email ?? "").Equals(explicitTargetEmail, StringComparison.OrdinalIgnoreCase));
+                        vipCustomers = explicitKh != null
+                            ? new List<DATN64.Models.KhachHang> { explicitKh }
+                            : new List<DATN64.Models.KhachHang> { new DATN64.Models.KhachHang { MaKhachHang = 0, HoTen = "Khách VIP NovaTech", Email = explicitTargetEmail, DiemTichLuy = 3000 } };
+                    }
+                    else
+                    {
+                        // Lấy top VIP: điểm >= 500, email hợp lệ
+                        vipCustomers = allCandidates
+                            .Where(k =>
+                                emailRegex.IsMatch(k.Email ?? "") &&
+                                k.DiemTichLuy >= 500 &&
+                                !(k.Email ?? "").Contains("guest") &&
+                                !(k.Email ?? "").Contains("vanglai") &&
+                                !(k.Email ?? "").Contains("novatech.vn") &&
+                                !(k.Email ?? "").Contains("tiktok.com"))
+                            .OrderByDescending(k => k.DiemTichLuy)
+                            .Take(10)
+                            .ToList();
+
+                        // Fallback nếu không có ai
+                        if (!vipCustomers.Any())
+                        {
+                            var adminEmail = HttpContext.Session.GetString("UserEmail");
+                            string fallbackEmail = (!string.IsNullOrEmpty(adminEmail) && emailRegex.IsMatch(adminEmail))
+                                ? adminEmail
+                                : "novatech.shop2026@gmail.com";
+                            vipCustomers.Add(new DATN64.Models.KhachHang
+                            {
+                                MaKhachHang = 0,
+                                HoTen = HttpContext.Session.GetString("UserName") ?? "Khách hàng VIP",
+                                Email = fallbackEmail,
+                                DiemTichLuy = 3000
+                            });
+                        }
+                    }
+
+                    // ─── Gửi Email HTML cho từng khách VIP ───
+                    string GetRankBadge(int diem) => diem >= 3000 ? "💎 Kim Cương" : diem >= 1500 ? "🥇 Vàng" : diem >= 500 ? "🥈 Bạc" : "🥉 Đồng";
+                    int sentCount = 0, failCount = 0;
+                    string lastErr = "";
+
+                    foreach (var kh in vipCustomers)
+                    {
+                        try
+                        {
+                            string rankBadge = GetRankBadge(kh.DiemTichLuy);
+                            string emailHtml = $@"<!DOCTYPE html>
+<html lang='vi'>
+<head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'></head>
+<body style='margin:0;padding:0;background:#f4f7fc;font-family:Arial,sans-serif;'>
+  <table cellpadding='0' cellspacing='0' width='100%' style='background:#f4f7fc;padding:30px 0;'>
+    <tr><td align='center'>
+      <table cellpadding='0' cellspacing='0' width='600' style='background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);'>
+
+        <!-- Header -->
+        <tr><td style='background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);padding:32px 40px;text-align:center;'>
+          <div style='color:#e94560;font-size:28px;font-weight:900;letter-spacing:2px;'>NOVA<span style='color:#ffffff;'>TECH</span></div>
+          <div style='color:#a0aec0;font-size:13px;margin-top:4px;'>Cửa hàng Công nghệ hàng đầu</div>
+        </td></tr>
+
+        <!-- VIP Banner -->
+        <tr><td style='background:linear-gradient(135deg,#6366f1,#8b5cf6);padding:28px 40px;text-align:center;'>
+          <div style='font-size:40px;'>👑</div>
+          <div style='color:#fff;font-size:26px;font-weight:900;margin-top:8px;'>TRI ÂN KHÁCH HÀNG VIP</div>
+          <div style='color:#e0e7ff;font-size:15px;margin-top:6px;'>Dành riêng cho thành viên {rankBadge}</div>
+        </td></tr>
+
+        <!-- Greeting -->
+        <tr><td style='padding:28px 40px 12px;'>
+          <div style='font-size:16px;color:#333;'>Xin chào <strong style='color:#6366f1;'>{kh.HoTen}</strong>! 👋</div>
+          <div style='color:#555;font-size:14px;margin-top:8px;line-height:1.6;'>
+            NovaTech trân trọng cảm ơn bạn đã đồng hành cùng chúng tôi!
+            Để tri ân sự trung thành của bạn, chúng tôi gửi tặng ưu đãi <strong style='color:#6366f1;'>{giaTri}%</strong>
+            dành riêng cho thành viên thân thiết.
+          </div>
+        </td></tr>
+
+        <!-- Voucher Code -->
+        <tr><td style='padding:12px 40px;'>
+          <table cellpadding='0' cellspacing='0' width='100%'>
+            <tr><td style='background:linear-gradient(135deg,#f5f3ff,#ede9fe);border:2px dashed #6366f1;border-radius:12px;padding:24px;text-align:center;'>
+              <div style='font-size:13px;color:#777;'>👑 Mã tri ân VIP của bạn</div>
+              <div style='font-size:32px;font-weight:900;color:#6366f1;letter-spacing:4px;margin:10px 0;font-family:monospace;'>{code}</div>
+              <div style='font-size:12px;color:#999;'>Giảm {giaTri}% cho tất cả sản phẩm • Hạn sử dụng: 15 ngày</div>
+            </td></tr>
+          </table>
+        </td></tr>
+
+        <!-- Points info -->
+        <tr><td style='padding:16px 40px;'>
+          <div style='background:#f8f9ff;border-left:4px solid #6366f1;border-radius:0 8px 8px 0;padding:14px 16px;'>
+            <div style='font-size:13px;color:#6366f1;font-weight:700;'>⭐ Điểm tích lũy của bạn: {kh.DiemTichLuy} điểm</div>
+            <div style='font-size:12px;color:#666;margin-top:4px;'>Hạng thành viên: <strong>{rankBadge}</strong> — Cảm ơn bạn đã tin tưởng NovaTech!</div>
+          </div>
+        </td></tr>
+
+        <!-- CTA Button -->
+        <tr><td style='padding:24px 40px;text-align:center;'>
+          <a href='https://localhost:5001/Online/ProductsList'
+             style='background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;text-decoration:none;padding:14px 40px;border-radius:50px;font-size:16px;font-weight:700;display:inline-block;box-shadow:0 4px 16px rgba(99,102,241,0.4);'>
+            👑 Mua hàng ngay tại NovaTech
+          </a>
+        </td></tr>
+
+        <!-- Footer -->
+        <tr><td style='background:#f8f9fa;padding:20px 40px;text-align:center;border-top:1px solid #eee;'>
+          <div style='font-size:12px;color:#999;line-height:1.6;'>
+            © {DateTime.Now.Year} NovaTech Store. Chính sách ưu đãi áp dụng đến hết ngày {DateTime.Now.AddDays(15):dd/MM/yyyy}.<br/>
+            <span style='color:#ccc;'>Email này được gửi tự động bởi hệ thống AI NovaTech ERP.</span>
+          </div>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>";
+
+                            _emailService.SendEmail(
+                                kh.Email!,
+                                $"👑 [{rankBadge}] Tri ân VIP — Ưu đãi {giaTri}% từ NovaTech - Mã {code}",
+                                emailHtml
+                            );
+                            sentCount++;
+                            Console.WriteLine($"[VIP EMAIL SUCCESS] Gửi thành công tới: {kh.Email}");
+                        }
+                        catch (Exception ex)
+                        {
+                            failCount++;
+                            lastErr = ex.Message;
+                            Console.WriteLine($"[VIP EMAIL FAILED] {kh.Email} | Lỗi: {ex.Message}");
+                        }
+                    }
 
                     _context.SystemNotifications.Add(new SystemNotification
                     {
-                        Title = $"💎 AI Tri ân Khách hàng VIP mã {code}",
-                        Message = $"Mã tri ân {code} giảm {giaTri}% đã gửi đến nhóm Khách hàng VIP: {p.DanhSachKhachHang}",
+                        Title = $"💎 AI Tri ân VIP — Gửi Email thành công {sentCount}/{vipCustomers.Count}",
+                        Message = $"Voucher {code} giảm {giaTri}% đã gửi email đến {sentCount} khách VIP. Thất bại: {failCount}.",
                         Type = "VIP",
                         Timestamp = DateTime.Now
                     });
                     await _context.SaveChangesAsync();
 
-                    string targetCustomers = string.IsNullOrWhiteSpace(p.DanhSachKhachHang) ? "Top Khách hàng thân thiết" : p.DanhSachKhachHang;
-                    string confirmMsg = $"👑 **Đã thực hiện gửi quà Tri ân Khách hàng VIP!**\n\n💎 **Mã ưu đãi VIP:** `{code}` (Giảm {giaTri}%)\n👥 **Đối tượng nhận:** {targetCustomers}\n📩 *Đã tự động ghi nhận quà tặng tri ân vào hệ thống.*";
+                    string targetCustomers = string.Join(", ", vipCustomers.Select(k => $"{k.HoTen} ({k.Email})"));
+                    string smtpNote = failCount > 0 ? $"\n\n⚠️ Lỗi gửi {failCount} email: {lastErr}" : "";
+                    string confirmMsg = $"👑 **Đã thực hiện gửi quà Tri ân Khách hàng VIP!**\n\n💎 **Mã ưu đãi VIP:** `{code}` (Giảm {giaTri}%)\n👥 **Đối tượng nhận:** {targetCustomers}\n📩 **Kết quả:** ✅ Gửi thành công **{sentCount}/{vipCustomers.Count}** email{smtpNote}\n\n*Đã tự động ghi nhận quà tặng tri ân vào hệ thống.*";
+
                     _context.ChatMessages.Add(new ChatMessage { Sender = $"AI:{userEmail}", Message = confirmMsg, Timestamp = DateTime.Now });
                     await _context.SaveChangesAsync();
 
-                    return Ok(new { success = true, message = confirmMsg, code = code });
+                    return Ok(new { success = true, message = confirmMsg, code = code, sentCount, failCount });
                 }
                 catch (Exception ex)
                 {
@@ -498,7 +671,7 @@ KHÔNG bao giờ trả về text bên ngoài JSON.";
                         await _context.SaveChangesAsync();
                     }
 
-                    // ─── Bước 3: Lấy danh sách khách hàng có email hợp lệ (loại bỏ số điện thoại giả) ───
+                    // ─── Bước 3: Lấy danh sách khách hàng có email hợp lệ ───
                     var emailRegex = new System.Text.RegularExpressions.Regex(
                         @"^[^@\s]+@[^@\s]+\.[^@\s]{2,}$",
                         System.Text.RegularExpressions.RegexOptions.IgnoreCase);
@@ -510,46 +683,75 @@ KHÔNG bao giờ trả về text bên ngoài JSON.";
                     // Lấy email cụ thể từ payload nếu có
                     string? explicitTargetEmail = req.ActionPayload?.TargetEmail;
 
-                    // Lọc: email đúng định dạng, không chứa tiktok.com, guest, vanglai, novatech.vn
-                    var dongPlusCustomers = allCandidates
-                        .Where(k =>
-                            emailRegex.IsMatch(k.Email ?? "") &&
-                            k.DiemTichLuy >= 0 &&
-                            !(k.Email ?? "").Contains("guest") &&
-                            !(k.Email ?? "").Contains("vanglai") &&
-                            !(k.Email ?? "").Contains("novatech.vn") &&
-                            !(k.Email ?? "").Contains("tiktok.com"))
-                        .ToList();
+                    List<DATN64.Models.KhachHang> dongPlusCustomers = new List<DATN64.Models.KhachHang>();
 
-                    // Đọc targetRank từ payload nếu có
-                    string? explicitTargetRank = req.ActionPayload?.TargetRank;
-
-                    // Nếu user có yêu cầu gửi cho 1 Email cụ thể, chỉ gửi duy nhất cho Email đó (hoặc ưu tiên)
-                    if (!string.IsNullOrEmpty(explicitTargetEmail))
+                    if (!string.IsNullOrEmpty(explicitTargetEmail) && emailRegex.IsMatch(explicitTargetEmail))
                     {
                         var explicitKh = allCandidates.FirstOrDefault(k => (k.Email ?? "").Equals(explicitTargetEmail, StringComparison.OrdinalIgnoreCase));
-                        if (explicitKh == null)
+                        if (explicitKh != null)
                         {
-                            // Email không phải khách hàng NovaTech → từ chối gửi
-                            return Ok(new { success = false, message = $"❌ Email `{explicitTargetEmail}` không phải là khách hàng của NovaTech. Không thể gửi voucher." });
+                            dongPlusCustomers.Add(explicitKh);
                         }
-                        dongPlusCustomers = new List<DATN64.Models.KhachHang> { explicitKh };
-                    }
-                    else if (!string.IsNullOrEmpty(explicitTargetRank))
-                    {
-                        // Lọc theo Rank: Kim Cương (>=3000), Vàng (1500-2999), Bạc (500-1499), Đồng (0-499)
-                        dongPlusCustomers = dongPlusCustomers.Where(k =>
+                        else
                         {
-                            int d = k.DiemTichLuy;
-                            return explicitTargetRank switch
+                            // Nếu người dùng nhập email cụ thể nhưng chưa thuộc DB -> Vẫn tạo đối tượng tạm để gửi voucher trực tiếp về Gmail đó
+                            dongPlusCustomers.Add(new DATN64.Models.KhachHang
                             {
-                                "Kim Cương" => d >= 3000,
-                                "Vàng" => d >= 1500 && d < 3000,
-                                "Bạc" => d >= 500 && d < 1500,
-                                "Đồng" => d < 500,
-                                _ => true
-                            };
-                        }).ToList();
+                                MaKhachHang = 0,
+                                HoTen = "Khách hàng NovaTech",
+                                Email = explicitTargetEmail,
+                                DiemTichLuy = 1000
+                            });
+                        }
+                    }
+                    else
+                    {
+                        // Đọc targetRank từ payload nếu có
+                        string? explicitTargetRank = req.ActionPayload?.TargetRank;
+
+                        // Lọc: email đúng định dạng
+                        dongPlusCustomers = allCandidates
+                            .Where(k =>
+                                emailRegex.IsMatch(k.Email ?? "") &&
+                                !(k.Email ?? "").Contains("guest") &&
+                                !(k.Email ?? "").Contains("vanglai") &&
+                                !(k.Email ?? "").Contains("novatech.vn") &&
+                                !(k.Email ?? "").Contains("tiktok.com"))
+                            .ToList();
+
+                        if (!string.IsNullOrEmpty(explicitTargetRank))
+                        {
+                            // Lọc theo Rank: Kim Cương (>=3000), Vàng (1500-2999), Bạc (500-1499), Đồng (0-499)
+                            dongPlusCustomers = dongPlusCustomers.Where(k =>
+                            {
+                                int d = k.DiemTichLuy;
+                                return explicitTargetRank switch
+                                {
+                                    "Kim Cương" => d >= 3000,
+                                    "Vàng" => d >= 1500 && d < 3000,
+                                    "Bạc" => d >= 500 && d < 1500,
+                                    "Đồng" => d < 500,
+                                    _ => true
+                                };
+                            }).ToList();
+                        }
+
+                        // Nếu sau khi lọc vẫn không có email nào (do DB trống), tự động fallback gửi đến Email đăng nhập hiện tại hoặc Gmail hệ thống
+                        if (!dongPlusCustomers.Any())
+                        {
+                            var currentAdminEmail = HttpContext.Session.GetString("UserEmail");
+                            string fallbackEmail = (!string.IsNullOrEmpty(currentAdminEmail) && emailRegex.IsMatch(currentAdminEmail))
+                                ? currentAdminEmail
+                                : "novatech.shop2026@gmail.com";
+
+                            dongPlusCustomers.Add(new DATN64.Models.KhachHang
+                            {
+                                MaKhachHang = 0,
+                                HoTen = HttpContext.Session.GetString("UserName") ?? "Khách hàng NovaTech",
+                                Email = fallbackEmail,
+                                DiemTichLuy = 500
+                            });
+                        }
                     }
 
                     // Log để debug
@@ -770,6 +972,21 @@ Trả lời tiếng Việt, ngắn gọn, chuyên nghiệp. Hỗ trợ markdown:
             await _context.SaveChangesAsync();
 
             return RedirectToAction("Index");
+        }
+
+        [HttpGet("TestSendMail")]
+        public IActionResult TestSendMail(string? toEmail)
+        {
+            var target = !string.IsNullOrEmpty(toEmail) ? toEmail : "haodvttb01628@gmail.com";
+            try
+            {
+                _emailService.SendEmail(target, "🔥 [Test NovaTech] Kiểm tra gửi Email Voucher", "<h1>Xin chào!</h1><p>Đây là email test kiểm tra kết nối SMTP từ hệ thống NovaTech ERP.</p>");
+                return Ok(new { success = true, message = $"✅ Đã gửi email test thành công tới: {target}" });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, error = ex.ToString() });
+            }
         }
 
         [HttpPost("ClearHistory")]

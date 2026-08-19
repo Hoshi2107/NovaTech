@@ -25,9 +25,6 @@ namespace DATN64.Controllers.Api
         {
             try
             {
-                // Auto generate tickets for existing low stock products
-                await _context.AutoGenerateLowStockTicketsAsync();
-
                 var query = _context.SanPhams
                     .Include(p => p.DanhMuc)
                     .Include(p => p.ThuongHieu)
@@ -80,23 +77,59 @@ namespace DATN64.Controllers.Api
             try
             {
                 var transactions = await _context.InventoryTransactions.ToListAsync();
+                var productIds = transactions.Select(t => {
+                    int.TryParse(t.ProductSKU, out var id);
+                    return id;
+                }).Where(id => id > 0).Distinct().ToList();
 
-                var result = transactions.OrderByDescending(t => t.Date).Select(t => new {
-                    t.Id,
-                    t.Code,
-                    t.Type,
-                    t.ProductSKU,
-                    t.ProductName,
-                    t.QuantityChange,
-                    t.Creator,
-                    Date = t.Date.ToString("yyyy-MM-dd HH:mm:ss"),
-                    t.Note,
-                    t.SoLuongTruoc,
-                    t.SoLuongSau,
-                    t.TrangThai,
-                    t.NguoiDuyet,
-                    NgayDuyet = t.NgayDuyet.HasValue ? t.NgayDuyet.Value.ToString("yyyy-MM-dd HH:mm:ss") : null,
-                    t.LyDoTuChoi
+                var productsDict = await _context.SanPhams
+                    .Where(p => productIds.Contains(p.MaSanPham))
+                    .ToDictionaryAsync(p => p.MaSanPham, p => new { p.GiaNhap, p.GiaBan });
+
+                var result = transactions.OrderByDescending(t => t.Date).Select(t => {
+                    int.TryParse(t.ProductSKU, out var pId);
+                    decimal giaNhap = 0;
+                    decimal giaBan = 0;
+                    if (pId > 0 && productsDict.TryGetValue(pId, out var prodInfo))
+                    {
+                        giaNhap = prodInfo.GiaNhap;
+                        giaBan = prodInfo.GiaBan;
+                    }
+
+                    // Nếu có giá nhập trong Note thì ưu tiên lấy
+                    if (t.Note != null && t.Note.Contains("Đơn giá nhập:"))
+                    {
+                        var match = System.Text.RegularExpressions.Regex.Match(t.Note, @"Đơn giá nhập:\s*([\d\.,]+)");
+                        if (match.Success)
+                        {
+                            var numStr = match.Groups[1].Value.Replace(".", "").Replace(",", "");
+                            if (decimal.TryParse(numStr, out var parsedCost) && parsedCost > 0)
+                            {
+                                giaNhap = parsedCost;
+                            }
+                        }
+                    }
+
+                    return new {
+                        t.Id,
+                        t.Code,
+                        t.Type,
+                        t.ProductSKU,
+                        t.ProductName,
+                        t.QuantityChange,
+                        t.Creator,
+                        Date = t.Date.ToString("yyyy-MM-dd HH:mm:ss"),
+                        t.Note,
+                        t.SoLuongTruoc,
+                        t.SoLuongSau,
+                        t.TrangThai,
+                        t.NguoiDuyet,
+                        NgayDuyet = t.NgayDuyet.HasValue ? t.NgayDuyet.Value.ToString("yyyy-MM-dd HH:mm:ss") : null,
+                        t.LyDoTuChoi,
+                        GiaNhap = giaNhap,
+                        GiaBan = giaBan,
+                        ThanhTien = giaNhap * Math.Abs(t.QuantityChange)
+                    };
                 }).ToList();
 
                 return Ok(result);
@@ -127,6 +160,22 @@ namespace DATN64.Controllers.Api
                 int count = await _context.InventoryTransactions.CountAsync(t => t.Type == "Nhập kho") + 1;
                 string code = "PN" + count.ToString("D6");
 
+                decimal importCost = request.ImportPrice.HasValue && request.ImportPrice.Value > 0 
+                    ? request.ImportPrice.Value 
+                    : product.GiaNhap;
+                decimal thanhTien = importCost * request.Quantity;
+
+                var noteBuilder = new System.Text.StringBuilder();
+                if (!string.IsNullOrEmpty(request.Note))
+                {
+                    noteBuilder.Append(request.Note);
+                    noteBuilder.Append(" - ");
+                }
+                noteBuilder.Append($"Nguồn: {request.Source} | Đơn giá nhập: {importCost:N0} đ | Thành tiền: {thanhTien:N0} đ");
+
+                var currentUser = HttpContext.Session.GetString("UserName") ?? "Thủ kho";
+
+                // Tạo phiếu ở trạng thái "Chờ duyệt", KHÔNG tăng tồn kho và KHÔNG ghi vào báo cáo giá cho đến khi được duyệt
                 var tx = new InventoryTransaction
                 {
                     Code = code,
@@ -134,19 +183,18 @@ namespace DATN64.Controllers.Api
                     ProductSKU = product.MaSanPham.ToString(),
                     ProductName = product.TenSanPham,
                     QuantityChange = request.Quantity,
-                    Creator = HttpContext.Session.GetString("UserName") ?? "Thủ kho",
+                    Creator = currentUser,
                     Date = DateTime.Now,
-                    Note = string.IsNullOrEmpty(request.Note) ? $"Nhập kho ({request.Source})" : $"{request.Note} (Nguồn: {request.Source})",
+                    Note = noteBuilder.ToString(),
                     TrangThai = "Chờ duyệt",
                     SoLuongTruoc = null,
                     SoLuongSau = null
                 };
-
                 _context.InventoryTransactions.Add(tx);
                 await _context.SaveChangesAsync();
 
                 return Ok(new { 
-                    message = $"Đã tạo phiếu nhập kho chờ duyệt cho {request.Quantity} sản phẩm! Vui lòng đợi quản lý phê duyệt.", 
+                    message = $"Đã tạo phiếu nhập kho ({code}) cho {request.Quantity} sản phẩm với đơn giá {importCost:N0} đ! Phiếu đang ở trạng thái 'Chờ duyệt', sau khi Quản lý phê duyệt thì hàng mới vào kho và hiển thị lên biến động giá.", 
                     code = code 
                 });
             }
@@ -247,6 +295,45 @@ namespace DATN64.Controllers.Api
                 if (tx.Type == "Nhập kho")
                 {
                     product.SoLuongTon += tx.QuantityChange;
+
+                    // Trích xuất giá nhập từ Note nếu có để cập nhật lịch sử giá và sản phẩm
+                    decimal importCost = product.GiaNhap;
+                    if (tx.Note != null && tx.Note.Contains("Đơn giá nhập:"))
+                    {
+                        var match = System.Text.RegularExpressions.Regex.Match(tx.Note, @"Đơn giá nhập:\s*([\d\.,]+)");
+                        if (match.Success)
+                        {
+                            var numStr = match.Groups[1].Value.Replace(".", "").Replace(",", "");
+                            if (decimal.TryParse(numStr, out var parsedCost) && parsedCost > 0)
+                            {
+                                importCost = parsedCost;
+                            }
+                        }
+                    }
+
+                    if (importCost > 0)
+                    {
+                        product.GiaNhap = importCost;
+                    }
+
+                    // Tự động ghi vào PhieuNhap & ChiTietPhieuNhap để đồng bộ Báo Cáo Biến Động Giá
+                    var phieuNhap = new PhieuNhap
+                    {
+                        MaNCC = product.MaNCC > 0 ? product.MaNCC : 1,
+                        MaNhanVien = 1,
+                        NgayNhap = DateTime.Now
+                    };
+                    _context.PhieuNhaps.Add(phieuNhap);
+                    await _context.SaveChangesAsync();
+
+                    var ctPhieuNhap = new ChiTietPhieuNhap
+                    {
+                        MaPhieuNhap = phieuNhap.MaPhieuNhap,
+                        MaSanPham = product.MaSanPham,
+                        SoLuong = tx.QuantityChange,
+                        GiaNhap = importCost
+                    };
+                    _context.ChiTietPhieuNhaps.Add(ctPhieuNhap);
                 }
                 else if (tx.Type == "Xuất kho")
                 {
@@ -573,6 +660,8 @@ namespace DATN64.Controllers.Api
     {
         public int ProductId { get; set; }
         public int Quantity { get; set; }
+        public decimal? ImportPrice { get; set; }
+        public bool UpdateProductPrice { get; set; } = true;
         public string Source { get; set; } = "Nhà cung cấp";
         public string? Note { get; set; }
     }

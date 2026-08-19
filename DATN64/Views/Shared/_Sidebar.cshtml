@@ -29,7 +29,7 @@
         </div>
         <div>
             <h5 class="m-0 fw-bold text-dark tracking-wider">NovaTech</h5>
-            <span class="text-xs text-muted-custom">Hệ quản trị ERP v1.0</span>
+            <span class="text-xs text-muted-custom">Hệ quản trị</span>
         </div>
     </div>
 
@@ -94,6 +94,12 @@
                     <a href="@Url.Action("Export", "Inventory")" class="nav-link-custom @(ctrl == "Inventory" && (act == "Export" || (act == "Index" && tab == "export")) ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
                         <i class="fa-solid fa-circle-up text-cyan fs-5"></i>
                         <span>Xuất kho</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="@Url.Action("ImportPriceHistory", "Report")" class="nav-link-custom @(ctrl == "Report" && act == "ImportPriceHistory" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
+                        <i class="fa-solid fa-arrow-trend-up text-cyan fs-5"></i>
+                        <span>Biến động giá nhập</span>
                     </a>
                 </li>
             }

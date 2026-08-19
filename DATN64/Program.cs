@@ -48,9 +48,6 @@ using (var scope = app.Services.CreateScope())
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     DbInitializer.Initialize(context);
 
-    // Tự động tạo vé/phiếu cho sản phẩm sắp hết hàng (Code của bạn)
-    context.AutoGenerateLowStockTickets();
-
     // Cập nhật ảnh iPhone 15 và Debug hệ thống (Code mới cập nhật từ server về)
     try
     {
