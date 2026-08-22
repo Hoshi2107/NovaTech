@@ -36,6 +36,14 @@
                         <i class="fa-solid fa-boxes-stacked me-2"></i>Tồn kho
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link rounded-3 py-2.5" :class="{ active: activeTab === 'purchase-request' }" @@click="setTab('purchase-request')">
+                        <i class="fa-solid fa-file-pen me-2 text-warning"></i>Yêu cầu nhập hàng
+                        <span v-if="purchaseRequests.filter(r => r.trangThai === 'Đã duyệt YC' && !r.maYeuCauNhap).length > 0" class="badge bg-warning text-dark rounded-pill ms-1">
+                            ${ purchaseRequests.filter(r => r.trangThai === 'Đã duyệt YC').length }
+                        </span>
+                    </button>
+                </li>
 
                 <li class="nav-item" role="presentation">
                     <button class="nav-link rounded-3 py-2.5" :class="{ active: activeTab === 'audit' }" @@click="setTab('audit')">
@@ -365,7 +373,133 @@
             </div>
         </div>
 
-        <!-- 3. IMPORT TAB -->
+        <!-- 3. PURCHASE REQUEST TAB — Yêu cầu nhập hàng -->
+        <div class="tab-pane show active" v-if="activeTab === 'purchase-request'">
+            <div class="row g-4">
+                <!-- Left: Create Request Form -->
+                <div class="col-md-5">
+                    <div class="card border-0 card-premium p-4 h-100">
+                        <div class="card-title form-section-header d-flex align-items-center gap-2 mb-3">
+                            <div class="d-inline-flex align-items-center justify-content-center bg-warning-subtle text-warning rounded-circle" style="width:44px;height:44px;">
+                                <i class="fa-solid fa-file-pen fs-5"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-bold mb-0">Gửi Yêu Cầu Nhập Hàng</h5>
+                                <small class="text-muted-custom text-xs">Gửi lên kế toán để phê duyệt trước khi đặt hàng</small>
+                            </div>
+                        </div>
+                        <form @@submit.prevent="submitPurchaseRequest">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Chọn sản phẩm</label>
+                                <select class="form-select" v-model="forms.purchaseReq.productId" required @@change="onPurchaseReqProductChange">
+                                    <option value="" disabled>--- Chọn sản phẩm cần nhập ---</option>
+                                    <option v-for="p in activeProducts" :value="p.maSanPham">
+                                        ${ p.tenSanPham } (Mã: #${ p.maSanPham }) - Tồn: ${ p.soLuongTon } cái
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Số lượng yêu cầu</label>
+                                <input type="number" class="form-control" v-model.number="forms.purchaseReq.quantity" min="1" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Giá ước tính (VNĐ)</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" v-model.number="forms.purchaseReq.estimatedPrice" min="0" step="1000" placeholder="Để trống = dùng giá nhập hiện tại">
+                                    <span class="input-group-text bg-light text-muted fw-bold">VNĐ</span>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Nhà cung cấp</label>
+                                <input type="text" class="form-control" v-model="forms.purchaseReq.nhaCungCap" placeholder="Tên nhà cung cấp...">
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Ghi chú / Lý do yêu cầu</label>
+                                <textarea class="form-control" v-model="forms.purchaseReq.note" placeholder="Lý do nhập hàng, ghi chú kèm theo..." rows="3"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-warning rounded-3 w-100 fw-bold py-2.5 text-dark" :disabled="submitting">
+                                <span v-if="submitting" class="spinner-border spinner-border-sm me-2"></span>
+                                <i class="fa-solid fa-paper-plane me-2" v-else></i>Gửi yêu cầu lên kế toán
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Right: Purchase Request List -->
+                <div class="col-md-7">
+                    <div class="card border-0 card-premium">
+                        <div class="card-header bg-transparent border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                            <h5 class="fw-bold mb-0 text-gradient"><i class="fa-solid fa-list-check me-2 text-warning"></i>Danh sách Yêu cầu nhập</h5>
+                            <button class="btn btn-sm btn-outline-secondary rounded-3" @@click="loadPurchaseRequests">
+                                <i class="fa-solid fa-rotate-right me-1"></i>Làm mới
+                            </button>
+                        </div>
+                        <div class="card-body p-3">
+                            <div v-if="purchaseRequestsLoading" class="text-center py-4">
+                                <div class="spinner-border text-warning" role="status"></div>
+                            </div>
+                            <div v-else-if="purchaseRequests.filter(r => r.trangThai !== 'Hoàn thành').length === 0" class="text-center py-5 text-muted">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block opacity-50"></i>Chưa có yêu cầu nhập nào
+                            </div>
+                            <div class="table-responsive" v-else-if="purchaseRequests.filter(r => r.trangThai !== 'Hoàn thành').length > 0">
+                                <table class="table table-modern align-middle table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Mã YC</th>
+                                            <th>Sản phẩm</th>
+                                            <th class="text-center">SL</th>
+                                            <th>Trạng thái</th>
+                                            <th class="text-center">Thao tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template v-for="req in purchaseRequests" :key="req.id">
+                                        <tr v-if="req.trangThai !== 'Hoàn thành'">
+                                            <td><span class="badge bg-warning text-dark text-xxs">${ req.code }</span></td>
+                                            <td>
+                                                <div class="fw-bold text-xs text-truncate" style="max-width:140px">${ req.productName }</div>
+                                                <small class="text-muted text-xxs">${ req.date?.substring(0,10) }</small>
+                                            </td>
+                                            <td class="text-center fw-bold">${ req.quantityChange }</td>
+                                            <td>
+                                                <span class="badge text-xs" :class="{
+                                                    'bg-warning text-dark': req.trangThai === 'Chờ duyệt YC',
+                                                    'bg-success': req.trangThai === 'Đã duyệt YC',
+                                                    'bg-danger': req.trangThai === 'Từ chối YC',
+                                                    'bg-info text-dark': req.trangThai === 'Chờ xác nhận PN'
+                                                }">${ req.trangThai === 'Chờ xác nhận PN' ? 'Chờ xác nhận hàng về' : req.trangThai }</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <!-- Tạo phiếu nhập khi YC đã được duyệt -->
+                                                <button class="btn btn-xs btn-success py-1 px-2 text-xxs fw-bold rounded-pill"
+                                                        v-if="req.trangThai === 'Đã duyệt YC'"
+                                                        @@click="openCreateImportModal(req)">
+                                                    <i class="fa-solid fa-circle-down me-1"></i>Tạo Phiếu Nhập
+                                                </button>
+                                                <!-- Nút xác nhận hàng về — chỉ Manager/Kế toán mới thấy -->
+                                                <button class="btn btn-xs btn-primary py-1 px-2 text-xxs fw-bold rounded-pill"
+                                                        v-else-if="req.trangThai === 'Chờ xác nhận PN' && isManager"
+                                                        @@click="confirmPhieuNhap(req)" :disabled="submitting">
+                                                    <i class="fa-solid fa-box-open me-1"></i>Xác nhận hàng về
+                                                </button>
+                                                <span v-else class="text-muted text-xxs">
+                                                    <span v-if="req.trangThai === 'Chờ duyệt YC'">Chờ kế toán</span>
+                                                    <span v-else-if="req.trangThai === 'Chờ xác nhận PN'"><i class="fa-solid fa-clock me-1"></i>Chờ xác nhận</span>
+                                                    <span v-else>—</span>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3b. OLD IMPORT TAB (giữ lại cho tương thích) -->
         <div class="tab-pane show active" v-if="activeTab === 'import'">
             <div class="row justify-content-center">
                 <div class="col-md-9 col-lg-7">
@@ -1208,6 +1342,47 @@
         </div>
 
     </div>
+
+    <!-- Modal: Tạo phiếu nhập từ YC đã duyệt (Moved here to avoid z-index backdrop overlay issues in nested tab layouts) -->
+    <div class="modal fade" id="createImportModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-0 bg-success text-white rounded-top">
+                    <h5 class="modal-title"><i class="fa-solid fa-circle-down me-2"></i>Tạo Phiếu Nhập Thực Tế</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4" v-if="selectedPurchaseReq">
+                    <div class="p-3 bg-success bg-opacity-10 border border-success border-opacity-20 rounded-3 mb-3">
+                        <div class="fw-bold text-success mb-1"><i class="fa-solid fa-circle-check me-1"></i>Từ yêu cầu: ${ selectedPurchaseReq.code }</div>
+                        <div class="text-xs text-muted">Sản phẩm: <strong>${ selectedPurchaseReq.productName }</strong> | YC: <strong>${ selectedPurchaseReq.quantityChange } cái</strong></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Số lượng thực tế nhận được</label>
+                        <input type="number" class="form-control" v-model.number="forms.createImport.quantity" :max="selectedPurchaseReq.quantityChange" min="1" required>
+                        <div class="form-text text-xs text-muted">Tối đa: ${ selectedPurchaseReq.quantityChange } cái (theo yêu cầu)</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Đơn giá nhập thực tế (VNĐ)</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" v-model.number="forms.createImport.importPrice" min="1" step="1000" required>
+                            <span class="input-group-text bg-light fw-bold text-muted">VNĐ</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Ghi chú</label>
+                        <textarea class="form-control" v-model="forms.createImport.note" rows="2" placeholder="Ghi chú khi nhận hàng..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-success fw-bold" @@click="submitCreateImport" :disabled="submitting">
+                        <span v-if="submitting" class="spinner-border spinner-border-sm me-1"></span>
+                        <i class="fa-solid fa-circle-check me-1" v-else></i>Tạo Phiếu Nhập & Gửi kế toán duyệt
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
@@ -1415,6 +1590,39 @@
             background-color: #cbd5e1;
             border-radius: 2px;
         }
+
+        /* Fix Bootstrap Modal backdrop stacking context issue.
+           Khi modal mở, bất kỳ element nào có transform/filter đều tạo ra
+           stacking context mới → backdrop bị "trapped" bên trong → màn hình bị mờ.
+           Fix: neutralize toàn bộ transform/filter khi modal-open đang active. */
+        body.modal-open .main-content,
+        body.modal-open #app,
+        body.modal-open .animate-fade-in,
+        body.modal-open .card-premium,
+        body.modal-open .card-premium:hover,
+        body.modal-open .card-glass,
+        body.modal-open .card-glass:hover,
+        body.modal-open .stats-wrapper,
+        body.modal-open .stats-wrapper:hover,
+        body.modal-open .stats-wrapper::before,
+        body.modal-open .stats-wrapper:hover::before,
+        body.modal-open .icon-shape-glow,
+        body.modal-open .stats-wrapper:hover .icon-shape-glow,
+        body.modal-open .timeline-badge-modern,
+        body.modal-open .timeline-item-modern:hover .timeline-badge-modern,
+        body.modal-open .bg-glass {
+            transform: none !important;
+            filter: none !important;
+            animation: none !important;
+        }
+
+        /* Đảm bảo modal và backdrop luôn ở trên cùng */
+        .modal-backdrop {
+            z-index: 1040 !important;
+        }
+        .modal {
+            z-index: 1055 !important;
+        }
     </style>
 
     <script>
@@ -1448,7 +1656,23 @@
                     historyType: '',
                     historyTime: 'all'
                 },
+                purchaseRequests: [],
+                purchaseRequestsLoading: false,
+                selectedPurchaseReq: null,
                 forms: {
+                    purchaseReq: {
+                        productId: '',
+                        variantId: '',
+                        quantity: 10,
+                        estimatedPrice: '',
+                        nhaCungCap: 'Nhà cung cấp',
+                        note: ''
+                    },
+                    createImport: {
+                        quantity: '',
+                        importPrice: '',
+                        note: ''
+                    },
                     import: {
                         productId: '',
                         variantId: '',
@@ -1747,6 +1971,10 @@
                         this.transactions = txRes.data;
                         this.categories = optRes.data.categories;
                         this.brands = optRes.data.brands;
+                        
+                        // Load purchase requests in background
+                        await this.loadPurchaseRequests();
+
                         this.$nextTick(() => {
                             this.initCharts();
                             this.generateLedger();
@@ -1759,6 +1987,172 @@
                     } finally {
                         if (!silent) this.loading = false;
                         this.updateTime();
+                    }
+                },
+                async loadPurchaseRequests() {
+                    this.purchaseRequestsLoading = true;
+                    try {
+                        const res = await axios.get('/api/inventory/purchase-requests');
+                        this.purchaseRequests = res.data;
+                    } catch (err) {
+                        console.error('Lỗi khi tải yêu cầu nhập:', err);
+                    } finally {
+                        this.purchaseRequestsLoading = false;
+                    }
+                },
+                onPurchaseReqProductChange() {
+                    this.forms.purchaseReq.variantId = '';
+                    const prod = this.activeProducts.find(p => p.maSanPham === this.forms.purchaseReq.productId);
+                    if (prod) {
+                        this.forms.purchaseReq.estimatedPrice = prod.giaNhap || 0;
+                    }
+                },
+                async submitPurchaseRequest() {
+                    this.submitting = true;
+                    try {
+                        const payload = {
+                            productId: this.forms.purchaseReq.productId,
+                            quantity: this.forms.purchaseReq.quantity,
+                            estimatedPrice: this.forms.purchaseReq.estimatedPrice,
+                            nhaCungCap: this.forms.purchaseReq.nhaCungCap,
+                            note: this.forms.purchaseReq.note
+                        };
+                        const res = await axios.post('/api/inventory/purchase-request', payload);
+                        Swal.fire('Thành công', res.data.message, 'success');
+                        
+                        // Reset form
+                        this.forms.purchaseReq.productId = '';
+                        this.forms.purchaseReq.quantity = 10;
+                        this.forms.purchaseReq.estimatedPrice = '';
+                        this.forms.purchaseReq.nhaCungCap = 'Nhà cung cấp';
+                        this.forms.purchaseReq.note = '';
+                        
+                        await this.loadPurchaseRequests();
+                    } catch (err) {
+                        console.error(err);
+                        const msg = err.response?.data?.message || 'Có lỗi xảy ra!';
+                        Swal.fire('Lỗi', msg, 'error');
+                    } finally {
+                        this.submitting = false;
+                    }
+                },
+                // openCreateImportModal(req) {
+                //     this.selectedPurchaseReq = req;
+                //     this.forms.createImport.quantity = req.quantityChange;
+                //     let estPrice = 0;
+                //     const match = req.note.match(/Giá ước tính:\s*([\d,.]+)/);
+                //     if (match) {
+                //         estPrice = parseFloat(match[1].replace(/[,.]/g, ''));
+                //     }
+                //     this.forms.createImport.importPrice = estPrice || 0;
+                //     this.forms.createImport.note = '';
+                    
+                //     const modalEl = document.getElementById('createImportModal');
+                //     if (modalEl) {
+                //         const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                //         modal.show();
+                //     }
+                // },
+                openCreateImportModal(req) {
+                    this.selectedPurchaseReq = req;
+                    this.forms.createImport.quantity = req.quantityChange;
+                    let estPrice = 0;
+                    const match = req.note.match(/Giá ước tính:\s*([\d,.]+)/);
+                    if (match) {
+                        estPrice = parseFloat(match[1].replace(/[,.]/g, ''));
+                    }
+                    this.forms.createImport.importPrice = estPrice || 0;
+                    this.forms.createImport.note = '';
+                    const modalEl = document.getElementById('createImportModal');
+                    if (modalEl) {
+                        // Dọn backdrop thừa nếu có (phòng trường hợp bị stuck)
+                        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+                        document.body.classList.remove('modal-open');
+                        document.body.style.removeProperty('padding-right');
+                        document.body.style.removeProperty('overflow');
+                        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                        modal.show();
+                    }
+                },
+                async submitCreateImport() {
+                    if (!this.selectedPurchaseReq) return;
+                    this.submitting = true;
+                    try {
+                        const payload = {
+                            quantity: this.forms.createImport.quantity,
+                            importPrice: this.forms.createImport.importPrice,
+                            note: this.forms.createImport.note
+                        };
+                        const res = await axios.post(`/api/inventory/create-from-request/${this.selectedPurchaseReq.id}`, payload);
+                        
+                        const modalEl = document.getElementById('createImportModal');
+                        if (modalEl) {
+                            const modal = bootstrap.Modal.getInstance(modalEl);
+                            if (modal) modal.hide();
+                        }
+                        
+                        Swal.fire('Thành công', res.data.message, 'success');
+                        await this.loadPurchaseRequests();
+                        await this.fetchData(true);
+                    } catch (err) {
+                        console.error(err);
+                        const msg = err.response?.data?.message || 'Có lỗi xảy ra!';
+                        Swal.fire('Lỗi', msg, 'error');
+                    } finally {
+                        this.submitting = false;
+                    }
+                },
+                async confirmPhieuNhap(req) {
+                    // Tìm phiếu nhập thực tế tương ứng với yêu cầu này (req.id là MaYeuCauNhap của phiếu nhập)
+                    // Ở client, transactions chứa các phiếu nhập thực tế.
+                    const phieuNhapTx = this.transactions.find(t => t.maYeuCauNhap == req.id && t.trangThai === 'Chờ duyệt PN');
+                    
+                    let targetId = null;
+                    if (phieuNhapTx) {
+                        targetId = phieuNhapTx.id;
+                    } else {
+                        // Nếu transactions chưa sync kịp, gọi API lấy danh sách hoặc tìm qua API,
+                        // nhưng thường transactions đã được loaded đầy đủ.
+                        // Thử tìm trong list transactions chung.
+                        const found = this.transactions.find(t => t.maYeuCauNhap == req.id);
+                        if (found) targetId = found.id;
+                    }
+
+                    if (!targetId) {
+                        // Nếu không tìm thấy transaction ID, thử fetch lại data trước
+                        await this.fetchData(true);
+                        const retryFound = this.transactions.find(t => t.maYeuCauNhap == req.id);
+                        if (retryFound) {
+                            targetId = retryFound.id;
+                        } else {
+                            Swal.fire('Lỗi', 'Không tìm thấy phiếu nhập thực tế tương ứng với yêu cầu này!', 'error');
+                            return;
+                        }
+                    }
+
+                    const confirmResult = await Swal.fire({
+                        title: 'Xác nhận nhập kho?',
+                        text: `Xác nhận đã nhận đủ ${req.quantityChange} sản phẩm cho yêu cầu ${req.code}? Hành động này sẽ cập nhật tồn kho chính thức.`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Đồng ý',
+                        cancelButtonText: 'Hủy'
+                    });
+
+                    if (!confirmResult.isConfirmed) return;
+
+                    this.submitting = true;
+                    try {
+                        const res = await axios.post(`/api/inventory/phieu-nhap/approve/${targetId}`);
+                        Swal.fire('Thành công', res.data.message, 'success');
+                        await this.loadPurchaseRequests();
+                        await this.fetchData(true);
+                    } catch (err) {
+                        console.error(err);
+                        const msg = err.response?.data?.message || 'Có lỗi xảy ra khi xác nhận hàng về.';
+                        Swal.fire('Lỗi', msg, 'error');
+                    } finally {
+                        this.submitting = false;
                     }
                 },
                 setTab(tab) {

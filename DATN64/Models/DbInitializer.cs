@@ -381,6 +381,14 @@ namespace DATN64.Models
                     ALTER TABLE dbo.ChiTietPhieuNhap ADD GiaNiemYetLucNhap DECIMAL(18,2) NOT NULL DEFAULT 0;
             ");
 
+            // Add PhanLoai and MaYeuCauNhap columns to InventoryTransaction
+            ExecuteSql(db, @"
+                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.InventoryTransaction') AND name = 'PhanLoai')
+                    ALTER TABLE dbo.InventoryTransaction ADD PhanLoai NVARCHAR(50) NOT NULL DEFAULT N'PhieuNhap';
+                IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.InventoryTransaction') AND name = 'MaYeuCauNhap')
+                    ALTER TABLE dbo.InventoryTransaction ADD MaYeuCauNhap NVARCHAR(50) NULL;
+            ");
+
             // Ensure DonHang.MaNhanVien column allows NULL when the model is optional
             ExecuteSql(db, @"
                 IF OBJECT_ID('dbo.DonHang', 'U') IS NOT NULL

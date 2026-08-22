@@ -5,6 +5,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using DATN64.Models;
+using DATN64.Helpers;
 
 namespace DATN64.Controllers.Api
 {
@@ -76,7 +77,9 @@ namespace DATN64.Controllers.Api
         {
             try
             {
-                var transactions = await _context.InventoryTransactions.ToListAsync();
+                var transactions = await _context.InventoryTransactions
+                    .Where(t => t.PhanLoai != "YeuCauNhap")
+                    .ToListAsync();
                 var productIds = transactions.Select(t => {
                     int.TryParse(t.ProductSKU, out var id);
                     return id;
@@ -128,7 +131,9 @@ namespace DATN64.Controllers.Api
                         t.LyDoTuChoi,
                         GiaNhap = giaNhap,
                         GiaBan = giaBan,
-                        ThanhTien = giaNhap * Math.Abs(t.QuantityChange)
+                        ThanhTien = giaNhap * Math.Abs(t.QuantityChange),
+                        t.MaYeuCauNhap,
+                        t.PhanLoai
                     };
                 }).ToList();
 
@@ -653,9 +658,299 @@ namespace DATN64.Controllers.Api
                 return StatusCode(500, new { message = "Lỗi hệ thống khi từ chối phiếu điều chỉnh", error = ex.Message });
             }
         }
+
+        // ═══════════════════════════════════════════════════════════
+    // 2-STEP IMPORT WORKFLOW
+    // ═══════════════════════════════════════════════════════════
+
+    // GET: api/inventory/purchase-requests
+    [HttpGet("purchase-requests")]
+    public async Task<IActionResult> GetPurchaseRequests(string? status)
+    {
+        try
+        {
+            var query = _context.InventoryTransactions
+                .Where(t => t.PhanLoai == "YeuCauNhap")
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(status))
+                query = query.Where(t => t.TrangThai == status);
+
+            var list = await query.OrderByDescending(t => t.Date).Select(t => new
+            {
+                t.Id, t.Code, t.Type, t.ProductSKU, t.ProductName,
+                t.QuantityChange, t.Creator,
+                Date = t.Date.ToString("yyyy-MM-dd HH:mm:ss"),
+                t.Note, t.TrangThai, t.NguoiDuyet,
+                NgayDuyet = t.NgayDuyet.HasValue ? t.NgayDuyet.Value.ToString("yyyy-MM-dd HH:mm:ss") : null,
+                t.LyDoTuChoi, t.PhanLoai, t.MaYeuCauNhap
+            }).ToListAsync();
+
+            return Ok(list);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi tải danh sách yêu cầu nhập", error = ex.Message });
+        }
     }
 
-    // Request DTOs
+    // POST: api/inventory/purchase-request  — Thủ kho gửi yêu cầu nhập hàng
+    [HttpPost("purchase-request")]
+    public async Task<IActionResult> CreatePurchaseRequest([FromBody] PurchaseRequestDto request)
+    {
+        if (request == null || request.ProductId <= 0 || request.Quantity <= 0)
+            return BadRequest(new { message = "Dữ liệu yêu cầu nhập không hợp lệ!" });
+
+        try
+        {
+            var product = await _context.SanPhams.FirstOrDefaultAsync(p => p.MaSanPham == request.ProductId);
+            if (product == null)
+                return NotFound(new { message = "Không tìm thấy sản phẩm!" });
+
+            int count = await _context.InventoryTransactions.CountAsync(t => t.PhanLoai == "YeuCauNhap") + 1;
+            string code = "YC" + count.ToString("D6");
+
+            decimal estPrice = request.EstimatedPrice.HasValue && request.EstimatedPrice.Value > 0
+                ? request.EstimatedPrice.Value
+                : product.GiaNhap;
+
+            var note = $"Nguồn: {request.NhaCungCap} | Giá ước tính: {estPrice:N0} đ | Tổng ước tính: {estPrice * request.Quantity:N0} đ";
+            if (!string.IsNullOrEmpty(request.Note))
+                note = request.Note + " — " + note;
+
+            var tx = new InventoryTransaction
+            {
+                Code        = code,
+                Type        = "Nhập kho",
+                PhanLoai    = "YeuCauNhap",
+                ProductSKU  = product.MaSanPham.ToString(),
+                ProductName = product.TenSanPham,
+                QuantityChange = request.Quantity,
+                Creator     = HttpContext.Session.GetString("UserName") ?? "Thủ kho",
+                Date        = DateTime.Now,
+                Note        = note,
+                TrangThai   = "Chờ duyệt YC",
+            };
+
+            _context.InventoryTransactions.Add(tx);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = $"Đã gửi Yêu cầu nhập hàng ({code}) cho {request.Quantity} sản phẩm. Đang chờ kế toán phê duyệt.", code });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi hệ thống khi tạo yêu cầu nhập", error = ex.Message });
+        }
+    }
+
+    // POST: api/inventory/purchase-request/approve/{id}  — Kế toán duyệt yêu cầu
+    [HttpPost("purchase-request/approve/{id}")]
+    public async Task<IActionResult> ApprovePurchaseRequest(int id)
+    {
+        if (!AuthHelper.HasPermission(HttpContext, "Import_Inventory"))
+            return StatusCode(403, new { message = "Bạn không có quyền duyệt yêu cầu nhập hàng!" });
+
+        try
+        {
+            var tx = await _context.InventoryTransactions.FirstOrDefaultAsync(t => t.Id == id && t.PhanLoai == "YeuCauNhap");
+            if (tx == null) return NotFound(new { message = "Không tìm thấy yêu cầu nhập!" });
+            if (tx.TrangThai != "Chờ duyệt YC")
+                return BadRequest(new { message = "Yêu cầu này đã được xử lý!" });
+
+            tx.TrangThai   = "Đã duyệt YC";
+            tx.NguoiDuyet  = HttpContext.Session.GetString("UserName") ?? "Kế toán";
+            tx.NgayDuyet   = DateTime.Now;
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = $"Đã duyệt yêu cầu {tx.Code}. Thủ kho có thể tạo Phiếu Nhập khi hàng về." });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi hệ thống", error = ex.Message });
+        }
+    }
+
+    // POST: api/inventory/purchase-request/reject/{id}  — Kế toán từ chối yêu cầu
+    [HttpPost("purchase-request/reject/{id}")]
+    public async Task<IActionResult> RejectPurchaseRequest(int id, [FromBody] RejectRequestDto request)
+    {
+        if (!AuthHelper.HasPermission(HttpContext, "Import_Inventory"))
+            return StatusCode(403, new { message = "Bạn không có quyền từ chối yêu cầu nhập hàng!" });
+
+        if (request == null || string.IsNullOrEmpty(request.LyDoTuChoi))
+            return BadRequest(new { message = "Bắt buộc phải nhập lý do từ chối!" });
+
+        try
+        {
+            var tx = await _context.InventoryTransactions.FirstOrDefaultAsync(t => t.Id == id && t.PhanLoai == "YeuCauNhap");
+            if (tx == null) return NotFound(new { message = "Không tìm thấy yêu cầu nhập!" });
+            if (tx.TrangThai != "Chờ duyệt YC")
+                return BadRequest(new { message = "Yêu cầu này đã được xử lý!" });
+
+            tx.TrangThai   = "Từ chối YC";
+            tx.NguoiDuyet  = HttpContext.Session.GetString("UserName") ?? "Kế toán";
+            tx.NgayDuyet   = DateTime.Now;
+            tx.LyDoTuChoi  = request.LyDoTuChoi;
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = $"Đã từ chối yêu cầu {tx.Code}." });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi hệ thống", error = ex.Message });
+        }
+    }
+
+    // POST: api/inventory/create-from-request/{id}  — Thủ kho tạo phiếu nhập thực tế từ YC đã duyệt
+    [HttpPost("create-from-request/{id}")]
+    public async Task<IActionResult> CreateImportFromRequest(int id, [FromBody] CreateImportFromRequestDto request)
+    {
+        if (request == null || request.Quantity <= 0 || request.ImportPrice <= 0)
+            return BadRequest(new { message = "Dữ liệu phiếu nhập không hợp lệ!" });
+
+        try
+        {
+            var yeuCau = await _context.InventoryTransactions.FirstOrDefaultAsync(t => t.Id == id && t.PhanLoai == "YeuCauNhap");
+            if (yeuCau == null) return NotFound(new { message = "Không tìm thấy yêu cầu nhập!" });
+            if (yeuCau.TrangThai != "Đã duyệt YC")
+                return BadRequest(new { message = "Chỉ có thể tạo phiếu nhập từ yêu cầu đã được kế toán duyệt!" });
+
+            // Kiểm tra đã tạo phiếu nhập từ YC này chưa
+            // MaYeuCauNhap is stored as NVARCHAR(50) in DB, compare as string
+            string idStr = id.ToString();
+            bool alreadyCreated = await _context.InventoryTransactions
+                .AnyAsync(t => t.MaYeuCauNhap == idStr && t.PhanLoai == "PhieuNhap");
+            if (alreadyCreated)
+                return BadRequest(new { message = "Phiếu nhập đã được tạo từ yêu cầu này rồi!" });
+
+            int count = await _context.InventoryTransactions.CountAsync(t => t.PhanLoai == "PhieuNhap" && t.Type == "Nhập kho") + 1;
+            string code = "PN" + count.ToString("D6");
+
+            decimal thanhTien = request.ImportPrice * request.Quantity;
+            var note = $"Từ yêu cầu {yeuCau.Code} | Đơn giá nhập: {request.ImportPrice:N0} đ | Thành tiền: {thanhTien:N0} đ";
+            if (!string.IsNullOrEmpty(request.Note))
+                note = request.Note + " — " + note;
+
+            var phieuNhap = new InventoryTransaction
+            {
+                Code           = code,
+                Type           = "Nhập kho",
+                PhanLoai       = "PhieuNhap",
+                MaYeuCauNhap   = id.ToString(),
+                ProductSKU     = yeuCau.ProductSKU,
+                ProductName    = yeuCau.ProductName,
+                QuantityChange = request.Quantity,
+                Creator        = HttpContext.Session.GetString("UserName") ?? "Thủ kho",
+                Date           = DateTime.Now,
+                Note           = note,
+                TrangThai      = "Chờ duyệt PN",
+            };
+
+            _context.InventoryTransactions.Add(phieuNhap);
+
+            // Cập nhật trạng thái YC → "Chờ xác nhận PN" để UI biết đang chờ xác nhận hàng về
+            yeuCau.TrangThai = "Chờ xác nhận PN";
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = $"Đã tạo Phiếu Nhập ({code}) chờ kế toán xác nhận hàng về. Sau khi xác nhận hàng sẽ vào kho.", code });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi hệ thống khi tạo phiếu nhập", error = ex.Message });
+        }
+    }
+
+    // POST: api/inventory/phieu-nhap/approve/{id}  — Kế toán xác nhận hàng đã về, hàng vào kho
+    [HttpPost("phieu-nhap/approve/{id}")]
+    public async Task<IActionResult> ApprovePhieuNhap(int id)
+    {
+        if (!AuthHelper.HasPermission(HttpContext, "Import_Inventory"))
+            return StatusCode(403, new { message = "Bạn không có quyền xác nhận phiếu nhập hàng!" });
+
+        try
+        {
+            var phieuNhap = await _context.InventoryTransactions
+                .FirstOrDefaultAsync(t => t.Id == id && t.PhanLoai == "PhieuNhap" && t.TrangThai == "Chờ duyệt PN");
+            if (phieuNhap == null)
+                return NotFound(new { message = "Không tìm thấy phiếu nhập hoặc phiếu đã được xử lý!" });
+
+            // Lấy sản phẩm
+            if (!int.TryParse(phieuNhap.ProductSKU, out int productId))
+                return BadRequest(new { message = "Mã sản phẩm trong phiếu nhập không hợp lệ!" });
+
+            var product = await _context.SanPhams.FirstOrDefaultAsync(p => p.MaSanPham == productId);
+            if (product == null)
+                return NotFound(new { message = "Không tìm thấy sản phẩm tương ứng!" });
+
+            int beforeQty = product.SoLuongTon;
+
+            // Cập nhật tồn kho
+            product.SoLuongTon += phieuNhap.QuantityChange;
+            int afterQty = product.SoLuongTon;
+
+            // Trích xuất đơn giá nhập từ Note để cập nhật giá sản phẩm
+            decimal importCost = product.GiaNhap;
+            if (phieuNhap.Note != null && phieuNhap.Note.Contains("Đơn giá nhập:"))
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(phieuNhap.Note, @"Đơn giá nhập:\s*([\d\.,]+)");
+                if (match.Success)
+                {
+                    var numStr = match.Groups[1].Value.Replace(".", "").Replace(",", "");
+                    if (decimal.TryParse(numStr, out var parsedCost) && parsedCost > 0)
+                        importCost = parsedCost;
+                }
+            }
+
+            if (importCost > 0)
+                product.GiaNhap = importCost;
+
+            // Cập nhật phiếu nhập
+            phieuNhap.TrangThai    = "Đã duyệt";
+            phieuNhap.SoLuongTruoc = beforeQty;
+            phieuNhap.SoLuongSau   = afterQty;
+            phieuNhap.NguoiDuyet   = HttpContext.Session.GetString("UserName") ?? "Kế toán";
+            phieuNhap.NgayDuyet    = DateTime.Now;
+
+            // Cập nhật YeuCauNhap liên kết → "Hoàn thành" (để ẩn khỏi danh sách)
+            if (!string.IsNullOrEmpty(phieuNhap.MaYeuCauNhap) && int.TryParse(phieuNhap.MaYeuCauNhap, out int yeuCauId))
+            {
+                var yeuCau = await _context.InventoryTransactions
+                    .FirstOrDefaultAsync(t => t.Id == yeuCauId && t.PhanLoai == "YeuCauNhap");
+                if (yeuCau != null)
+                    yeuCau.TrangThai = "Hoàn thành";
+            }
+
+            // Tự động sync vào PhieuNhap & ChiTietPhieuNhap cho Báo Cáo Biến Động Giá
+            var phieuNhapRecord = new PhieuNhap
+            {
+                MaNCC       = product.MaNCC > 0 ? product.MaNCC : 1,
+                MaNhanVien  = 1,
+                NgayNhap    = DateTime.Now
+            };
+            _context.PhieuNhaps.Add(phieuNhapRecord);
+            await _context.SaveChangesAsync();
+
+            var ctPhieuNhap = new ChiTietPhieuNhap
+            {
+                MaPhieuNhap = phieuNhapRecord.MaPhieuNhap,
+                MaSanPham   = product.MaSanPham,
+                SoLuong     = phieuNhap.QuantityChange,
+                GiaNhap     = importCost
+            };
+            _context.ChiTietPhieuNhaps.Add(ctPhieuNhap);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = $"Đã xác nhận hàng về! Tồn kho {product.TenSanPham}: {beforeQty} → {afterQty} cái." });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi hệ thống khi xác nhận phiếu nhập", error = ex.Message });
+        }
+    }
+
+    }
+
     public class ImportRequest
     {
         public int ProductId { get; set; }
@@ -690,6 +985,27 @@ namespace DATN64.Controllers.Api
     }
 
     public class RejectAdjustRequest
+    {
+        public string LyDoTuChoi { get; set; } = "";
+    }
+
+    public class PurchaseRequestDto
+    {
+        public int ProductId { get; set; }
+        public int Quantity { get; set; }
+        public decimal? EstimatedPrice { get; set; }
+        public string NhaCungCap { get; set; } = "Nhà cung cấp";
+        public string? Note { get; set; }
+    }
+
+    public class CreateImportFromRequestDto
+    {
+        public int Quantity { get; set; }           // Số lượng thực tế nhận được
+        public decimal ImportPrice { get; set; }    // Giá nhập thực tế
+        public string? Note { get; set; }
+    }
+
+    public class RejectRequestDto
     {
         public string LyDoTuChoi { get; set; } = "";
     }

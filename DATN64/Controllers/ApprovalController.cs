@@ -37,14 +37,21 @@ namespace DATN64.Controllers
                 .OrderByDescending(o => o.NgayDat)
                 .ToList();
 
-            // Pending inventory transactions — trạng thái "Chờ duyệt"
+            // Pending inventory transactions — trạng thái "Chờ duyệt" hoặc "Chờ duyệt PN"
             var pendingInventory = _context.InventoryTransactions
-                .Where(t => t.TrangThai == "Chờ duyệt")
+                .Where(t => t.TrangThai == "Chờ duyệt" || t.TrangThai == "Chờ duyệt PN")
+                .OrderByDescending(t => t.Date)
+                .ToList();
+
+            // Pending purchase requests (YeuCauNhap) — trạng thái "Chờ duyệt YC"
+            var pendingRequests = _context.InventoryTransactions
+                .Where(t => t.PhanLoai == "YeuCauNhap" && t.TrangThai == "Chờ duyệt YC")
                 .OrderByDescending(t => t.Date)
                 .ToList();
 
             ViewBag.PendingOrders    = pendingOrders;
             ViewBag.PendingInventory = pendingInventory;
+            ViewBag.PendingRequests  = pendingRequests;
             ViewBag.CanApproveOrder  = canApproveOrder;
             ViewBag.CanApproveInv    = canApproveInv;
 
@@ -118,6 +125,20 @@ namespace DATN64.Controllers
 
             var approver = HttpContext.Session.GetString("UserName") ?? "Hệ thống";
 
+            // Nếu là phiếu nhập thuộc quy trình 2 bước, cần validate trạng thái đúng
+            if ((txn.PhanLoai == "PhieuNhap") && txn.TrangThai != "Chờ duyệt PN")
+            {
+                TempData["ToastMessage"] = "Phiếu này không ở trạng thái chờ duyệt!";
+                TempData["ToastType"] = "danger";
+                return RedirectToAction(nameof(Index));
+            }
+            if ((txn.PhanLoai != "PhieuNhap") && txn.TrangThai != "Chờ duyệt")
+            {
+                TempData["ToastMessage"] = "Phiếu này không ở trạng thái chờ duyệt!";
+                TempData["ToastType"] = "danger";
+                return RedirectToAction(nameof(Index));
+            }
+
             if (action == "approve")
             {
                 txn.TrangThai  = "Đã duyệt";
@@ -187,6 +208,16 @@ namespace DATN64.Controllers
                     }
                 }
 
+                // Cập nhật trạng thái YeuCauNhap liên kết → "Hoàn thành" để ẩn khỏi danh sách
+                if (txn.PhanLoai == "PhieuNhap" && !string.IsNullOrEmpty(txn.MaYeuCauNhap) && int.TryParse(txn.MaYeuCauNhap, out int yeuCauId))
+                {
+                    var yeuCau = _context.InventoryTransactions.FirstOrDefault(t => t.Id == yeuCauId && t.PhanLoai == "YeuCauNhap");
+                    if (yeuCau != null)
+                    {
+                        yeuCau.TrangThai = "Hoàn thành";
+                    }
+                }
+
                 TempData["ToastMessage"] = $"Đã duyệt phiếu #{txn.Code} thành công và đồng bộ vào Báo cáo biến động giá!";
                 TempData["ToastType"] = "success";
             }
@@ -196,6 +227,17 @@ namespace DATN64.Controllers
                 txn.NguoiDuyet = approver;
                 txn.NgayDuyet  = DateTime.Now;
                 txn.LyDoTuChoi = lyDo;
+
+                // Nếu từ chối phiếu nhập thực tế, trả trạng thái Yêu Cầu Nhập liên kết về "Đã duyệt YC" để có thể tạo lại
+                if (txn.PhanLoai == "PhieuNhap" && !string.IsNullOrEmpty(txn.MaYeuCauNhap) && int.TryParse(txn.MaYeuCauNhap, out int yeuCauId))
+                {
+                    var yeuCau = _context.InventoryTransactions.FirstOrDefault(t => t.Id == yeuCauId && t.PhanLoai == "YeuCauNhap");
+                    if (yeuCau != null)
+                    {
+                        yeuCau.TrangThai = "Đã duyệt YC";
+                    }
+                }
+
                 TempData["ToastMessage"] = $"Đã từ chối phiếu #{txn.Code}.";
                 TempData["ToastType"] = "warning";
             }

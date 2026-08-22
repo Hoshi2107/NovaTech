@@ -30,6 +30,13 @@ namespace DATN64.Models
         public string? NguoiDuyet { get; set; }
         public DateTime? NgayDuyet { get; set; }
         public string? LyDoTuChoi { get; set; }
+
+        // 2-step import workflow
+        // PhanLoai: "YeuCauNhap" = purchase request | "PhieuNhap" = actual import receipt
+        public string PhanLoai { get; set; } = "PhieuNhap";
+        // MaYeuCauNhap: links a PhieuNhap back to the approved YeuCauNhap
+        // DB column is NVARCHAR(50), so we use string? here to avoid InvalidCastException
+        public string? MaYeuCauNhap { get; set; }
     }
 
     [Table("KhoHang")]
