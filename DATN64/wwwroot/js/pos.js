@@ -113,7 +113,12 @@ var app = new Vue({
         qrCodeUrl() {
             if (this.totalAmount <= 0) return '';
             const amount = this.totalAmount;
-            const description = encodeURIComponent('Thanh toan POS NovaTech');
+            // TC521 FIX: Nội dung CK gồm tên KH + thời gian để dễ đối soát
+            const customerNote = this.customerName && this.customerName !== 'Khách Hàng Vãng Lai'
+                ? this.customerName.split(' ').slice(-1)[0]  // Lấy tên (không họ)
+                : 'KH';
+            const timeStamp = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }).replace(':', 'h');
+            const description = encodeURIComponent(`TT NovaTech POS ${customerNote} ${timeStamp}`);
             const accName = encodeURIComponent(this.bankConfig.accountName);
             // Use 970415 (VietinBank BIN) instead of "VietinBank" for maximum compatibility with the VietQR API
             return `https://img.vietqr.io/image/970415-${this.bankConfig.accountNo}-${this.bankConfig.template}.png?amount=${amount}&addInfo=${description}&accountName=${accName}`;
@@ -250,8 +255,19 @@ var app = new Vue({
             }
         },
         // ── Customer Autocomplete ──────────────────────────────────────────
+        // TC548 FIX: Chuẩn hóa tiếng Việt để tìm kiếm không dấu
+        normalizeVi(str) {
+            if (!str) return '';
+            return str
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/đ/g, 'd')
+                .replace(/Đ/g, 'D')
+                .toLowerCase()
+                .trim();
+        },
         onCustomerSearch() {
-            const q = (this.customerSearchQuery || '').trim().toLowerCase();
+            const q = this.normalizeVi(this.customerSearchQuery);
             this.customerNavIndex = -1;
             if (!q) {
                 this.customerSearchResults = [];
@@ -260,7 +276,7 @@ var app = new Vue({
             }
             this.customerSearchResults = this.customers
                 .filter(c => {
-                    const nameMatch = (c.name || '').toLowerCase().includes(q);
+                    const nameMatch = this.normalizeVi(c.name).includes(q);
                     const phoneMatch = (c.phone || '').includes(q);
                     return nameMatch || phoneMatch;
                 })
@@ -541,6 +557,11 @@ var app = new Vue({
                 alert('Cảnh báo: Tiền khách đưa chưa đủ để thực hiện thanh toán!');
                 return;
             }
+            // TC590 FIX: Không cho checkout khi tiền mặt = 0
+            if (this.paymentMethod === 'Tiền mặt' && this.cashReceived <= 0) {
+                alert('Vui lòng nhập số tiền khách đưa!');
+                return;
+            }
             this.showPaymentModal = false;
             await this.handleCheckout();
         },
@@ -595,6 +616,8 @@ var app = new Vue({
                 this.showReceiptModal = true;
 
                 this.successMsg = response.data.message || 'Đơn hàng POS thanh toán thành công!';
+                // TC561 FIX: Tự ẩn thông báo sau 4 giây
+                setTimeout(() => { this.successMsg = ''; this.errorMsg = ''; }, 4000);
                 this.cart = [];
                 this.customerIndex = "-1";
                 this.customerName = "Khách Hàng Vãng Lai";
@@ -628,6 +651,8 @@ var app = new Vue({
                 this.showReceiptModal = true;
 
                 this.successMsg = 'Đơn hàng POS thanh toán thành công (Chế độ offline)!';
+                // TC561 FIX: Tự ẩn thông báo sau 4 giây
+                setTimeout(() => { this.successMsg = ''; this.errorMsg = ''; }, 4000);
                 this.cart = [];
                 this.customerIndex = "-1";
                 this.customerName = "Khách Hàng Vãng Lai";
@@ -679,6 +704,11 @@ var app = new Vue({
                 alert("Giỏ hàng trống, không thể lưu tạm đơn!");
                 return;
             }
+            // TC440 FIX: Debounce tránh double-click tạo 2 bản
+            if (this._holdingCart) return;
+            this._holdingCart = true;
+            setTimeout(() => { this._holdingCart = false; }, 1000);
+
             const newHeldCart = {
                 id: Date.now(),
                 cart: [...this.cart.map(i => ({ ...i }))],
@@ -756,6 +786,15 @@ var app = new Vue({
                 e.preventDefault();
                 this.handleCheckout();
             } else if (e.key === 'Escape') {
+                // TC558 FIX: Escape đóng tất cả modal, kể cả variant modal
+                if (this.showVariantModal) {
+                    this.closeVariantModal();
+                    return;
+                }
+                if (this.showPaymentModal) {
+                    this.showPaymentModal = false;
+                    return;
+                }
                 if (this.showReceiptModal) {
                     this.showReceiptModal = false;
                 }
