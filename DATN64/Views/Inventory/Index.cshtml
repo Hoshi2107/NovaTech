@@ -376,57 +376,188 @@
         <!-- 3. PURCHASE REQUEST TAB — Yêu cầu nhập hàng -->
         <div class="tab-pane show active" v-if="activeTab === 'purchase-request'">
             <div class="row g-4">
-                <!-- Left: Create Request Form -->
-                <div class="col-md-5">
-                    <div class="card border-0 card-premium p-4 h-100">
-                        <div class="card-title form-section-header d-flex align-items-center gap-2 mb-3">
-                            <div class="d-inline-flex align-items-center justify-content-center bg-warning-subtle text-warning rounded-circle" style="width:44px;height:44px;">
-                                <i class="fa-solid fa-file-pen fs-5"></i>
-                            </div>
-                            <div>
-                                <h5 class="fw-bold mb-0">Gửi Yêu Cầu Nhập Hàng</h5>
-                                <small class="text-muted-custom text-xs">Gửi lên kế toán để phê duyệt trước khi đặt hàng</small>
-                            </div>
-                        </div>
-                        <form @@submit.prevent="submitPurchaseRequest">
-                            <div class="mb-3">
-                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Chọn sản phẩm</label>
-                                <select class="form-select" v-model="forms.purchaseReq.productId" required @@change="onPurchaseReqProductChange">
-                                    <option value="" disabled>--- Chọn sản phẩm cần nhập ---</option>
-                                    <option v-for="p in activeProducts" :value="p.maSanPham">
-                                        ${ p.tenSanPham } (Mã: #${ p.maSanPham }) - Tồn: ${ p.soLuongTon } cái
-                                    </option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Số lượng yêu cầu</label>
-                                <input type="number" class="form-control" v-model.number="forms.purchaseReq.quantity" min="1" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Giá ước tính (VNĐ)</label>
-                                <div class="input-group">
-                                    <input type="number" class="form-control" v-model.number="forms.purchaseReq.estimatedPrice" min="0" step="1000" placeholder="Để trống = dùng giá nhập hiện tại">
-                                    <span class="input-group-text bg-light text-muted fw-bold">VNĐ</span>
+                <!-- Left: Create Request Form (Multi-item) -->
+                <div class="col-md-7">
+                    <div class="card border-0 card-premium p-4">
+                        <div class="card-title form-section-header d-flex align-items-center justify-content-between gap-2 mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="d-inline-flex align-items-center justify-content-center bg-warning-subtle text-warning rounded-circle" style="width:44px;height:44px;">
+                                    <i class="fa-solid fa-file-pen fs-5"></i>
+                                </div>
+                                <div>
+                                    <h5 class="fw-bold mb-0">Gửi Yêu Cầu Nhập Hàng</h5>
+                                    <small class="text-muted-custom text-xs">Tối đa <strong>10 mẫu</strong> khác nhau trong 1 phiếu — Gửi lên kế toán để phê duyệt</small>
                                 </div>
                             </div>
+                            <span class="badge rounded-pill px-3 py-1.5 fw-bold" :class="purchaseReqItems.length >= 10 ? 'bg-danger-subtle text-danger' : 'bg-warning-subtle text-warning'">
+                                ${ purchaseReqItems.length } / 10 mẫu
+                            </span>
+                        </div>
+
+                        <form @@submit.prevent="submitPurchaseRequest">
+                            <!-- Item list -->
+                            <div v-for="(item, idx) in purchaseReqItems" :key="idx"
+                                 class="p-3 mb-3 rounded-4 border border-secondary border-opacity-15 position-relative"
+                                 style="background: rgba(245,158,11,0.04);">
+                                <!-- Row header -->
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span class="badge bg-warning text-dark fw-bold px-2 py-1 rounded-pill text-xxs">
+                                        <i class="fa-solid fa-box me-1"></i>Mẫu #${ idx + 1 }
+                                    </span>
+                                    <button type="button" class="btn btn-xs btn-outline-danger rounded-pill py-0 px-2 text-xxs"
+                                            v-if="purchaseReqItems.length > 1"
+                                            @@click="removePurchaseReqItem(idx)">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Product/Variant Searchable Select -->
+                                <div class="mb-2 position-relative purchase-req-dropdown-container">
+                                    <label class="form-label fw-bold text-xs text-uppercase text-muted-custom mb-1">
+                                        Sản phẩm / Biến thể
+                                    </label>
+                                    
+                                    <div class="input-group input-group-sm" style="cursor: pointer;" @@click.stop="toggleItemDropdown(idx)">
+                                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="fa-solid fa-search"></i></span>
+                                        <input type="text" 
+                                               class="form-control form-control-sm bg-white" 
+                                               :value="getItemSelectedLabel(item)" 
+                                               placeholder="--- Click để tìm & chọn SP hoặc biến thể ---" 
+                                               readonly style="cursor: pointer; font-weight: 500;">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm border-start-0 dropdown-toggle text-muted"></button>
+                                    </div>
+
+                                    <!-- Dropdown List Popup -->
+                                    <div class="dropdown-menu shadow-lg p-2 w-100 mt-1 border border-secondary border-opacity-10 rounded-3 animate-fade-in" 
+                                         :class="{ show: item.isOpen }" 
+                                         style="max-height: 280px; overflow-y: auto; z-index: 1060; position: absolute; top: 100%; left: 0;"
+                                         @@click.stop>
+                                        
+                                        <!-- Search Input -->
+                                        <div class="input-group input-group-sm mb-2 sticky-top bg-white pt-1">
+                                            <span class="input-group-text bg-light border-end-0 text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
+                                            <input :id="'purchase-search-input-' + idx"
+                                                   type="text" 
+                                                   class="form-control form-control-sm border-start-0" 
+                                                   v-model="item.searchQuery" 
+                                                   placeholder="Nhập tên hoặc mã sản phẩm/biến thể..."
+                                                   @@click.stop>
+                                            <button class="btn btn-xs btn-outline-secondary" type="button" v-if="item.searchQuery" @@click.stop="item.searchQuery = ''">
+                                                <i class="fa-solid fa-xmark"></i>
+                                            </button>
+                                        </div>
+
+                                        <!-- Empty state -->
+                                        <div v-if="filteredSelectableProducts(item, idx).length === 0" class="text-center text-muted text-xs py-3">
+                                            <i class="fa-solid fa-box-open me-1 opacity-50"></i>Không tìm thấy sản phẩm / biến thể phù hợp
+                                        </div>
+
+                                        <!-- Product & Variant options -->
+                                        <div v-else class="d-flex flex-column gap-1">
+                                            <div v-for="p in filteredSelectableProducts(item, idx)" 
+                                                 :key="p.maSanPham" 
+                                                 class="dropdown-item py-1.5 px-2 rounded-2 d-flex align-items-center justify-content-between cursor-pointer border-bottom border-light"
+                                                 :class="{ 
+                                                    'bg-warning bg-opacity-15 fw-bold': item.productId === p.maSanPham,
+                                                    'disabled opacity-50': purchaseReqItems.some((r, i) => i !== idx && r.productId === p.maSanPham)
+                                                 }"
+                                                 @@click.stop="purchaseReqItems.some((r, i) => i !== idx && r.productId === p.maSanPham) ? null : selectItemProduct(idx, p)">
+                                                
+                                                <div class="d-flex align-items-center gap-2 overflow-hidden me-2">
+                                                    <img :src="p.hinhAnh || 'https://via.placeholder.com/32'" class="rounded shadow-xs flex-shrink-0" width="32" height="32" alt="img">
+                                                    <div class="text-truncate">
+                                                        <div class="text-xs fw-bold text-dark text-truncate">${ p.tenSanPham }</div>
+                                                        <div class="text-xxs text-muted">Mã: #${ p.maSanPham } | Tồn: <span class="fw-bold">${ p.soLuongTon }</span> cái</div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="text-end flex-shrink-0">
+                                                    <span v-if="p.trangThai === 'Biến thể'" class="badge rounded-pill px-2 py-0.5 text-xxs border" style="background:#ede9fe; color:#7c3aed; border-color:#ddd6fe !important;">
+                                                        <i class="fa-solid fa-layer-group me-1"></i>Biến thể
+                                                    </span>
+                                                    <span v-else class="badge bg-primary-subtle text-primary border border-primary border-opacity-25 rounded-pill px-2 py-0.5 text-xxs">
+                                                        <i class="fa-solid fa-box me-1"></i>SP Chính
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row g-2">
+                                    <!-- Quantity -->
+                                    <div class="col-4">
+                                        <label class="form-label fw-bold text-xs text-uppercase text-muted-custom mb-1">Số lượng</label>
+                                        <input type="number" class="form-control form-control-sm" v-model.number="item.quantity" min="1" required placeholder="10">
+                                    </div>
+                                    <!-- Estimated Price -->
+                                    <div class="col-8">
+                                        <label class="form-label fw-bold text-xs text-uppercase text-muted-custom mb-1">Giá ước tính (VNĐ)</label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" class="form-control" v-model.number="item.estimatedPrice" min="0" step="1000" placeholder="Để trống = giá nhập hiện tại">
+                                            <span class="input-group-text text-muted fw-bold">₫</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Nhà cung cấp -->
+                                <div class="mt-2">
+                                    <label class="form-label fw-bold text-xs text-uppercase text-muted-custom mb-1">Nhà cung cấp</label>
+                                    <input type="text" class="form-control form-control-sm" v-model="item.nhaCungCap" placeholder="Tên nhà cung cấp...">
+                                </div>
+
+                                <!-- Preview mini -->
+                                <div class="mt-2 text-xs text-muted" v-if="item.productId && item.quantity > 0">
+                                    <i class="fa-solid fa-circle-info me-1 text-warning"></i>
+                                    Ước tính: <strong class="text-dark">${ formatCurrency((item.estimatedPrice || getProductById(item.productId)?.giaNhap || 0) * item.quantity) }</strong>
+                                </div>
+                            </div>
+
+                            <!-- Add item button -->
+                            <div class="d-flex justify-content-center mb-3">
+                                <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-4 fw-bold"
+                                        @@click="addPurchaseReqItem"
+                                        :disabled="purchaseReqItems.length >= 10">
+                                    <i class="fa-solid fa-plus me-1"></i>
+                                    Thêm mẫu sản phẩm
+                                    <span class="text-muted ms-1" v-if="purchaseReqItems.length >= 10">(Đã đạt tối đa)</span>
+                                </button>
+                            </div>
+
+                            <!-- Ghi chú chung -->
                             <div class="mb-3">
-                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Nhà cung cấp</label>
-                                <input type="text" class="form-control" v-model="forms.purchaseReq.nhaCungCap" placeholder="Tên nhà cung cấp...">
+                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Ghi chú / Lý do yêu cầu chung</label>
+                                <textarea class="form-control" v-model="forms.purchaseReqNote" placeholder="Lý do nhập hàng, ghi chú chung cho toàn bộ phiếu..." rows="2"></textarea>
                             </div>
-                            <div class="mb-4">
-                                <label class="form-label fw-bold text-xs text-uppercase text-muted-custom">Ghi chú / Lý do yêu cầu</label>
-                                <textarea class="form-control" v-model="forms.purchaseReq.note" placeholder="Lý do nhập hàng, ghi chú kèm theo..." rows="3"></textarea>
+
+                            <!-- Summary before submit -->
+                            <div class="p-3 rounded-4 mb-3 bg-warning bg-opacity-10 border border-warning border-opacity-20" v-if="purchaseReqItems.some(i => i.productId && i.quantity > 0)">
+                                <div class="text-xs fw-bold text-warning text-uppercase mb-1"><i class="fa-solid fa-calculator me-1"></i>Tóm tắt phiếu yêu cầu</div>
+                                <div class="d-flex justify-content-between text-xs">
+                                    <span class="text-muted">Tổng số mẫu:</span>
+                                    <strong>${ purchaseReqItems.filter(i => i.productId).length } mẫu</strong>
+                                </div>
+                                <div class="d-flex justify-content-between text-xs">
+                                    <span class="text-muted">Tổng số lượng:</span>
+                                    <strong>${ purchaseReqItems.reduce((s, i) => s + (i.quantity || 0), 0) } cái</strong>
+                                </div>
+                                <div class="d-flex justify-content-between text-xs">
+                                    <span class="text-muted">Tổng ước tính:</span>
+                                    <strong class="text-warning">${ formatCurrency(purchaseReqTotalEstimate) }</strong>
+                                </div>
                             </div>
-                            <button type="submit" class="btn btn-warning rounded-3 w-100 fw-bold py-2.5 text-dark" :disabled="submitting">
+
+                            <button type="submit" class="btn btn-warning rounded-3 w-100 fw-bold py-2.5 text-dark" :disabled="submitting || !purchaseReqItems.some(i => i.productId)">
                                 <span v-if="submitting" class="spinner-border spinner-border-sm me-2"></span>
-                                <i class="fa-solid fa-paper-plane me-2" v-else></i>Gửi yêu cầu lên kế toán
+                                <i class="fa-solid fa-paper-plane me-2" v-else></i>
+                                Gửi ${ purchaseReqItems.filter(i => i.productId).length } mẫu lên kế toán
                             </button>
                         </form>
                     </div>
                 </div>
 
                 <!-- Right: Purchase Request List -->
-                <div class="col-md-7">
+                <div class="col-md-5">
                     <div class="card border-0 card-premium">
                         <div class="card-header bg-transparent border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
                             <h5 class="fw-bold mb-0 text-gradient"><i class="fa-solid fa-list-check me-2 text-warning"></i>Danh sách Yêu cầu nhập</h5>
@@ -1659,7 +1790,11 @@
                 purchaseRequests: [],
                 purchaseRequestsLoading: false,
                 selectedPurchaseReq: null,
+                purchaseReqItems: [
+                    { productId: '', quantity: 10, estimatedPrice: '', nhaCungCap: 'Nhà cung cấp', searchQuery: '', isOpen: false }
+                ],
                 forms: {
+                    purchaseReqNote: '',
                     purchaseReq: {
                         productId: '',
                         variantId: '',
@@ -1705,6 +1840,16 @@
                 }
             },
             computed: {
+                allSelectableProducts() {
+                    return this.products.filter(p => p.trangThai === 'Đang bán' || p.trangThai === 'Biến thể');
+                },
+                purchaseReqTotalEstimate() {
+                    return this.purchaseReqItems.reduce((sum, item) => {
+                        if (!item.productId || !item.quantity) return sum;
+                        const price = item.estimatedPrice || (this.getProductById(item.productId)?.giaNhap || 0);
+                        return sum + price * item.quantity;
+                    }, 0);
+                },
                 getPriceDiffPercent() {
                     if (!this.effectiveImportProduct || !this.effectiveImportProduct.giaNhap || !this.forms.import.price) return 0;
                     const diff = this.forms.import.price - this.effectiveImportProduct.giaNhap;
@@ -1931,6 +2076,7 @@
             mounted() {
                 this.updateTime();
                 this.fetchData();
+                document.addEventListener('click', this.closeAllPurchaseDropdowns);
                 
                 // Parse initial tab
                 const params = new URLSearchParams(window.location.search);
@@ -1945,6 +2091,7 @@
                 }, 10000);
             },
             beforeDestroy() {
+                document.removeEventListener('click', this.closeAllPurchaseDropdowns);
                 if (this.pollingTimer) {
                     clearInterval(this.pollingTimer);
                 }
@@ -2000,34 +2147,111 @@
                         this.purchaseRequestsLoading = false;
                     }
                 },
-                onPurchaseReqProductChange() {
-                    this.forms.purchaseReq.variantId = '';
-                    const prod = this.activeProducts.find(p => p.maSanPham === this.forms.purchaseReq.productId);
-                    if (prod) {
-                        this.forms.purchaseReq.estimatedPrice = prod.giaNhap || 0;
+                // --- Multi-item purchase request helpers ---
+                filteredSelectableProducts(item, idx) {
+                    let list = this.allSelectableProducts;
+                    if (item && item.searchQuery) {
+                        const q = item.searchQuery.toLowerCase().trim();
+                        list = list.filter(p => (p.tenSanPham && p.tenSanPham.toLowerCase().includes(q)) || (p.maSanPham && p.maSanPham.toString().includes(q)));
+                    }
+                    return list;
+                },
+                getItemSelectedLabel(item) {
+                    if (!item || !item.productId) return '';
+                    const p = this.products.find(x => x.maSanPham === item.productId);
+                    if (!p) return '';
+                    const tag = p.trangThai === 'Biến thể' ? '[Biến thể]' : '[SP Chính]';
+                    return `${tag} ${p.tenSanPham} (#${p.maSanPham}) - Tồn: ${p.soLuongTon} cái`;
+                },
+                toggleItemDropdown(idx) {
+                    this.purchaseReqItems.forEach((item, i) => {
+                        if (i === idx) {
+                            item.isOpen = !item.isOpen;
+                            if (item.isOpen) {
+                                this.$nextTick(() => {
+                                    const el = document.getElementById(`purchase-search-input-${idx}`);
+                                    if (el) el.focus();
+                                });
+                            }
+                        } else {
+                            item.isOpen = false;
+                        }
+                    });
+                },
+                selectItemProduct(idx, p) {
+                    const item = this.purchaseReqItems[idx];
+                    if (!item) return;
+                    item.productId = p.maSanPham;
+                    item.estimatedPrice = p.giaNhap || 0;
+                    item.isOpen = false;
+                },
+                closeAllPurchaseDropdowns(e) {
+                    if (e && e.target && e.target.closest && e.target.closest('.purchase-req-dropdown-container')) {
+                        return;
+                    }
+                    if (this.purchaseReqItems) {
+                        this.purchaseReqItems.forEach(item => { item.isOpen = false; });
                     }
                 },
+                getProductById(id) {
+                    return this.products.find(p => p.maSanPham === id) || null;
+                },
+                addPurchaseReqItem() {
+                    if (this.purchaseReqItems.length >= 10) return;
+                    this.purchaseReqItems.push({ productId: '', quantity: 10, estimatedPrice: '', nhaCungCap: 'Nhà cung cấp', searchQuery: '', isOpen: false });
+                },
+                removePurchaseReqItem(idx) {
+                    if (this.purchaseReqItems.length <= 1) return;
+                    this.purchaseReqItems.splice(idx, 1);
+                },
+                onPurchaseReqItemChange(idx) {
+                    const item = this.purchaseReqItems[idx];
+                    if (!item) return;
+                    const prod = this.activeProducts.find(p => p.maSanPham === item.productId);
+                    if (prod && !item.estimatedPrice) {
+                        item.estimatedPrice = prod.giaNhap || 0;
+                    }
+                },
+                onPurchaseReqProductChange() {
+                    // Legacy no-op (kept for safety)
+                },
                 async submitPurchaseRequest() {
+                    const validItems = this.purchaseReqItems.filter(i => i.productId && i.quantity > 0);
+                    if (validItems.length === 0) {
+                        Swal.fire('Lưu ý', 'Bạn chưa chọn sản phẩm nào!', 'warning');
+                        return;
+                    }
                     this.submitting = true;
                     try {
-                        const payload = {
-                            productId: this.forms.purchaseReq.productId,
-                            quantity: this.forms.purchaseReq.quantity,
-                            estimatedPrice: this.forms.purchaseReq.estimatedPrice,
-                            nhaCungCap: this.forms.purchaseReq.nhaCungCap,
-                            note: this.forms.purchaseReq.note
-                        };
-                        const res = await axios.post('/api/inventory/purchase-request', payload);
-                        Swal.fire('Thành công', res.data.message, 'success');
-                        
-                        // Reset form
-                        this.forms.purchaseReq.productId = '';
-                        this.forms.purchaseReq.quantity = 10;
-                        this.forms.purchaseReq.estimatedPrice = '';
-                        this.forms.purchaseReq.nhaCungCap = 'Nhà cung cấp';
-                        this.forms.purchaseReq.note = '';
-                        
-                        await this.loadPurchaseRequests();
+                        const note = this.forms.purchaseReqNote;
+                        const requests = validItems.map(item => axios.post('/api/inventory/purchase-request', {
+                            productId: item.productId,
+                            quantity: item.quantity,
+                            estimatedPrice: item.estimatedPrice || null,
+                            nhaCungCap: item.nhaCungCap || 'Nhà cung cấp',
+                            note: note
+                        }));
+
+                        const results = await Promise.allSettled(requests);
+                        const succeeded = results.filter(r => r.status === 'fulfilled');
+                        const failed = results.filter(r => r.status === 'rejected');
+
+                        if (succeeded.length > 0 && failed.length === 0) {
+                            const codes = succeeded.map(r => r.value.data.code).join(', ');
+                            Swal.fire('Đã gửi!', `Đã tạo thành công ${succeeded.length} yêu cầu nhập hàng: <b>${codes}</b>. Đang chờ kế toán phê duyệt.`, 'success');
+                        } else if (succeeded.length > 0 && failed.length > 0) {
+                            Swal.fire('Một phần thành công', `Đã gửi ${succeeded.length}/${validItems.length} yêu cầu. ${failed.length} yêu cầu bị lỗi.`, 'warning');
+                        } else {
+                            const msg = failed[0]?.reason?.response?.data?.message || 'Có lỗi xảy ra!';
+                            Swal.fire('Lỗi', msg, 'error');
+                        }
+
+                        if (succeeded.length > 0) {
+                            // Reset form
+                            this.purchaseReqItems = [{ productId: '', quantity: 10, estimatedPrice: '', nhaCungCap: 'Nhà cung cấp', searchQuery: '', isOpen: false }];
+                            this.forms.purchaseReqNote = '';
+                            await this.loadPurchaseRequests();
+                        }
                     } catch (err) {
                         console.error(err);
                         const msg = err.response?.data?.message || 'Có lỗi xảy ra!';
