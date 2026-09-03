@@ -6,6 +6,8 @@ using DATN64.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace DATN64.Controllers
 {
@@ -101,11 +103,6 @@ namespace DATN64.Controllers
         [HttpGet]
         public IActionResult GetCustomerThread(int id)
         {
-            if (!IsUserLoggedIn())
-            {
-                return Unauthorized(new { message = "Vui lòng đăng nhập để sử dụng chat." });
-            }
-
             var thread = _context.CustomerInboxThreads
                 .Include(t => t.Messages)
                 .FirstOrDefault(t => t.Id == id);
@@ -178,6 +175,7 @@ namespace DATN64.Controllers
                 .FirstOrDefault(t => t.Id == request.ThreadId);
 
             var messageText = (request.Message ?? "").Trim();
+            var imageUrl = string.IsNullOrWhiteSpace(request.ImageUrl) ? null : request.ImageUrl.Trim();
 
             if (thread == null)
             {
@@ -189,9 +187,9 @@ namespace DATN64.Controllers
                 return BadRequest(new { message = "Hội thoại đã đóng. Không thể gửi phản hồi mới." });
             }
 
-            if (string.IsNullOrWhiteSpace(messageText))
+            if (string.IsNullOrWhiteSpace(messageText) && string.IsNullOrWhiteSpace(imageUrl))
             {
-                return BadRequest(new { message = "Vui lòng nhập nội dung phản hồi." });
+                return BadRequest(new { message = "Vui lòng nhập nội dung phản hồi hoặc đính kèm ảnh." });
             }
 
             TryAttachCorrectCustomerProfileToThread(thread);
@@ -200,6 +198,7 @@ namespace DATN64.Controllers
             {
                 Sender = "staff",
                 Text = messageText,
+                ImageUrl = imageUrl,
                 Timestamp = DateTime.Now,
                 IsRead = true
             });
@@ -297,14 +296,55 @@ namespace DATN64.Controllers
         }
 
         [HttpPost]
-        public IActionResult CreateCustomerInquiry([FromBody] CreateInquiryRequest request)
+        public async Task<IActionResult> UploadChatImage(IFormFile file)
         {
-            if (!IsUserLoggedIn())
+            if (file == null || file.Length == 0)
             {
-                return Unauthorized(new { message = "Vui lòng đăng nhập để sử dụng chat." });
+                return BadRequest(new { message = "Không có file được tải lên." });
             }
 
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
+            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+
+            if (!allowedExtensions.Contains(extension))
+            {
+                return BadRequest(new { message = "Chỉ cho phép tải lên ảnh (.jpg, .jpeg, .png, .webp, .gif)." });
+            }
+
+            if (file.Length > 5 * 1024 * 1024)
+            {
+                return BadRequest(new { message = "Ảnh quá lớn. Vui lòng chọn ảnh dưới 5MB." });
+            }
+
+            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "cskh");
+
+            if (!Directory.Exists(uploadsFolder))
+            {
+                Directory.CreateDirectory(uploadsFolder);
+            }
+
+            var uniqueFileName = $"{Guid.NewGuid()}{extension}";
+            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            var imageUrl = $"/uploads/cskh/{uniqueFileName}";
+
+            return Json(new { imageUrl = imageUrl });
+        }
+
+        [HttpPost]
+        public IActionResult CreateCustomerInquiry([FromBody] CreateInquiryRequest request)
+        {
             var customerName = NormalizeText(request.CustomerName);
+            if (string.IsNullOrWhiteSpace(customerName))
+            {
+                customerName = "Khách vãng lai";
+            }
+
             var customerPhone = NormalizePhone(request.CustomerPhone);
             var customerEmail = NormalizeEmail(request.CustomerEmail);
             var sessionEmail = NormalizeEmail(HttpContext.Session.GetString("UserEmail"));
@@ -314,8 +354,9 @@ namespace DATN64.Controllers
                 : request.Subject.Trim();
 
             var messageText = NormalizeText(request.Message);
+            var imageUrl = string.IsNullOrWhiteSpace(request.ImageUrl) ? null : request.ImageUrl.Trim();
 
-            if (string.IsNullOrWhiteSpace(customerName) || string.IsNullOrWhiteSpace(messageText))
+            if (string.IsNullOrWhiteSpace(messageText) && string.IsNullOrWhiteSpace(imageUrl))
             {
                 return BadRequest(new { message = "Vui lòng nhập nội dung câu hỏi." });
             }
@@ -346,6 +387,7 @@ namespace DATN64.Controllers
                     {
                         Sender = "customer",
                         Text = messageText,
+                        ImageUrl = imageUrl,
                         Timestamp = now,
                         IsRead = false
                     },
@@ -363,6 +405,12 @@ namespace DATN64.Controllers
             _context.CustomerInboxThreads.Add(thread);
             _context.SaveChanges();
 
+            if (thread.CustomerId == 0 && (string.IsNullOrWhiteSpace(thread.CustomerName) || thread.CustomerName == "Khách vãng lai"))
+            {
+                thread.CustomerName = $"Khách vãng lai #{thread.Id}";
+                _context.SaveChanges();
+            }
+
             return Json(new
             {
                 message = "Đã gửi tin nhắn thành công.",
@@ -373,25 +421,21 @@ namespace DATN64.Controllers
         [HttpPost]
         public IActionResult AddCustomerInquiryMessage([FromBody] AddInquiryMessageRequest request)
         {
-            if (!IsUserLoggedIn())
-            {
-                return Unauthorized(new { message = "Vui lòng đăng nhập để sử dụng chat." });
-            }
-
             var thread = _context.CustomerInboxThreads
                 .Include(t => t.Messages)
                 .FirstOrDefault(t => t.Id == request.ThreadId);
 
             var messageText = NormalizeText(request.Message);
+            var imageUrl = string.IsNullOrWhiteSpace(request.ImageUrl) ? null : request.ImageUrl.Trim();
 
             if (thread == null)
             {
                 return NotFound(new { message = "Không tìm thấy hội thoại." });
             }
 
-            if (string.IsNullOrWhiteSpace(messageText))
+            if (string.IsNullOrWhiteSpace(messageText) && string.IsNullOrWhiteSpace(imageUrl))
             {
-                return BadRequest(new { message = "Vui lòng nhập nội dung tin nhắn." });
+                return BadRequest(new { message = "Vui lòng nhập nội dung tin nhắn hoặc đính kèm ảnh." });
             }
 
             TryAttachCorrectCustomerProfileToThread(thread);
@@ -400,6 +444,7 @@ namespace DATN64.Controllers
             {
                 Sender = "customer",
                 Text = messageText,
+                ImageUrl = imageUrl,
                 Timestamp = DateTime.Now,
                 IsRead = false
             });
@@ -606,9 +651,9 @@ namespace DATN64.Controllers
 
             var finalCustomerId = customer?.MaKhachHang ?? 0;
 
-            var customerName = !string.IsNullOrWhiteSpace(thread.CustomerName)
+            var customerName = !string.IsNullOrWhiteSpace(thread.CustomerName) && thread.CustomerName != "Khách vãng lai"
                 ? thread.CustomerName
-                : customer?.HoTen ?? "Khách hàng";
+                : (customer != null && !string.IsNullOrWhiteSpace(customer.HoTen) ? customer.HoTen : $"Khách vãng lai #{thread.Id}");
 
             var customerPhone = !string.IsNullOrWhiteSpace(thread.CustomerPhone)
                 ? thread.CustomerPhone
@@ -638,6 +683,7 @@ namespace DATN64.Controllers
                     threadId = m.ThreadId,
                     sender = m.Sender,
                     text = m.Text,
+                    imageUrl = m.ImageUrl,
                     timestamp = m.Timestamp,
                     isRead = m.IsRead,
                     isAutoReply = m.IsAutoReply
@@ -676,6 +722,7 @@ namespace DATN64.Controllers
             public int ThreadId { get; set; }
             public string? Message { get; set; }
             public string? Status { get; set; }
+            public string? ImageUrl { get; set; }
         }
 
         public class CreateInquiryRequest
@@ -685,12 +732,14 @@ namespace DATN64.Controllers
             public string? CustomerEmail { get; set; }
             public string? Subject { get; set; }
             public string? Message { get; set; }
+            public string? ImageUrl { get; set; }
         }
 
         public class AddInquiryMessageRequest
         {
             public int ThreadId { get; set; }
             public string? Message { get; set; }
+            public string? ImageUrl { get; set; }
         }
     }
 }

@@ -10,34 +10,14 @@
     var customerPhone = session?.GetString("CustomerPhone") ?? "";
 
     var isLogged = !string.IsNullOrWhiteSpace(userEmail);
-
-    var returnUrl = Context.Request.Path + Context.Request.QueryString;
-    var loginUrl = Url.Action("Login", "Account", new { returnUrl = returnUrl });
+    var displayName = isLogged ? userName : "Khách vãng lai";
 }
 
-@if (!isLogged)
-{
-    <div id="nova-chat-widget">
-        <a class="nova-chat-toggle nova-chat-login-link text-decoration-none" href="@loginUrl">
-            <span class="nova-chat-toggle-icon">
-                <i class="fa-solid fa-comment-dots"></i>
-            </span>
-
-            <span class="nova-chat-toggle-text">
-                Đăng nhập để chat
-            </span>
-
-            <span class="nova-chat-online-dot"></span>
-        </a>
-    </div>
-}
-else
-{
-    <div id="nova-chat-widget"
-         data-user-name="@userName"
-         data-user-email="@userEmail"
-         data-user-roles="@userRoles"
-         data-customer-phone="@customerPhone">
+<div id="nova-chat-widget"
+     data-user-name="@displayName"
+     data-user-email="@userEmail"
+     data-user-roles="@userRoles"
+     data-customer-phone="@customerPhone">
 
         <button id="novaChatToggle" type="button" class="nova-chat-toggle">
             <span class="nova-chat-toggle-icon">
@@ -108,7 +88,26 @@ else
             <div class="nova-chat-footer">
                 <div id="novaChatStatus" class="nova-chat-status"></div>
 
+                <!-- Preview ảnh đã chọn -->
+                <div id="novaChatImagePreview" class="nova-img-preview nova-chat-hidden">
+                    <div class="nova-img-preview-inner">
+                        <img id="novaChatPreviewImg" src="" alt="preview" />
+                        <button type="button" id="novaChatRemoveImg" class="nova-img-remove" title="Xóa ảnh">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+
                 <div class="nova-chat-input-wrap">
+                    <!-- Nút chọn ảnh -->
+                    <button type="button" id="novaChatAttachBtn" class="nova-chat-attach" title="Đính kèm ảnh">
+                        <i class="fa-solid fa-image"></i>
+                    </button>
+                    <input type="file"
+                           id="novaChatFileInput"
+                           accept="image/jpeg,image/png,image/webp,image/gif"
+                           style="display:none" />
+
                     <textarea id="novaChatInput"
                               rows="2"
                               placeholder="Nhập tin nhắn..."
@@ -513,9 +512,10 @@ else
         color: #dc2626;
     }
 
+    /* Grid: attach + textarea + send */
     .nova-chat-input-wrap {
         display: grid;
-        grid-template-columns: 1fr 48px;
+        grid-template-columns: 40px 1fr 48px;
         gap: 9px;
         align-items: end;
     }
@@ -568,6 +568,116 @@ else
         font-size: 11px;
         color: #94a3b8;
         font-weight: 600;
+    }
+
+    /* Nút đính kèm ảnh */
+    .nova-chat-attach {
+        width: 40px;
+        height: 40px;
+        border: 1.5px solid #cbd5e1;
+        border-radius: 14px;
+        background: #f8fafc;
+        color: #64748b;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        transition: all 0.22s ease;
+        flex-shrink: 0;
+        align-self: flex-end;
+    }
+
+    .nova-chat-attach:hover {
+        background: #eff6ff;
+        border-color: #2563eb;
+        color: #2563eb;
+        transform: scale(1.06);
+    }
+
+    /* Preview ảnh trước khi gửi */
+    .nova-img-preview {
+        margin-bottom: 8px;
+        animation: novaFadeUp 0.22s ease;
+    }
+
+    .nova-img-preview-inner {
+        display: inline-flex;
+        position: relative;
+    }
+
+    .nova-img-preview-inner img {
+        max-width: 120px;
+        max-height: 90px;
+        border-radius: 12px;
+        border: 2px solid #dbeafe;
+        object-fit: cover;
+        box-shadow: 0 6px 14px rgba(15, 23, 42, 0.10);
+    }
+
+    .nova-img-remove {
+        position: absolute;
+        top: -7px;
+        right: -7px;
+        width: 22px;
+        height: 22px;
+        border: 0;
+        border-radius: 50%;
+        background: #ef4444;
+        color: #ffffff;
+        font-size: 11px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+        transition: transform 0.18s ease;
+    }
+
+    .nova-img-remove:hover {
+        transform: scale(1.12);
+    }
+
+    /* Ảnh trong bong bóng chat */
+    .nova-msg-img {
+        display: block;
+        max-width: 200px;
+        max-height: 180px;
+        border-radius: 12px;
+        margin-top: 6px;
+        object-fit: cover;
+        cursor: pointer;
+        border: 1.5px solid rgba(255,255,255,0.3);
+        transition: transform 0.2s ease;
+    }
+
+    .nova-msg-img:hover {
+        transform: scale(1.03);
+    }
+
+    /* Lightbox xem ảnh phóng to */
+    .nova-lightbox {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        background: rgba(0,0,0,0.85);
+        align-items: center;
+        justify-content: center;
+        cursor: zoom-out;
+        animation: novaConfirmFadeIn 0.2s ease;
+    }
+
+    .nova-lightbox.active {
+        display: flex;
+    }
+
+    .nova-lightbox img {
+        max-width: 90vw;
+        max-height: 88vh;
+        border-radius: 16px;
+        box-shadow: 0 28px 70px rgba(0,0,0,0.6);
+        object-fit: contain;
     }
 
     .nova-confirm-modal {
@@ -811,33 +921,44 @@ else
     }
 </style>
 
-@if (isLogged)
-{
-    <script>
-        (function () {
-            const widget = document.getElementById('nova-chat-widget');
-            const toggle = document.getElementById('novaChatToggle');
-            const panel = document.getElementById('novaChatPanel');
-            const closeBtn = document.getElementById('novaChatClose');
-            const clearBtn = document.getElementById('novaChatClear');
-            const body = document.getElementById('novaChatBody');
-            const input = document.getElementById('novaChatInput');
-            const sendBtn = document.getElementById('novaChatSend');
-            const status = document.getElementById('novaChatStatus');
-            const typing = document.getElementById('novaTyping');
+<!-- Lightbox để xem ảnh phóng to -->
+<div id="novaLightbox" class="nova-lightbox">
+    <img id="novaLightboxImg" src="" alt="" />
+</div>
 
-            const confirmModal = document.getElementById('novaConfirmModal');
-            const confirmOkBtn = document.getElementById('novaConfirmOk');
-            const confirmCancelBtn = document.getElementById('novaConfirmCancel');
+<script>
+    (function () {
+        const widget = document.getElementById('nova-chat-widget');
+        const toggle = document.getElementById('novaChatToggle');
+        const panel = document.getElementById('novaChatPanel');
+        const closeBtn = document.getElementById('novaChatClose');
+        const clearBtn = document.getElementById('novaChatClear');
+        const body = document.getElementById('novaChatBody');
+        const input = document.getElementById('novaChatInput');
+        const sendBtn = document.getElementById('novaChatSend');
+        const status = document.getElementById('novaChatStatus');
+        const typing = document.getElementById('novaTyping');
+        const attachBtn = document.getElementById('novaChatAttachBtn');
+        const fileInput = document.getElementById('novaChatFileInput');
+        const imgPreviewBox = document.getElementById('novaChatImagePreview');
+        const previewImg = document.getElementById('novaChatPreviewImg');
+        const removeImgBtn = document.getElementById('novaChatRemoveImg');
+        const lightbox = document.getElementById('novaLightbox');
+        const lightboxImg = document.getElementById('novaLightboxImg');
 
-            const sessionUserName = (widget.dataset.userName || '').trim();
-            const sessionUserEmail = (widget.dataset.userEmail || '').trim();
-            const sessionCustomerPhone = (widget.dataset.customerPhone || '').trim();
+        const confirmModal = document.getElementById('novaConfirmModal');
+        const confirmOkBtn = document.getElementById('novaConfirmOk');
+        const confirmCancelBtn = document.getElementById('novaConfirmCancel');
 
-            const storageKey = 'novatech_customer_chat_thread_id_v3_' + (sessionUserEmail || 'guest');
+        const sessionUserName = (widget ? widget.dataset.userName : '').trim();
+        const sessionUserEmail = (widget ? widget.dataset.userEmail : '').trim();
+        const sessionCustomerPhone = (widget ? widget.dataset.customerPhone : '').trim();
+
+        const storageKey = 'novatech_customer_chat_thread_id_v3_' + (sessionUserEmail || 'guest');
 
             let currentThreadId = localStorage.getItem(storageKey);
             let isSending = false;
+            let selectedImageUrl = null; // URL ảnh đã upload lên server
 
             function escapeHtml(value) {
                 return String(value || '')
@@ -850,15 +971,8 @@ else
 
             function formatTime(value) {
                 const date = value ? new Date(value) : new Date();
-
-                if (Number.isNaN(date.getTime())) {
-                    return '';
-                }
-
-                return date.toLocaleTimeString('vi-VN', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
+                if (Number.isNaN(date.getTime())) return '';
+                return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
             }
 
             function scrollToBottom() {
@@ -868,10 +982,7 @@ else
             function setStatus(message, type) {
                 status.textContent = message || '';
                 status.className = 'nova-chat-status';
-
-                if (type) {
-                    status.classList.add(type);
-                }
+                if (type) status.classList.add(type);
             }
 
             function showTyping(show) {
@@ -883,7 +994,7 @@ else
                 isSending = sending;
                 sendBtn.disabled = sending;
                 input.disabled = sending;
-
+                attachBtn.disabled = sending;
                 if (sending) {
                     sendBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
                 } else {
@@ -891,16 +1002,35 @@ else
                 }
             }
 
-            function appendMessage(sender, text, timestamp) {
+            // Hiển thị preview ảnh đã chọn nhưng chưa gửi
+            function showImagePreview(objectUrl) {
+                previewImg.src = objectUrl;
+                imgPreviewBox.classList.remove('nova-chat-hidden');
+            }
+
+            function clearImagePreview() {
+                previewImg.src = '';
+                imgPreviewBox.classList.add('nova-chat-hidden');
+                fileInput.value = '';
+                selectedImageUrl = null;
+            }
+
+            // Render một tin nhắn vào bong bóng chat
+            function appendMessage(sender, text, timestamp, imageUrl) {
                 const isUser = sender === 'customer' || sender === 'user';
 
                 const row = document.createElement('div');
                 row.className = 'nova-msg-row ' + (isUser ? 'user' : 'support');
 
+                const imgHtml = imageUrl
+                    ? `<img class="nova-msg-img" src="${escapeHtml(imageUrl)}" alt="ảnh" onclick="window.__novaOpenLightbox('${escapeHtml(imageUrl)}')" />`
+                    : '';
+
                 row.innerHTML = `
                     <div class="nova-msg ${isUser ? 'user' : 'support'}">
                         <div class="nova-msg-sender">${isUser ? 'Bạn' : 'NovaTech'}</div>
-                        <div class="nova-msg-text">${escapeHtml(text)}</div>
+                        ${text ? `<div class="nova-msg-text">${escapeHtml(text)}</div>` : ''}
+                        ${imgHtml}
                         <div class="nova-msg-time">${formatTime(timestamp)}</div>
                     </div>
                 `;
@@ -915,11 +1045,9 @@ else
                         <div class="nova-chat-welcome-icon">
                             <i class="fa-solid fa-wand-magic-sparkles"></i>
                         </div>
-
                         <div class="nova-chat-welcome-title">
                             Xin chào, NovaTech có thể hỗ trợ gì cho anh/chị?
                         </div>
-
                         <div class="nova-chat-welcome-text">
                             Gửi câu hỏi về đơn hàng, sản phẩm, bảo hành hoặc góp ý dịch vụ.
                         </div>
@@ -930,7 +1058,6 @@ else
             function openConfirmModal() {
                 return new Promise((resolve) => {
                     confirmModal.classList.remove('nova-chat-hidden');
-
                     function cleanup() {
                         confirmOkBtn.removeEventListener('click', handleOk);
                         confirmCancelBtn.removeEventListener('click', handleCancel);
@@ -938,31 +1065,14 @@ else
                         document.removeEventListener('keydown', handleEsc);
                         confirmModal.classList.add('nova-chat-hidden');
                     }
-
-                    function handleOk() {
-                        cleanup();
-                        resolve(true);
+                    function handleOk() { cleanup(); resolve(true); }
+                    function handleCancel() { cleanup(); resolve(false); }
+                    function handleBackdrop(e) {
+                        if (e.target.classList.contains('nova-confirm-backdrop')) { cleanup(); resolve(false); }
                     }
-
-                    function handleCancel() {
-                        cleanup();
-                        resolve(false);
+                    function handleEsc(e) {
+                        if (e.key === 'Escape') { cleanup(); resolve(false); }
                     }
-
-                    function handleBackdrop(event) {
-                        if (event.target.classList.contains('nova-confirm-backdrop')) {
-                            cleanup();
-                            resolve(false);
-                        }
-                    }
-
-                    function handleEsc(event) {
-                        if (event.key === 'Escape') {
-                            cleanup();
-                            resolve(false);
-                        }
-                    }
-
                     confirmOkBtn.addEventListener('click', handleOk);
                     confirmCancelBtn.addEventListener('click', handleCancel);
                     confirmModal.addEventListener('click', handleBackdrop);
@@ -973,50 +1083,45 @@ else
             async function postJson(url, bodyData) {
                 const response = await fetch(url, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(bodyData)
                 });
-
                 let data = {};
-
-                try {
-                    data = await response.json();
-                } catch {
-                    data = {};
-                }
-
-                if (!response.ok) {
-                    throw new Error(data.message || 'Có lỗi xảy ra khi gửi tin nhắn.');
-                }
-
+                try { data = await response.json(); } catch { data = {}; }
+                if (!response.ok) throw new Error(data.message || 'Có lỗi xảy ra khi gửi tin nhắn.');
                 return data;
             }
 
-            async function loadCurrentThread() {
-                if (!currentThreadId) {
-                    return;
-                }
+            // Upload ảnh lên server, trả về imageUrl
+            async function uploadImageToServer(file) {
+                const formData = new FormData();
+                formData.append('file', file);
 
+                const response = await fetch('/SalesCSKH/UploadChatImage', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                let data = {};
+                try { data = await response.json(); } catch { data = {}; }
+
+                if (!response.ok) throw new Error(data.message || 'Không thể tải ảnh lên. Vui lòng thử lại.');
+                return data.imageUrl;
+            }
+
+            async function loadCurrentThread() {
+                if (!currentThreadId) return;
                 try {
                     const response = await fetch(`/SalesCSKH/GetCustomerThread?id=${encodeURIComponent(currentThreadId)}`);
-
                     if (!response.ok) {
                         localStorage.removeItem(storageKey);
                         currentThreadId = null;
                         return;
                     }
-
                     const thread = await response.json();
                     const messages = Array.isArray(thread.messages) ? thread.messages : [];
-
                     clearMessagesOnly();
-
-                    messages.forEach(message => {
-                        appendMessage(message.sender, message.text, message.timestamp);
-                    });
-
+                    messages.forEach(msg => appendMessage(msg.sender, msg.text, msg.timestamp, msg.imageUrl));
                     setStatus('Đã tải lại hội thoại gần nhất.', 'success');
                 } catch {
                     setStatus('Không thể tải lại hội thoại cũ.', 'error');
@@ -1025,15 +1130,19 @@ else
 
             async function sendMessage() {
                 const message = input.value.trim();
+                const hasImage = !!selectedImageUrl;
 
-                if (!message || isSending) {
-                    return;
-                }
+                if ((!message && !hasImage) || isSending) return;
+
+                const textToSend = message;
+                const imageToSend = selectedImageUrl;
 
                 input.value = '';
                 input.style.height = 'auto';
+                clearImagePreview();
 
-                appendMessage('customer', message, new Date().toISOString());
+                // Hiện tin nhắn ngay ở UI (optimistic)
+                appendMessage('customer', textToSend, new Date().toISOString(), imageToSend);
                 setStatus('');
                 setSendingState(true);
                 showTyping(true);
@@ -1047,17 +1156,18 @@ else
                             customerPhone: sessionCustomerPhone || '',
                             customerEmail: sessionUserEmail || '',
                             subject: 'Chat hỗ trợ NovaTech',
-                            message: message
+                            message: textToSend,
+                            imageUrl: imageToSend
                         });
                     } else {
                         result = await postJson('/SalesCSKH/AddCustomerInquiryMessage', {
                             threadId: Number(currentThreadId),
-                            message: message
+                            message: textToSend,
+                            imageUrl: imageToSend
                         });
                     }
 
                     const thread = result.thread;
-
                     if (thread && thread.id) {
                         currentThreadId = String(thread.id);
                         localStorage.setItem(storageKey, currentThreadId);
@@ -1067,18 +1177,15 @@ else
 
                     if (thread && Array.isArray(thread.messages)) {
                         clearMessagesOnly();
-
-                        thread.messages.forEach(msg => {
-                            appendMessage(msg.sender, msg.text, msg.timestamp);
-                        });
+                        thread.messages.forEach(msg => appendMessage(msg.sender, msg.text, msg.timestamp, msg.imageUrl));
                     } else {
-                        appendMessage('staff', 'NovaTech đã nhận tin nhắn của anh/chị. Nhân viên sẽ phản hồi sớm nhất ạ.', new Date().toISOString());
+                        appendMessage('staff', 'NovaTech đã nhận tin nhắn của anh/chị. Nhân viên sẽ phản hồi sớm nhất ạ.', new Date().toISOString(), null);
                     }
 
                     setStatus(result.message || 'Đã gửi tin nhắn.', 'success');
                 } catch (error) {
                     showTyping(false);
-                    appendMessage('staff', 'Tin nhắn chưa gửi được. Anh/chị vui lòng thử lại sau.', new Date().toISOString());
+                    appendMessage('staff', 'Tin nhắn chưa gửi được. Anh/chị vui lòng thử lại sau.', new Date().toISOString(), null);
                     setStatus(error.message, 'error');
                 } finally {
                     setSendingState(false);
@@ -1086,11 +1193,50 @@ else
                 }
             }
 
+            // Lightbox
+            window.__novaOpenLightbox = function (src) {
+                lightboxImg.src = src;
+                lightbox.classList.add('active');
+            };
+
+            lightbox.addEventListener('click', function () {
+                lightbox.classList.remove('active');
+                lightboxImg.src = '';
+            });
+
+            // Chọn ảnh
+            attachBtn.addEventListener('click', function () {
+                fileInput.click();
+            });
+
+            fileInput.addEventListener('change', async function () {
+                const file = fileInput.files[0];
+                if (!file) return;
+
+                // Hiện preview tạm từ object URL
+                const objectUrl = URL.createObjectURL(file);
+                showImagePreview(objectUrl);
+                setStatus('Đang tải ảnh lên...', '');
+
+                try {
+                    const uploadedUrl = await uploadImageToServer(file);
+                    selectedImageUrl = uploadedUrl;
+                    setStatus('Ảnh đã sẵn sàng. Nhấn Gửi để gửi kèm ảnh.', 'success');
+                } catch (err) {
+                    clearImagePreview();
+                    setStatus(err.message, 'error');
+                }
+            });
+
+            // Xóa ảnh đã chọn
+            removeImgBtn.addEventListener('click', function () {
+                clearImagePreview();
+                setStatus('');
+            });
+
             toggle.addEventListener('click', async function () {
                 const isHidden = panel.classList.contains('nova-chat-hidden');
-
                 panel.classList.toggle('nova-chat-hidden');
-
                 if (isHidden) {
                     input.focus();
                     await loadCurrentThread();
@@ -1103,14 +1249,11 @@ else
 
             clearBtn.addEventListener('click', async function () {
                 const confirmed = await openConfirmModal();
-
-                if (!confirmed) {
-                    return;
-                }
-
+                if (!confirmed) return;
                 localStorage.removeItem(storageKey);
                 currentThreadId = null;
                 clearMessagesOnly();
+                clearImagePreview();
                 setStatus('Đã xóa lịch sử hiển thị trên trình duyệt.', 'success');
             });
 
@@ -1123,10 +1266,36 @@ else
                 }
             });
 
+            input.addEventListener('paste', async function (event) {
+                const items = (event.clipboardData || (event.originalEvent && event.originalEvent.clipboardData))?.items;
+                if (!items) return;
+
+                for (const item of items) {
+                    if (item.type.indexOf('image') !== -1) {
+                        event.preventDefault();
+                        const file = item.getAsFile();
+                        if (!file) continue;
+
+                        const objectUrl = URL.createObjectURL(file);
+                        showImagePreview(objectUrl);
+                        setStatus('Đang tải ảnh dán...', '');
+
+                        try {
+                            const uploadedUrl = await uploadImageToServer(file);
+                            selectedImageUrl = uploadedUrl;
+                            setStatus('Ảnh đã dán từ bộ nhớ tạm. Nhấn Gửi để gửi kèm ảnh.', 'success');
+                        } catch (err) {
+                            clearImagePreview();
+                            setStatus(err.message, 'error');
+                        }
+                        break;
+                    }
+                }
+            });
+
             input.addEventListener('input', function () {
                 input.style.height = 'auto';
                 input.style.height = Math.min(input.scrollHeight, 110) + 'px';
             });
         })();
     </script>
-}

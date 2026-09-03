@@ -278,6 +278,12 @@ namespace DATN64.Models
     );
 ");
 
+            // Thêm cột ImageUrl nếu chưa có (nâng cấp database tự động)
+            ExecuteSql(db, @"
+    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.CustomerInboxMessage') AND name = 'ImageUrl')
+        ALTER TABLE dbo.CustomerInboxMessage ADD ImageUrl NVARCHAR(MAX) NULL;
+");
+
             // Create CauHinh
             ExecuteSql(db, @"
                 IF OBJECT_ID('dbo.CauHinh', 'U') IS NULL
