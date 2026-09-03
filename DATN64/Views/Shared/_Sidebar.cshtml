@@ -122,6 +122,9 @@
                             <span>In vận đơn</span>
                         </a>
                     </li>
+                }
+                @if (canViewOrder || canViewCustomer)
+                {
                     <li class="nav-item">
                         <a href="@Url.Action("Index", "SalesCSKH")" class="nav-link-custom @(ctrl == "SalesCSKH" ? "active" : "") d-flex align-items-center gap-3 py-2.5 px-3 rounded-3">
                             <i class="fa-solid fa-headset text-cyan fs-5"></i>

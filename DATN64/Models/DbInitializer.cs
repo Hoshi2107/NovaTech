@@ -692,12 +692,18 @@ namespace DATN64.Models
             {
                 var passwordHasher = new Microsoft.AspNetCore.Identity.PasswordHasher<NhanVien>();
                 
-                // Seed demo accounts if they don't exist
+                // Seed demo accounts for all 9 system roles if they don't exist
                 var demoAccounts = new List<NhanVien>
                 {
-                    new NhanVien { HoTen = "Super Admin Demo", Email = "admin@novatech.vn", SoDienThoai = "0911111111", MatKhau = "123", VaiTro = "Admin", TrangThai = "Hoạt động" },
+                    new NhanVien { HoTen = "Super Admin Demo", Email = "superadmin@novatech.vn", SoDienThoai = "0900000001", MatKhau = "123", VaiTro = "Super Admin", TrangThai = "Hoạt động" },
+                    new NhanVien { HoTen = "Admin Demo", Email = "admin@novatech.vn", SoDienThoai = "0911111111", MatKhau = "123", VaiTro = "Admin", TrangThai = "Hoạt động" },
+                    new NhanVien { HoTen = "Quản Lý Cửa Hàng Demo", Email = "qlcuahang@novatech.vn", SoDienThoai = "0944444444", MatKhau = "123", VaiTro = "Quản lý cửa hàng", TrangThai = "Hoạt động" },
+                    new NhanVien { HoTen = "Quản Lý Kho Demo", Email = "qlkho@novatech.vn", SoDienThoai = "0933333333", MatKhau = "123", VaiTro = "Quản lý kho", TrangThai = "Hoạt động" },
+                    new NhanVien { HoTen = "Nhân Viên Kho Demo", Email = "nvkho@novatech.vn", SoDienThoai = "0955555555", MatKhau = "123", VaiTro = "Nhân viên kho", TrangThai = "Hoạt động" },
                     new NhanVien { HoTen = "Bán Hàng Demo", Email = "sale@novatech.vn", SoDienThoai = "0922222222", MatKhau = "123", VaiTro = "Nhân viên bán hàng", TrangThai = "Hoạt động" },
-                    new NhanVien { HoTen = "Nhân Viên Kho Demo", Email = "kho@novatech.vn", SoDienThoai = "0933333333", MatKhau = "123", VaiTro = "Quản lý kho", TrangThai = "Hoạt động" }
+                    new NhanVien { HoTen = "CSKH Demo", Email = "cskh@novatech.vn", SoDienThoai = "0966666666", MatKhau = "123", VaiTro = "CSKH", TrangThai = "Hoạt động" },
+                    new NhanVien { HoTen = "Kế Toán Demo", Email = "ketoan@novatech.vn", SoDienThoai = "0977777777", MatKhau = "123", VaiTro = "Kế toán", TrangThai = "Hoạt động" },
+                    new NhanVien { HoTen = "Marketing Demo", Email = "marketing@novatech.vn", SoDienThoai = "0988888888", MatKhau = "123", VaiTro = "Marketing", TrangThai = "Hoạt động" }
                 };
 
                 foreach (var demo in demoAccounts)
