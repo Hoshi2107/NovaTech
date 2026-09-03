@@ -20,7 +20,8 @@
     bool canViewReport     = AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Report");
     bool canViewSetting    = AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Setting");
     bool canViewApproval   = AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "Approve_Order") ||
-                             AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "Import_Inventory");
+                             AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "Approve_Inventory") ||
+                             AuthHelper.HasPermission(HttpContextAccessor.HttpContext!, "View_Approval");
 }
 <aside class="sidebar position-fixed top-0 bottom-0 start-0 z-3 p-3">
     <div class="sidebar-brand d-flex align-items-center gap-2 mb-4 pb-3 border-bottom border-secondary border-opacity-25">

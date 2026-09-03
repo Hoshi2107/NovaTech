@@ -587,8 +587,7 @@ namespace DATN64.Models
                     INSERT INTO dbo.RolePermission (RoleName, PermissionName) VALUES 
                     (N'Quản lý kho', 'View_Product'), (N'Quản lý kho', 'Create_Product'), (N'Quản lý kho', 'Edit_Product'),
                     (N'Quản lý kho', 'View_Inventory'), (N'Quản lý kho', 'Import_Inventory'), (N'Quản lý kho', 'Export_Inventory'),
-                    (N'Quản lý kho', 'View_Report'), (N'Quản lý kho', 'Export_Report'),
-                    (N'Quản lý kho', 'Approve_Order');
+                    (N'Quản lý kho', 'View_Report'), (N'Quản lý kho', 'Export_Report');
 
                     -- Nhân viên kho permissions
                     INSERT INTO dbo.RolePermission (RoleName, PermissionName) VALUES 
@@ -598,7 +597,7 @@ namespace DATN64.Models
                     -- Nhân viên bán hàng permissions
                     INSERT INTO dbo.RolePermission (RoleName, PermissionName) VALUES 
                     (N'Nhân viên bán hàng', 'View_Product'),
-                    (N'Nhân viên bán hàng', 'View_Order'), (N'Nhân viên bán hàng', 'Approve_Order'),
+                    (N'Nhân viên bán hàng', 'View_Order'),
                     (N'Nhân viên bán hàng', 'View_Customer'), (N'Nhân viên bán hàng', 'Create_Customer'),
                     (N'Nhân viên bán hàng', 'View_Promotion');
 
@@ -606,8 +605,8 @@ namespace DATN64.Models
                     INSERT INTO dbo.RolePermission (RoleName, PermissionName) VALUES 
                     (N'Kế toán', 'View_Accounting'),
                     (N'Kế toán', 'View_Report'), (N'Kế toán', 'Export_Report'),
-                    (N'Kế toán', 'View_Order'),
-                    (N'Kế toán', 'View_Customer');
+                    (N'Kế toán', 'View_Order'), (N'Kế toán', 'Approve_Order'),
+                    (N'Kế toán', 'View_Customer'), (N'Kế toán', 'View_Inventory');
 
                     -- Marketing permissions
                     INSERT INTO dbo.RolePermission (RoleName, PermissionName) VALUES 
@@ -618,63 +617,39 @@ namespace DATN64.Models
 
                     -- CSKH permissions
                     INSERT INTO dbo.RolePermission (RoleName, PermissionName) VALUES 
-                    ('CSKH', 'View_Customer'), ('CSKH', 'View_Order');
+                    ('CSKH', 'View_Customer'), ('CSKH', 'Create_Customer'), ('CSKH', 'Edit_Customer'),
+                    ('CSKH', 'View_Order'), ('CSKH', 'View_Product');
                 END
             ");
 
-            // Idempotent: Seed missing permissions for new roles on existing databases
+            // Idempotent: Fix/Sync permissions on existing database
             ExecuteSql(db, @"
-                -- Kế toán
-                IF NOT EXISTS (SELECT 1 FROM dbo.RolePermission WHERE RoleName = N'Kế toán' AND PermissionName = 'View_Accounting')
-                BEGIN
-                    INSERT INTO dbo.RolePermission (RoleName, PermissionName) VALUES
-                    (N'Kế toán', 'View_Accounting'),
-                    (N'Kế toán', 'View_Report'), (N'Kế toán', 'Export_Report'),
-                    (N'Kế toán', 'View_Order'),
-                    (N'Kế toán', 'View_Customer');
-                END
+                -- Kho: Xóa quyền Approve_Order và View_Approval nếu có
+                DELETE FROM dbo.RolePermission 
+                WHERE RoleName IN (N'Quản lý kho', N'Nhân viên kho') 
+                  AND PermissionName IN ('Approve_Order', 'Approve_Inventory', 'View_Approval');
 
-                -- Marketing
-                IF NOT EXISTS (SELECT 1 FROM dbo.RolePermission WHERE RoleName = N'Marketing' AND PermissionName = 'View_Promotion')
-                BEGIN
-                    INSERT INTO dbo.RolePermission (RoleName, PermissionName) VALUES
-                    (N'Marketing', 'View_Promotion'),
-                    (N'Marketing', 'View_Customer'), (N'Marketing', 'Create_Customer'),
-                    (N'Marketing', 'View_Report'),
-                    (N'Marketing', 'View_Product');
-                END
+                -- Kế toán: Thêm Approve_Order để vào được Trung tâm duyệt phiếu
+                IF NOT EXISTS (SELECT 1 FROM dbo.RolePermission WHERE RoleName = N'Kế toán' AND PermissionName = 'Approve_Order')
+                    INSERT INTO dbo.RolePermission (RoleName, PermissionName) VALUES (N'Kế toán', 'Approve_Order');
 
-                -- Quản lý cửa hàng
-                IF NOT EXISTS (SELECT 1 FROM dbo.RolePermission WHERE RoleName = N'Quản lý cửa hàng' AND PermissionName = 'View_Order')
-                BEGIN
-                    INSERT INTO dbo.RolePermission (RoleName, PermissionName) VALUES
-                    (N'Quản lý cửa hàng', 'View_Product'), (N'Quản lý cửa hàng', 'Create_Product'), (N'Quản lý cửa hàng', 'Edit_Product'),
-                    (N'Quản lý cửa hàng', 'View_Inventory'), (N'Quản lý cửa hàng', 'Import_Inventory'), (N'Quản lý cửa hàng', 'Export_Inventory'),
-                    (N'Quản lý cửa hàng', 'View_Order'), (N'Quản lý cửa hàng', 'Approve_Order'),
-                    (N'Quản lý cửa hàng', 'View_Customer'), (N'Quản lý cửa hàng', 'Create_Customer'),
-                    (N'Quản lý cửa hàng', 'View_Promotion'),
-                    (N'Quản lý cửa hàng', 'View_Employee'),
-                    (N'Quản lý cửa hàng', 'View_Report'), (N'Quản lý cửa hàng', 'Export_Report'),
-                    (N'Quản lý cửa hàng', 'View_Accounting'), (N'Quản lý cửa hàng', 'View_TikTok');
-                END
+                IF NOT EXISTS (SELECT 1 FROM dbo.RolePermission WHERE RoleName = N'Kế toán' AND PermissionName = 'View_Inventory')
+                    INSERT INTO dbo.RolePermission (RoleName, PermissionName) VALUES (N'Kế toán', 'View_Inventory');
 
-                -- Nhân viên kho
-                IF NOT EXISTS (SELECT 1 FROM dbo.RolePermission WHERE RoleName = N'Nhân viên kho' AND PermissionName = 'View_Inventory')
-                BEGIN
-                    INSERT INTO dbo.RolePermission (RoleName, PermissionName) VALUES
-                    (N'Nhân viên kho', 'View_Product'),
-                    (N'Nhân viên kho', 'View_Inventory'), (N'Nhân viên kho', 'Import_Inventory'), (N'Nhân viên kho', 'Export_Inventory');
-                END
+                -- CSKH: Thêm View_Product, Create_Customer, Edit_Customer
+                IF NOT EXISTS (SELECT 1 FROM dbo.RolePermission WHERE RoleName = 'CSKH' AND PermissionName = 'View_Product')
+                    INSERT INTO dbo.RolePermission (RoleName, PermissionName) VALUES ('CSKH', 'View_Product');
 
-                -- Quản lý kho: thêm Approve_Order nếu thiếu
-                IF NOT EXISTS (SELECT 1 FROM dbo.RolePermission WHERE RoleName = N'Quản lý kho' AND PermissionName = 'Approve_Order')
-                    INSERT INTO dbo.RolePermission (RoleName, PermissionName) VALUES (N'Quản lý kho', 'Approve_Order');
+                IF NOT EXISTS (SELECT 1 FROM dbo.RolePermission WHERE RoleName = 'CSKH' AND PermissionName = 'Create_Customer')
+                    INSERT INTO dbo.RolePermission (RoleName, PermissionName) VALUES ('CSKH', 'Create_Customer');
 
-                -- Admin: thêm View_Accounting nếu thiếu
+                IF NOT EXISTS (SELECT 1 FROM dbo.RolePermission WHERE RoleName = 'CSKH' AND PermissionName = 'Edit_Customer')
+                    INSERT INTO dbo.RolePermission (RoleName, PermissionName) VALUES ('CSKH', 'Edit_Customer');
+
+                -- Admin & QL Cửa Hàng
                 IF NOT EXISTS (SELECT 1 FROM dbo.RolePermission WHERE RoleName = 'Admin' AND PermissionName = 'View_Accounting')
                     INSERT INTO dbo.RolePermission (RoleName, PermissionName) VALUES ('Admin', 'View_Accounting');
 
-                -- Admin: thêm Export_Report nếu thiếu
                 IF NOT EXISTS (SELECT 1 FROM dbo.RolePermission WHERE RoleName = 'Admin' AND PermissionName = 'Export_Report')
                     INSERT INTO dbo.RolePermission (RoleName, PermissionName) VALUES ('Admin', 'Export_Report');
             ");

@@ -25,9 +25,9 @@ namespace DATN64.Controllers
 
             // Check at least one relevant permission
             bool canApproveOrder    = AuthHelper.HasPermission(HttpContext, "Approve_Order");
-            bool canApproveInv      = AuthHelper.HasPermission(HttpContext, "Import_Inventory");
+            bool canApproveInv      = AuthHelper.HasPermission(HttpContext, "Approve_Inventory") || AuthHelper.HasPermission(HttpContext, "View_Approval");
 
-            if (!canApproveOrder && !canApproveInv)
+            if (!canApproveOrder && !canApproveInv && !AuthHelper.HasPermission(HttpContext, "View_Approval"))
                 return View("~/Views/Shared/AccessDenied.cshtml");
 
             // Pending orders — trạng thái "Đơn mới" hoặc "Chờ duyệt"
