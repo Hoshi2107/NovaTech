@@ -295,3 +295,9 @@ C:\Users\Admin\Desktop\NovaTech\Fake-TikTokShop-for-NovaTech\obj\Debug\net10.0\F
 C:\Users\Admin\Desktop\NovaTech\Fake-TikTokShop-for-NovaTech\obj\Debug\net10.0\FakeTikTokShop.genruntimeconfig.cache
 C:\Users\Admin\Desktop\NovaTech\Fake-TikTokShop-for-NovaTech\obj\Debug\net10.0\ref\FakeTikTokShop.dll
 C:\Users\Admin\Desktop\NovaTech\Fake-TikTokShop-for-NovaTech\obj\Debug\net10.0\compressed\u4exrmvgzi-{0}-v89m7ozakv-v89m7ozakv.gz
+C:\Users\Admin\Desktop\NovaTech\Fake-TikTokShop-for-NovaTech\bin\Debug\net10.0\publish\web.config
+C:\Users\Admin\Desktop\NovaTech\Fake-TikTokShop-for-NovaTech\bin\Debug\net10.0\web.config
+C:\Users\Admin\Desktop\NovaTech\Fake-TikTokShop-for-NovaTech\bin\Debug\net10.0\publish\appsettings.json
+C:\Users\Admin\Desktop\NovaTech\Fake-TikTokShop-for-NovaTech\bin\Debug\net10.0\publish\FakeTikTokShop.deps.json
+C:\Users\Admin\Desktop\NovaTech\Fake-TikTokShop-for-NovaTech\bin\Debug\net10.0\publish\FakeTikTokShop.runtimeconfig.json
+C:\Users\Admin\Desktop\NovaTech\Fake-TikTokShop-for-NovaTech\bin\Debug\net10.0\publish\FakeTikTokShop.staticwebassets.endpoints.json
