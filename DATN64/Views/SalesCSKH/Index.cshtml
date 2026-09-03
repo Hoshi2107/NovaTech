@@ -185,6 +185,59 @@
             margin-top: 5px;
         }
 
+        .chat-msg-img {
+            display: block;
+            max-width: 220px;
+            max-height: 180px;
+            border-radius: 12px;
+            margin-top: 6px;
+            object-fit: cover;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            border: 1.5px solid rgba(255,255,255,0.3);
+        }
+
+        .chat-msg-img:hover {
+            transform: scale(1.03);
+        }
+
+        /* Lightbox phóng to ảnh trong admin */
+        .admin-lightbox {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: rgba(0,0,0,0.85);
+            align-items: center;
+            justify-content: center;
+            cursor: zoom-out;
+        }
+
+        .admin-lightbox.active {
+            display: flex;
+        }
+
+        .admin-lightbox img {
+            max-width: 90vw;
+            max-height: 88vh;
+            border-radius: 16px;
+            box-shadow: 0 28px 70px rgba(0,0,0,0.6);
+            object-fit: contain;
+        }
+
+        /* Preview ảnh trong ô reply */
+        .admin-img-preview {
+            margin-bottom: 8px;
+        }
+
+        .admin-img-preview img {
+            max-width: 100px;
+            max-height: 80px;
+            border-radius: 10px;
+            border: 2px solid #dbeafe;
+            object-fit: cover;
+        }
+
         .reply-box {
             padding: 16px;
             border-top: 1px solid #e2e8f0;
@@ -491,6 +544,16 @@
                       placeholder="Vui lòng chọn hội thoại trước khi phản hồi..."
                       disabled></textarea>
 
+            <!-- Preview ảnh NV đã chọn -->
+            <div id="adminImgPreviewBox" class="admin-img-preview d-none">
+                <div class="d-flex align-items-center gap-2">
+                    <img id="adminPreviewImg" src="" alt="preview" />
+                    <button type="button" id="adminRemoveImgBtn" class="btn btn-sm btn-outline-danger rounded-pill">
+                        <i class="fa-solid fa-xmark me-1"></i>Xóa ảnh
+                    </button>
+                </div>
+            </div>
+
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div>
                     <div id="replyStatus" class="small text-muted"></div>
@@ -499,15 +562,28 @@
                     </div>
                 </div>
 
-                <button id="sendReplyBtn"
-                        class="btn btn-primary rounded-pill px-4"
-                        onclick="sendReply()"
-                        disabled>
-                    <i class="fa-solid fa-paper-plane me-2"></i>
-                    Gửi phản hồi
-                </button>
+                <div class="d-flex gap-2 align-items-center">
+                    <!-- Nút đính kèm ảnh cho NV -->
+                    <input type="file" id="adminFileInput" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none" />
+                    <button type="button"
+                            id="adminAttachBtn"
+                            class="btn btn-outline-secondary rounded-pill px-3"
+                            disabled
+                            onclick="document.getElementById('adminFileInput').click()">
+                        <i class="fa-solid fa-image me-1"></i>Đính kèm ảnh
+                    </button>
+
+                    <button id="sendReplyBtn"
+                            class="btn btn-primary rounded-pill px-4"
+                            onclick="sendReply()"
+                            disabled>
+                        <i class="fa-solid fa-paper-plane me-2"></i>
+                        Gửi phản hồi
+                    </button>
+                </div>
             </div>
         </div>
+
     </div>
 </div>
 
@@ -540,6 +616,11 @@
 </div>
 
 @section Scripts {
+    <!-- Lightbox admin -->
+    <div id="adminLightbox" class="admin-lightbox">
+        <img id="adminLightboxImg" src="" alt="" />
+    </div>
+
     <script>
         let selectedThreadId = null;
         let selectedThreadStatus = null;
@@ -553,8 +634,10 @@
         let isUserBusy = false;
         let lastThreadRenderKey = "";
         let lastInboxRenderKey = "";
+        let adminSelectedImageUrl = null; // Ảnh NV chọn để gửi
 
         const CSKH_REFRESH_INTERVAL = 60 * 1000;
+
 
         function formatTime(value) {
             if (!value) return '';
@@ -732,9 +815,11 @@
             const input = document.getElementById('replyText');
             const button = document.getElementById('sendReplyBtn');
             const lockNote = document.getElementById('replyLockNote');
+            const attachBtn = document.getElementById('adminAttachBtn');
 
             input.disabled = !enabled;
             button.disabled = !enabled;
+            if (attachBtn) attachBtn.disabled = !enabled;
             input.placeholder = placeholder;
             lockNote.textContent = note || '';
         }
@@ -1032,18 +1117,25 @@
                 if (!messages.length) {
                     messagesBox.innerHTML = '<div class="empty-state">Hội thoại chưa có tin nhắn.</div>';
                 } else {
-                    messagesBox.innerHTML = messages.map(message => `
+                    messagesBox.innerHTML = messages.map(message => {
+                        const imgHtml = message.imageUrl
+                            ? `<img class="chat-msg-img" src="${escapeHtml(message.imageUrl)}" alt="ảnh" onclick="adminOpenLightbox('${escapeHtml(message.imageUrl)}')" />`
+                            : '';
+                        return `
                         <div class="chat-message ${message.sender === 'customer' ? 'customer' : 'staff'}">
                             <div class="chat-bubble">
                                 <div class="chat-sender">${message.sender === 'customer' ? 'Khách hàng' : 'NovaTech'}</div>
-                                <div>${escapeHtml(message.text)}</div>
+                                ${message.text ? `<div>${escapeHtml(message.text)}</div>` : ''}
+                                ${imgHtml}
                                 <span class="chat-time">${formatTime(message.timestamp)}</span>
                             </div>
                         </div>
-                    `).join('');
+                        `;
+                    }).join('');
 
                     messagesBox.scrollTop = messagesBox.scrollHeight;
                 }
+
 
                 if (thread.status === 'Closed') {
                     updateReplyState(
@@ -1077,6 +1169,7 @@
             const status = document.getElementById('replyStatus');
             const input = document.getElementById('replyText');
             const message = input.value.trim();
+            const imageUrl = adminSelectedImageUrl;
 
             status.textContent = '';
 
@@ -1092,8 +1185,8 @@
                 return;
             }
 
-            if (!message) {
-                status.textContent = 'Vui lòng nhập nội dung phản hồi.';
+            if (!message && !imageUrl) {
+                status.textContent = 'Vui lòng nhập nội dung phản hồi hoặc đính kèm ảnh.';
                 status.className = 'small text-danger';
                 return;
             }
@@ -1106,12 +1199,15 @@
                 const result = await postJson('/SalesCSKH/ReplyCustomerMessage', {
                     threadId: selectedThreadId,
                     message: message,
+                    imageUrl: imageUrl,
                     status: 'Replied'
                 });
 
                 input.value = '';
+                adminClearImagePreview();
                 status.textContent = 'Đã gửi phản hồi.';
                 status.className = 'small text-success';
+
 
                 const thread = currentThreads.find(t => sameId(t.id, selectedThreadId));
 
@@ -1139,6 +1235,116 @@
                 isUserBusy = false;
             }
         }
+
+        // Admin lightbox
+        function adminOpenLightbox(src) {
+            const lb = document.getElementById('adminLightbox');
+            const lbImg = document.getElementById('adminLightboxImg');
+            lbImg.src = src;
+            lb.classList.add('active');
+        }
+
+        document.getElementById('adminLightbox').addEventListener('click', function () {
+            this.classList.remove('active');
+            document.getElementById('adminLightboxImg').src = '';
+        });
+
+        // Admin image attach
+        function adminClearImagePreview() {
+            adminSelectedImageUrl = null;
+            document.getElementById('adminPreviewImg').src = '';
+            document.getElementById('adminImgPreviewBox').classList.add('d-none');
+            document.getElementById('adminFileInput').value = '';
+        }
+
+        document.getElementById('adminFileInput').addEventListener('change', async function () {
+            const file = this.files[0];
+            if (!file) return;
+
+            const status = document.getElementById('replyStatus');
+            const previewImg = document.getElementById('adminPreviewImg');
+            const previewBox = document.getElementById('adminImgPreviewBox');
+
+            // Hiện preview tạm
+            previewImg.src = URL.createObjectURL(file);
+            previewBox.classList.remove('d-none');
+            status.textContent = 'Đang tải ảnh lên...';
+            status.className = 'small text-muted';
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const response = await fetch('/SalesCSKH/UploadChatImage', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                let data = {};
+                try { data = await response.json(); } catch { data = {}; }
+
+                if (!response.ok) throw new Error(data.message || 'Không tải ảnh được.');
+
+                adminSelectedImageUrl = data.imageUrl;
+                status.textContent = 'Ảnh đã sẵn sàng. Nhấn Gửi để gửi kèm ảnh.';
+                status.className = 'small text-success';
+            } catch (err) {
+                adminClearImagePreview();
+                status.textContent = err.message;
+                status.className = 'small text-danger';
+            }
+        });
+
+        document.getElementById('adminRemoveImgBtn').addEventListener('click', function () {
+            adminClearImagePreview();
+            document.getElementById('replyStatus').textContent = '';
+        });
+
+        document.getElementById('replyText').addEventListener('paste', async function (event) {
+            const items = (event.clipboardData || (event.originalEvent && event.originalEvent.clipboardData))?.items;
+            if (!items) return;
+
+            for (const item of items) {
+                if (item.type.indexOf('image') !== -1) {
+                    event.preventDefault();
+                    const file = item.getAsFile();
+                    if (!file) continue;
+
+                    const status = document.getElementById('replyStatus');
+                    const previewImg = document.getElementById('adminPreviewImg');
+                    const previewBox = document.getElementById('adminImgPreviewBox');
+
+                    previewImg.src = URL.createObjectURL(file);
+                    previewBox.classList.remove('d-none');
+                    status.textContent = 'Đang tải ảnh dán lên...';
+                    status.className = 'small text-muted';
+
+                    try {
+                        const formData = new FormData();
+                        formData.append('file', file);
+
+                        const response = await fetch('/SalesCSKH/UploadChatImage', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        let data = {};
+                        try { data = await response.json(); } catch { data = {}; }
+
+                        if (!response.ok) throw new Error(data.message || 'Không tải ảnh được.');
+
+                        adminSelectedImageUrl = data.imageUrl;
+                        status.textContent = 'Ảnh đã dán từ bộ nhớ tạm. Nhấn Gửi để gửi kèm ảnh.';
+                        status.className = 'small text-success';
+                    } catch (err) {
+                        adminClearImagePreview();
+                        status.textContent = err.message;
+                        status.className = 'small text-danger';
+                    }
+                    break;
+                }
+            }
+        });
 
         async function closeThread() {
             if (!selectedThreadId) {

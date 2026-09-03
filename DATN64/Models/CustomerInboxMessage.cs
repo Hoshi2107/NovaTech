@@ -25,5 +25,8 @@ namespace DATN64.Models
         public bool IsRead { get; set; } = false;
 
         public bool IsAutoReply { get; set; } = false;
+
+        // Đường dẫn ảnh đính kèm (nếu có)
+        public string? ImageUrl { get; set; }
     }
 }
